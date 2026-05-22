@@ -1,15 +1,17 @@
 import Sidebar from './Sidebar'
 import Header from './Header'
+import MobileNav from './MobileNav'
 
 export default function MainLayout({ children }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen overflow-hidden bg-transparent">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto px-4 py-5 pb-20 sm:px-6 md:pb-6 lg:px-8">
           {children}
         </main>
+        <MobileNav />
       </div>
     </div>
   )

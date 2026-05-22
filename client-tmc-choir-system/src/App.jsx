@@ -12,7 +12,7 @@ import { formatDateShort, getStatusColor } from './lib/utils'
 function PlaceholderPage({ icon: Icon, title, description }) {
   return (
     <div className="card p-8 text-center">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
         <Icon size={22} />
       </div>
       <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
@@ -23,7 +23,7 @@ function PlaceholderPage({ icon: Icon, title, description }) {
 
 function Semesters() {
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       <div className="grid gap-4">
         {semesters.map((semester) => (
           <div key={semester.id} className="card p-5">
@@ -50,7 +50,7 @@ function Semesters() {
 
 function Judges() {
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="page-shell grid gap-4 lg:grid-cols-3">
       {judges.map((judge) => (
         <div key={judge.id} className="card p-5">
           <div className="flex items-start justify-between gap-3">
@@ -108,6 +108,26 @@ export default function App() {
           <Route path="/members" element={<Members />} />
           <Route path="/auditions" element={<Auditions />} />
           <Route path="/judges" element={<Judges />} />
+          <Route
+            path="/officers"
+            element={
+              <PlaceholderPage
+                icon={UserCheck}
+                title="Officers"
+                description="Officer records, terms, and responsibilities are ready for backend connection."
+              />
+            }
+          />
+          <Route
+            path="/elections"
+            element={
+              <PlaceholderPage
+                icon={UserCheck}
+                title="Officer Elections"
+                description="Election setup, voting windows, and result summaries can be managed here."
+              />
+            }
+          />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route

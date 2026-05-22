@@ -101,7 +101,7 @@ export default function Members() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       {/* Stats */}
       <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
         {[
@@ -121,7 +121,7 @@ export default function Members() {
 
       {/* Toolbar */}
       <div className="card p-4 flex flex-wrap items-center gap-3">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search members..." className="w-60" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search members..." className="w-full sm:w-60" />
         <div className="flex gap-1">
           {['All', ...VOICE_PARTS].map((v) => (
             <button
@@ -158,6 +158,7 @@ export default function Members() {
       {/* Table View */}
       {view === 'table' && (
         <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -214,6 +215,7 @@ export default function Members() {
               ))}
             </tbody>
           </table>
+          </div>
           {filtered.length === 0 && <EmptyState title="No members found" description="Try adjusting your filters." />}
         </div>
       )}
@@ -222,7 +224,7 @@ export default function Members() {
       {view === 'cards' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((m) => (
-            <div key={m.id} className="card p-5 hover:shadow-md transition-shadow">
+            <div key={m.id} className="card p-5 transition-shadow hover:shadow-md">
               <div className="flex items-start justify-between mb-3">
                 <Avatar name={m.name} voicePart={m.voicePart} size="lg" />
                 <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${getStatusColor(m.status)}`}>
@@ -261,7 +263,7 @@ export default function Members() {
           <div className="absolute inset-0 bg-black/30" onClick={() => setProfileDrawer(null)} />
           <div className="relative ml-auto w-80 bg-white h-full shadow-2xl flex flex-col overflow-y-auto">
             <div className="p-6 border-b border-gray-100">
-              <button onClick={() => setProfileDrawer(null)} className="text-xs text-gray-400 hover:text-gray-700 mb-4">← Close</button>
+              <button onClick={() => setProfileDrawer(null)} className="mb-4 text-xs text-gray-400 hover:text-gray-700">Close</button>
               <Avatar name={profileDrawer.name} voicePart={profileDrawer.voicePart} size="xl" />
               <h3 className="text-lg font-bold text-gray-900 mt-3">{profileDrawer.name}</h3>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getVoicePartColor(profileDrawer.voicePart)}`}>{profileDrawer.voicePart}</span>

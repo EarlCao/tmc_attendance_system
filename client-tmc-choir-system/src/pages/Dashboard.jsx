@@ -34,17 +34,20 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="card overflow-hidden">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Welcome back, Admin 👋</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Here's what's happening with TMC Choir today.</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Operations overview</p>
+          <h2 className="mt-1 text-2xl font-bold text-gray-900">Welcome back, Admin</h2>
+          <p className="mt-1 text-sm text-gray-500">Monitor attendance, members, auditions, and pending excuse reviews in one place.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => navigate('/attendance')} className="btn-primary">
             <ClipboardList size={15} /> Mark Attendance
           </button>
+        </div>
         </div>
       </div>
 
@@ -60,7 +63,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Attendance */}
         <div className="lg:col-span-2 card">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+          <div className="panel-header">
             <h3 className="text-sm font-semibold text-gray-900">Recent Attendance Sessions</h3>
             <button onClick={() => navigate('/attendance')} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
               View all <ArrowRight size={12} />
@@ -71,7 +74,7 @@ export default function Dashboard() {
               const presentCount = Math.floor(Math.random() * 4) + 12
               const absentCount  = 16 - presentCount
               return (
-                <div key={s.id} className="flex items-center justify-between px-5 py-3">
+                <div key={s.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-gray-50/70">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                       <ClipboardList size={14} className="text-blue-600" />
@@ -127,13 +130,13 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming Activities */}
         <div className="lg:col-span-2 card">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+          <div className="panel-header">
             <h3 className="text-sm font-semibold text-gray-900">Upcoming Activities</h3>
             <CalendarDays size={16} className="text-gray-400" />
           </div>
           <div className="divide-y divide-gray-50">
             {upcomingActivities.slice(0, 4).map((a) => (
-              <div key={a.id} className="flex items-start gap-3 px-5 py-3">
+              <div key={a.id} className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-gray-50/70">
                 <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0 mt-0.5">
                   <CalendarDays size={14} className="text-orange-500" />
                 </div>
@@ -152,7 +155,7 @@ export default function Dashboard() {
 
         {/* Recent Auditions */}
         <div className="card">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+          <div className="panel-header">
             <h3 className="text-sm font-semibold text-gray-900">Recent Auditions</h3>
             <button onClick={() => navigate('/auditions')} className="text-xs text-blue-600 hover:underline">
               View all
@@ -164,7 +167,7 @@ export default function Dashboard() {
                 ? (a.ratings.reduce((s, r) => s + (r.vocalQuality + r.pitchAccuracy + r.tone + r.rhythm + r.confidence + r.stagePresence) / 6, 0) / a.ratings.length).toFixed(1)
                 : null
               return (
-                <div key={a.id} className="flex items-center justify-between px-5 py-3">
+                <div key={a.id} className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-gray-50/70">
                   <div className="flex items-center gap-2">
                     <Avatar name={a.name} voicePart={a.targetPart} size="sm" />
                     <div className="min-w-0">

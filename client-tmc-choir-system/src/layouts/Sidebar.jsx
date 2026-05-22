@@ -42,22 +42,22 @@ export default function Sidebar() {
   return (
     <aside
       className={cn(
-        'relative flex flex-col bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-700/60 h-screen transition-all duration-300 shrink-0',
+        'relative hidden h-screen shrink-0 flex-col border-r border-gray-100 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 md:flex',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Logo */}
       <div className={cn(
-        'flex items-center gap-3 px-4 py-5 border-b border-gray-100 dark:border-gray-700/60',
+        'flex items-center gap-3 border-b border-gray-100 px-4 py-5',
         collapsed && 'justify-center px-2'
       )}>
-        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
+        <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/25">
           <Music4 size={18} className="text-white" />
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">TMC Choir</p>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight truncate">Attendance System</p>
+            <p className="text-sm font-bold text-gray-900 leading-tight truncate">TMC Choir</p>
+            <p className="text-[11px] text-gray-400 leading-tight truncate">Attendance System</p>
           </div>
         )}
       </div>
@@ -65,7 +65,7 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         {!collapsed && (
-          <p className="px-3 pb-2 text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">Main Menu</p>
+          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Main Menu</p>
         )}
         {navItems.map(({ to, icon: Icon, label }) => {
           const isActive = to === '/'
@@ -90,7 +90,7 @@ export default function Sidebar() {
 
         <div className="pt-3">
           {!collapsed && (
-            <p className="px-3 pb-2 text-[10px] font-semibold text-gray-400 dark:text-gray-600 uppercase tracking-wider">System</p>
+            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">System</p>
           )}
           {bottomItems.map(({ to, icon: Icon, label }) => {
             const isActive = location.pathname.startsWith(to)
@@ -116,16 +116,16 @@ export default function Sidebar() {
       {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-sm flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+        className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 shadow-sm transition-colors hover:border-blue-300 hover:text-blue-600"
       >
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>
 
       {/* Footer */}
       {!collapsed && (
-        <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700/60">
-          <p className="text-[10px] text-gray-400 dark:text-gray-600">TMC Choir &copy; 2025</p>
-          <p className="text-[10px] text-gray-400 dark:text-gray-600">Trinidad Municipal College</p>
+        <div className="border-t border-gray-100 px-4 py-3">
+          <p className="text-[10px] text-gray-400">TMC Choir &copy; 2026</p>
+          <p className="text-[10px] text-gray-400">Trinidad Municipal College</p>
         </div>
       )}
     </aside>

@@ -70,7 +70,7 @@ export default function Auditions() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total Auditionees" value={stats.total}   icon={Mic2}         color="purple" />
@@ -81,7 +81,7 @@ export default function Auditions() {
 
       {/* Toolbar */}
       <div className="card p-4 flex flex-wrap items-center gap-3">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search auditionees..." className="w-60" />
+        <SearchBar value={search} onChange={setSearch} placeholder="Search auditionees..." className="w-full sm:w-60" />
         <div className="flex gap-1">
           {['All','Passed','Failed','Pending'].map((s) => (
             <button key={s} onClick={() => setStatusFilter(s)}
@@ -101,6 +101,7 @@ export default function Auditions() {
 
       {/* Table */}
       <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -151,6 +152,7 @@ export default function Auditions() {
             })}
           </tbody>
         </table>
+        </div>
         {filtered.length === 0 && <EmptyState icon={Mic2} title="No auditionees found" description="Register auditionees or adjust your filters." />}
       </div>
 

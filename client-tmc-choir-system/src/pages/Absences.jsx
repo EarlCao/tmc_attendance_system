@@ -52,7 +52,7 @@ export default function Absences() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Pending Review" value={counts.Pending}  icon={Clock}        color="yellow" />
@@ -62,9 +62,9 @@ export default function Absences() {
 
       {/* Tabs + Filters */}
       <div className="card">
-        <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-gray-100">
+        <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 px-5 py-4">
           {/* Tabs */}
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+          <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
             {['Pending','Approved','Rejected'].map((t) => (
               <button
                 key={t}
@@ -81,7 +81,7 @@ export default function Absences() {
             ))}
           </div>
 
-          <SearchBar value={search} onChange={setSearch} placeholder="Search member..." className="w-52" />
+          <SearchBar value={search} onChange={setSearch} placeholder="Search member..." className="w-full sm:w-52" />
 
           <select
             value={voiceFilter}
@@ -95,7 +95,7 @@ export default function Absences() {
         {/* List */}
         <div className="divide-y divide-gray-50">
           {filtered.map((excuse) => (
-            <div key={excuse.id} className="flex items-start gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
+            <div key={excuse.id} className="flex flex-col gap-4 px-5 py-4 transition-colors hover:bg-gray-50/50 sm:flex-row sm:items-start">
               <Avatar name={excuse.memberName} voicePart={excuse.voicePart} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -113,7 +113,7 @@ export default function Absences() {
                   <p className="text-[10px] text-orange-500 mt-1 italic">Note: {excuse.notes}</p>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getStatusColor(excuse.status)}`}>
                   {excuse.status}
                 </span>
