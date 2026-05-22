@@ -8,10 +8,11 @@ import {
   ListPlus,
   MapPin,
   Save,
+  SlidersHorizontal,
   Trash2,
   XCircle,
 } from 'lucide-react'
-import { activeSemester, attendanceSessions, members, semesters } from '../data/mockData'
+import { activeSemester, attendanceSessions, members, officerAssignments, semesters } from '../data/mockData'
 import { cn, formatDateShort, getVoicePartColor } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Badge from '../components/common/Badge'
@@ -22,7 +23,21 @@ import StatCard from '../components/common/StatCard'
 
 const STATUS_OPTIONS = ['Present', 'Late', 'Absent', 'Excused']
 const SESSION_TYPES = ['Practice', 'Performance', 'Audition', 'Meeting', 'Other']
+const MEMBER_SORTS = [
+  { value: 'name-asc', label: 'Name A-Z' },
+  { value: 'name-desc', label: 'Name Z-A' },
+  { value: 'officers-first', label: 'Officers first' },
+  { value: 'voice-asc', label: 'Voice part' },
+  { value: 'status-asc', label: 'Attendance status' },
+]
+const SESSION_SORTS = [
+  { value: 'date-desc', label: 'Newest first' },
+  { value: 'date-asc', label: 'Oldest first' },
+  { value: 'title-asc', label: 'Title A-Z' },
+  { value: 'type-asc', label: 'Type' },
+]
 const statusIcon = { Present: CheckCircle2, Late: Clock, Absent: XCircle, Excused: FileText }
+const officerMap = Object.fromEntries(officerAssignments.map((officer) => [officer.memberId, officer.position]))
 
 const newSessionForm = {
   title: '',
@@ -55,6 +70,14 @@ function countStatuses(attendance = {}) {
   }
 }
 
+function compareText(a, b) {
+  return a.localeCompare(b, undefined, { sensitivity: 'base' })
+}
+
+function sessionTimestamp(session) {
+  return new Date(`${session.date}T${session.time || '00:00'}`).getTime()
+}
+
 export default function Attendance() {
   const [selectedSemId, setSelectedSemId] = useState(activeSemester?.id ?? semesters[semesters.length - 1].id)
   const [sessions, setSessions] = useState(() =>
@@ -71,16 +94,41 @@ export default function Attendance() {
   const [notesBySession, setNotesBySession] = useState(() => buildSessionNotes(attendanceSessions))
   const [search, setSearch] = useState('')
   const [voiceFilter, setVoiceFilter] = useState('All')
+  const [officerFilter, setOfficerFilter] = useState('All')
+  const [memberSort, setMemberSort] = useState('officers-first')
+  const [sessionSearch, setSessionSearch] = useState('')
+  const [sessionTypeFilter, setSessionTypeFilter] = useState('All')
+  const [sessionSort, setSessionSort] = useState('date-desc')
   const [createModal, setCreateModal] = useState(false)
   const [sessionForm, setSessionForm] = useState(newSessionForm)
   const [notesModal, setNotesModal] = useState(null)
   const [noteText, setNoteText] = useState('')
   const [saved, setSaved] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
+  const selectedSemester = semesters.find((semester) => semester.id === selectedSemId)
+  const readOnly = selectedSemester?.status !== 'active'
   const semesterSessions = useMemo(
     () => sessions.filter((session) => session.semesterId === selectedSemId),
     [sessions, selectedSemId]
   )
+  const visibleSessions = useMemo(() => {
+    return semesterSessions
+      .filter((session) => {
+        const normalizedSearch = sessionSearch.toLowerCase()
+        const matchSearch = session.title.toLowerCase().includes(normalizedSearch) ||
+          session.location.toLowerCase().includes(normalizedSearch) ||
+          session.type.toLowerCase().includes(normalizedSearch)
+        const matchType = sessionTypeFilter === 'All' || session.type === sessionTypeFilter
+        return matchSearch && matchType
+      })
+      .sort((a, b) => {
+        if (sessionSort === 'date-asc') return sessionTimestamp(a) - sessionTimestamp(b)
+        if (sessionSort === 'title-asc') return compareText(a.title, b.title)
+        if (sessionSort === 'type-asc') return compareText(a.type, b.type) || sessionTimestamp(b) - sessionTimestamp(a)
+        return sessionTimestamp(b) - sessionTimestamp(a)
+      })
+  }, [semesterSessions, sessionSearch, sessionSort, sessionTypeFilter])
   const selectedSession = sessions.find((session) => session.id === selectedSessionId)
   const currentAttendance = selectedSession ? attendanceBySession[selectedSession.id] ?? {} : {}
   const currentNotes = selectedSession ? notesBySession[selectedSession.id] ?? {} : {}
@@ -106,20 +154,39 @@ export default function Attendance() {
   }, [attendanceBySession, semesterSessions])
 
   const filteredMembers = useMemo(() =>
-    members.filter((member) => {
+    members
+      .filter((member) => {
       const matchSearch = member.name.toLowerCase().includes(search.toLowerCase())
       const matchVoice = voiceFilter === 'All' || member.voicePart === voiceFilter
-      return matchSearch && matchVoice
+      const isOfficer = !!officerMap[member.id]
+      const matchOfficer = officerFilter === 'All' ||
+        (officerFilter === 'Officers' && isOfficer) ||
+        (officerFilter === 'Members' && !isOfficer)
+      return matchSearch && matchVoice && matchOfficer
+    })
+      .sort((a, b) => {
+        if (memberSort === 'name-desc') return compareText(b.name, a.name)
+        if (memberSort === 'officers-first') {
+          const officerRank = Number(!!officerMap[b.id]) - Number(!!officerMap[a.id])
+          return officerRank || compareText(a.name, b.name)
+        }
+        if (memberSort === 'voice-asc') return compareText(a.voicePart, b.voicePart) || compareText(a.name, b.name)
+        if (memberSort === 'status-asc') {
+          return compareText(currentAttendance[a.id] ?? '', currentAttendance[b.id] ?? '') || compareText(a.name, b.name)
+        }
+        return compareText(a.name, b.name)
     }),
-    [search, voiceFilter]
+    [currentAttendance, memberSort, officerFilter, search, voiceFilter]
   )
 
   function openCreateModal() {
+    if (readOnly) return
     setSessionForm(newSessionForm)
     setCreateModal(true)
   }
 
   function handleCreateSession() {
+    if (readOnly) return
     const id = Date.now()
     const session = {
       ...sessionForm,
@@ -138,6 +205,7 @@ export default function Attendance() {
   }
 
   function deleteSession(sessionId) {
+    if (readOnly) return
     setSessions((prev) => prev.filter((session) => session.id !== sessionId))
     setAttendanceBySession((prev) => {
       const next = { ...prev }
@@ -150,10 +218,11 @@ export default function Attendance() {
       return next
     })
     if (selectedSessionId === sessionId) setSelectedSessionId(null)
+    setDeleteConfirm(null)
   }
 
   function setStatus(memberId, status) {
-    if (!selectedSession) return
+    if (!selectedSession || readOnly) return
     setAttendanceBySession((prev) => ({
       ...prev,
       [selectedSession.id]: {
@@ -165,7 +234,7 @@ export default function Attendance() {
   }
 
   function markAll(status) {
-    if (!selectedSession) return
+    if (!selectedSession || readOnly) return
     const updated = {}
     filteredMembers.forEach((member) => { updated[member.id] = status })
     setAttendanceBySession((prev) => ({
@@ -179,7 +248,7 @@ export default function Attendance() {
   }
 
   function handleSave() {
-    if (!selectedSession) return
+    if (!selectedSession || readOnly) return
     setSessions((prev) => prev.map((session) =>
       session.id === selectedSession.id ? { ...session, saved: true } : session
     ))
@@ -194,7 +263,7 @@ export default function Attendance() {
   }
 
   function saveNote() {
-    if (!selectedSession || !notesModal) return
+    if (!selectedSession || !notesModal || readOnly) return
     setNotesBySession((prev) => ({
       ...prev,
       [selectedSession.id]: {
@@ -214,19 +283,27 @@ export default function Attendance() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Attendance sessions</p>
               <h2 className="mt-1 text-2xl font-bold text-gray-900">Meeting attendance list</h2>
-              <p className="mt-1 text-sm text-gray-500">Create a meeting session, then open it to mark member attendance.</p>
+              <p className="mt-1 text-sm text-gray-500">
+                {readOnly ? 'This semester is archived. Attendance sheets can be viewed only.' : 'Create a meeting session, then open it to mark member attendance.'}
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={selectedSemId}
-                onChange={(event) => setSelectedSemId(Number(event.target.value))}
+                onChange={(event) => {
+                  setSelectedSemId(Number(event.target.value))
+                  setSelectedSessionId(null)
+                }}
                 className="input w-auto text-xs"
               >
                 {semesters.map((semester) => (
                   <option key={semester.id} value={semester.id}>{semester.name}</option>
                 ))}
               </select>
-              <button onClick={openCreateModal} className="btn-primary">
+              {readOnly && (
+                <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600">View only</span>
+              )}
+              <button onClick={openCreateModal} disabled={readOnly} className="btn-primary">
                 <ListPlus size={15} /> Add Session
               </button>
             </div>
@@ -241,18 +318,36 @@ export default function Attendance() {
         </div>
 
         <div className="card overflow-hidden">
-          <div className="panel-header">
+          <div className="panel-header flex-wrap">
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Session List</h3>
               <p className="text-xs text-gray-500">Each meeting has its own attendance sheet.</p>
             </div>
-            <button onClick={openCreateModal} className="btn-secondary text-xs">
-              <ListPlus size={14} /> New
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <SearchBar value={sessionSearch} onChange={setSessionSearch} placeholder="Search sessions..." className="w-full sm:w-52" />
+              <select
+                value={sessionTypeFilter}
+                onChange={(event) => setSessionTypeFilter(event.target.value)}
+                className="input w-auto text-xs"
+              >
+                <option value="All">All Types</option>
+                {SESSION_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+              <select
+                value={sessionSort}
+                onChange={(event) => setSessionSort(event.target.value)}
+                className="input w-auto text-xs"
+              >
+                {SESSION_SORTS.map((sort) => <option key={sort.value} value={sort.value}>{sort.label}</option>)}
+              </select>
+              <button onClick={openCreateModal} disabled={readOnly} className="btn-secondary text-xs disabled:cursor-not-allowed disabled:opacity-50">
+                <ListPlus size={14} /> New
+              </button>
+            </div>
           </div>
 
           <div className="divide-y divide-gray-50">
-            {semesterSessions.map((session) => {
+            {visibleSessions.map((session) => {
               const sessionCounts = countStatuses(attendanceBySession[session.id])
               return (
                 <div key={session.id} className="flex flex-col gap-4 px-5 py-4 hover:bg-gray-50/70 lg:flex-row lg:items-center">
@@ -282,9 +377,10 @@ export default function Attendance() {
                       Open Sheet
                     </button>
                     <button
-                      onClick={() => deleteSession(session.id)}
+                      onClick={() => setDeleteConfirm(session)}
+                      disabled={readOnly}
                       className="rounded-lg border border-gray-200 p-2 text-gray-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500"
-                      title="Delete session"
+                      title={readOnly ? 'Archived semester sessions cannot be deleted' : 'Delete session'}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -294,11 +390,11 @@ export default function Attendance() {
             })}
           </div>
 
-          {semesterSessions.length === 0 && (
+          {visibleSessions.length === 0 && (
             <EmptyState
               icon={CalendarDays}
-              title="No attendance sessions yet"
-              description="Create the first meeting session for this semester."
+              title={semesterSessions.length === 0 ? 'No attendance sessions yet' : 'No sessions match your filters'}
+              description={semesterSessions.length === 0 ? 'Create the first meeting session for this semester.' : 'Try changing the search, type, or sort controls.'}
             />
           )}
         </div>
@@ -374,6 +470,30 @@ export default function Attendance() {
             </div>
           </div>
         </Modal>
+
+        <Modal
+          open={!!deleteConfirm}
+          onClose={() => setDeleteConfirm(null)}
+          title="Delete Attendance Session"
+          size="sm"
+          footer={
+            <>
+              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
+              <button onClick={() => deleteSession(deleteConfirm.id)} className="btn-danger">Delete Session</button>
+            </>
+          }
+        >
+          {deleteConfirm && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                Delete <span className="font-semibold text-gray-900">{deleteConfirm.title}</span>? This will remove the session and its attendance records from this list.
+              </p>
+              <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                This action cannot be undone.
+              </div>
+            </div>
+          )}
+        </Modal>
       </div>
     )
   }
@@ -392,13 +512,14 @@ export default function Attendance() {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-2xl font-bold text-gray-900">{selectedSession.title}</h2>
               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{selectedSession.type}</span>
+              {readOnly && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">View only</span>}
             </div>
             <p className="mt-1 text-sm text-gray-500">
               {formatDateShort(selectedSession.date)}{selectedSession.time ? ` at ${selectedSession.time}` : ''}
               {selectedSession.location ? ` - ${selectedSession.location}` : ''}
             </p>
           </div>
-          <button onClick={handleSave} className="btn-primary">
+          <button onClick={handleSave} disabled={readOnly} className="btn-primary">
             <Save size={15} /> {saved ? 'Saved!' : 'Save Attendance'}
           </button>
         </div>
@@ -428,13 +549,33 @@ export default function Attendance() {
               </button>
             ))}
           </div>
+          <select
+            value={officerFilter}
+            onChange={(event) => setOfficerFilter(event.target.value)}
+            className="input w-auto text-xs"
+          >
+            <option value="All">All Members</option>
+            <option value="Officers">Officers Only</option>
+            <option value="Members">Non-officers</option>
+          </select>
+          <div className="flex items-center gap-1">
+            <SlidersHorizontal size={14} className="text-gray-400" />
+            <select
+              value={memberSort}
+              onChange={(event) => setMemberSort(event.target.value)}
+              className="input w-auto text-xs"
+            >
+              {MEMBER_SORTS.map((sort) => <option key={sort.value} value={sort.value}>{sort.label}</option>)}
+            </select>
+          </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <span className="text-xs text-gray-500">Bulk mark:</span>
             {STATUS_OPTIONS.map((status) => (
               <button
                 key={status}
                 onClick={() => markAll(status)}
-                className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50"
+                disabled={readOnly}
+                className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 All {status}
               </button>
@@ -446,19 +587,25 @@ export default function Attendance() {
           {filteredMembers.map((member) => {
             const status = currentAttendance[member.id]
             const hasNote = !!currentNotes[member.id]
+            const officerPosition = officerMap[member.id]
             return (
               <div key={member.id} className="flex flex-col gap-3 px-5 py-3 transition-colors hover:bg-gray-50/50 sm:flex-row sm:items-center sm:gap-4">
                 <Avatar name={member.name} voicePart={member.voicePart} size="md" />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {member.name}{officerPosition ? ` (${officerPosition})` : ''}
+                    </p>
                     {member.status === 'inactive' && <Badge variant="default">Inactive</Badge>}
                   </div>
                   <div className="mt-0.5 flex items-center gap-2">
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${getVoicePartColor(member.voicePart)}`}>
                       {member.voicePart}
                     </span>
+                    {officerPosition && (
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">Officer</span>
+                    )}
                     {hasNote && (
                       <span className="inline-flex items-center gap-1 text-[10px] text-blue-500">
                         <FileText size={10} /> Note added
@@ -475,8 +622,9 @@ export default function Attendance() {
                         key={option}
                         onClick={() => setStatus(member.id, option)}
                         title={option}
+                        disabled={readOnly}
                         className={cn(
-                          'flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all',
+                          'flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-75',
                           status === option
                             ? option === 'Present' ? 'border-green-300 bg-green-100 text-green-700'
                             : option === 'Late' ? 'border-yellow-300 bg-yellow-100 text-yellow-700'
@@ -500,7 +648,7 @@ export default function Attendance() {
                       ? 'border-blue-200 bg-blue-50 text-blue-500'
                       : 'border-gray-200 text-gray-400 hover:border-gray-300'
                   )}
-                  title="Add note"
+                  title={readOnly ? 'View note' : 'Add note'}
                 >
                   <FileText size={13} />
                 </button>
@@ -522,7 +670,7 @@ export default function Attendance() {
         footer={
           <>
             <button onClick={() => setNotesModal(null)} className="btn-secondary">Cancel</button>
-            <button onClick={saveNote} className="btn-primary">Save Note</button>
+            {!readOnly && <button onClick={saveNote} className="btn-primary">Save Note</button>}
           </>
         }
       >
@@ -530,8 +678,9 @@ export default function Attendance() {
         <textarea
           value={noteText}
           onChange={(event) => setNoteText(event.target.value)}
+          readOnly={readOnly}
           rows={4}
-          placeholder="Enter attendance note or absence reason..."
+          placeholder={readOnly ? 'No note recorded.' : 'Enter attendance note or absence reason...'}
           className="input resize-none"
         />
       </Modal>

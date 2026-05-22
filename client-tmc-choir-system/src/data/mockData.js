@@ -9,6 +9,15 @@ export const semesters = [
 
 export const activeSemester = semesters.find((s) => s.status === 'active')
 
+// ─── OFFICERS ───────────────────────────────────────────────────────────────
+export const officerAssignments = [
+  { memberId: 16, position: 'President' },
+  { memberId: 6, position: 'Vice President' },
+  { memberId: 8, position: 'Secretary' },
+  { memberId: 10, position: 'Treasurer' },
+  { memberId: 1, position: 'Auditor' },
+]
+
 // ─── MEMBERS ────────────────────────────────────────────────────────────────
 export const members = [
   { id: 1,  name: 'Reign Van Kylle Israel',     voicePart: 'Soprano', email: 'reign.israel@email.com',     phone: '09171234001', status: 'active',   attendanceRate: 94, present: 17, late: 1, absent: 0, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
