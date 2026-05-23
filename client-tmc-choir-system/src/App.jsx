@@ -78,6 +78,15 @@ function getSemesterJudges(semester, semesterAuditionees) {
   return judges.filter((judge) => judge.semesterId === semester.id || judgeIdsFromRatings.has(judge.id) || defaultActiveSemester)
 }
 
+function getAuditionAverage(ratings) {
+  if (!ratings.length) return null
+  const categories = ['vocalQuality', 'pitchAccuracy', 'tone', 'rhythm', 'confidence', 'stagePresence']
+  const total = ratings.reduce((sum, rating) => (
+    sum + categories.reduce((categorySum, category) => categorySum + rating[category], 0) / categories.length
+  ), 0)
+  return (total / ratings.length).toFixed(1)
+}
+
 function formatSemesterRange(semester) {
   if (!semester.startDate && !semester.endDate) return 'Dates not set'
   if (!semester.startDate) return `Until ${formatDateShort(semester.endDate)}`
@@ -903,6 +912,7 @@ function Officers({ semesterList = semesters, currentSemester = activeSemester }
   }))
   const [officerModal, setOfficerModal] = useState(false)
   const [editingOfficer, setEditingOfficer] = useState(null)
+  const [deleteOfficerConfirm, setDeleteOfficerConfirm] = useState(null)
   const [officerForm, setOfficerForm] = useState({
     name: '',
     position: '',
@@ -945,6 +955,7 @@ function Officers({ semesterList = semesters, currentSemester = activeSemester }
 
   function handleDeleteOfficer(id) {
     setOfficerList((prev) => prev.filter((officer) => officer.id !== id))
+    setDeleteOfficerConfirm(null)
   }
 
   return (
@@ -997,7 +1008,7 @@ function Officers({ semesterList = semesters, currentSemester = activeSemester }
                     <td className="px-5 py-3 text-right">
                       <div className="flex justify-end gap-1">
                         <button onClick={() => openOfficerModal(officer)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Pencil size={13} /></button>
-                        <button onClick={() => handleDeleteOfficer(officer.id)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 size={13} /></button>
+                        <button onClick={() => setDeleteOfficerConfirm(officer)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -1060,14 +1071,40 @@ function Officers({ semesterList = semesters, currentSemester = activeSemester }
           </div>
         </div>
       </Modal>
+
+      <Modal
+        open={!!deleteOfficerConfirm}
+        onClose={() => setDeleteOfficerConfirm(null)}
+        title="Remove Officer"
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => setDeleteOfficerConfirm(null)} className="btn-secondary">Cancel</button>
+            <button onClick={() => handleDeleteOfficer(deleteOfficerConfirm.id)} className="btn-danger">Yes, Remove</button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          Are you sure you want to remove <strong>{deleteOfficerConfirm?.name}</strong> as <strong>{deleteOfficerConfirm?.position}</strong>? This action cannot be undone.
+        </p>
+      </Modal>
     </div>
   )
 }
 
-function Reports() {
+function Reports({ currentSemester }) {
+  const [preparedReport, setPreparedReport] = useState(null)
   const totalAuditions = auditionees.length
   const passedAuditions = auditionees.filter((auditionee) => auditionee.status === 'Passed').length
   const averageAttendance = Math.round(members.reduce((sum, member) => sum + member.attendanceRate, 0) / members.length)
+  const activeMembers = members.filter((member) => member.status === 'active')
+  const pendingExcuses = excuses.filter((excuse) => excuse.status === 'Pending')
+  const reportTypes = [
+    { id: 'attendance', title: 'Semester Attendance Report', details: 'Member totals for present, late, absent, excused, attendance rate, and session history.' },
+    { id: 'auditions', title: 'Audition Evaluation Report', details: 'Auditionee status, assigned judges, per-category ratings, comments, and final recommendation.' },
+    { id: 'officers', title: 'Officers Report', details: 'Officer list by semester, positions, contact details, duties, and active/inactive status.' },
+    { id: 'excuses', title: 'Absence and Excuse Report', details: 'Excuse requests with reasons, review status, notes, and affected attendance sessions.' },
+  ]
 
   return (
     <div className="page-shell">
@@ -1095,12 +1132,7 @@ function Reports() {
         </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        {[
-          { title: 'Semester Attendance Report', details: 'Member totals for present, late, absent, excused, attendance rate, and session history.' },
-          { title: 'Audition Evaluation Report', details: 'Auditionee status, assigned judges, per-category ratings, comments, and final recommendation.' },
-          { title: 'Officers Report', details: 'Officer list by semester, positions, contact details, duties, and active/inactive status.' },
-          { title: 'Absence and Excuse Report', details: 'Excuse requests with reasons, review status, notes, and affected attendance sessions.' },
-        ].map((report) => (
+        {reportTypes.map((report) => (
           <div key={report.title} className="card p-5">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
@@ -1109,12 +1141,158 @@ function Reports() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-900">{report.title}</h3>
                 <p className="mt-1 text-sm text-gray-500">{report.details}</p>
-                <button className="btn-secondary mt-4 text-xs py-1.5">Prepare Report</button>
+                <button onClick={() => setPreparedReport(report)} className="btn-secondary mt-4 text-xs py-1.5">
+                  <FileText size={12} /> Prepare Report
+                </button>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      <Modal
+        open={!!preparedReport}
+        onClose={() => setPreparedReport(null)}
+        title={preparedReport?.title ?? 'Prepared Report'}
+        size="2xl"
+        footer={
+          <>
+            <button onClick={() => setPreparedReport(null)} className="btn-secondary">Close</button>
+            <button onClick={() => window.print()} className="btn-primary">Print Report</button>
+          </>
+        }
+      >
+        {preparedReport && (
+          <div className="space-y-5">
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Prepared for</p>
+              <h3 className="mt-1 text-base font-bold text-gray-900">{currentSemester?.name ?? activeSemester?.name ?? 'Current semester'}</h3>
+              <p className="mt-1 text-sm text-gray-500">Trinidad Municipal College Choir</p>
+              <p className="mt-1 text-xs text-gray-400">Generated from the current system records.</p>
+            </div>
+
+            {preparedReport.id === 'attendance' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Members</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{members.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Active</p>
+                    <p className="mt-1 text-lg font-bold text-green-600">{activeMembers.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Sessions</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{attendanceSessions.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Avg Attendance</p>
+                    <p className="mt-1 text-lg font-bold text-blue-600">{averageAttendance}%</p>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-lg border border-gray-100">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-xs text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Member</th>
+                        <th className="px-4 py-3 text-left">Voice Part</th>
+                        <th className="px-4 py-3 text-left">Present</th>
+                        <th className="px-4 py-3 text-left">Late</th>
+                        <th className="px-4 py-3 text-left">Absent</th>
+                        <th className="px-4 py-3 text-left">Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {members.map((member) => (
+                        <tr key={member.id}>
+                          <td className="px-4 py-3 font-medium text-gray-900">{member.name}</td>
+                          <td className="px-4 py-3 text-gray-500">{member.voicePart}</td>
+                          <td className="px-4 py-3 text-gray-500">{member.present}</td>
+                          <td className="px-4 py-3 text-gray-500">{member.late}</td>
+                          <td className="px-4 py-3 text-gray-500">{member.absent}</td>
+                          <td className="px-4 py-3 font-semibold text-gray-900">{member.attendanceRate}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {preparedReport.id === 'auditions' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Auditionees</p><p className="mt-1 text-lg font-bold text-gray-900">{totalAuditions}</p></div>
+                  <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Passed</p><p className="mt-1 text-lg font-bold text-green-600">{passedAuditions}</p></div>
+                  <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Failed</p><p className="mt-1 text-lg font-bold text-red-600">{auditionees.filter((item) => item.status === 'Failed').length}</p></div>
+                  <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pending</p><p className="mt-1 text-lg font-bold text-yellow-600">{auditionees.filter((item) => item.status === 'Pending').length}</p></div>
+                </div>
+                <div className="space-y-3">
+                  {auditionees.map((auditionee) => (
+                    <div key={auditionee.id} className="rounded-lg border border-gray-100 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900">{auditionee.name}</h4>
+                          <p className="mt-1 text-xs text-gray-500">{auditionee.targetPart} · {formatDateShort(auditionee.auditionDate)}</p>
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(auditionee.status)}`}>{auditionee.status}</span>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">Average rating: {getAuditionAverage(auditionee.ratings) ?? 'Not rated'}</p>
+                      <div className="mt-3 space-y-2">
+                        {auditionee.ratings.map((rating) => (
+                          <p key={rating.judgeId} className="rounded-lg bg-gray-50 p-2 text-xs text-gray-600">
+                            <strong>{rating.judgeName}:</strong> {rating.comments || 'No comment recorded.'}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {preparedReport.id === 'officers' && (
+              <div className="space-y-3">
+                {officerAssignments.map((assignment) => {
+                  const member = members.find((item) => item.id === assignment.memberId)
+                  return (
+                    <div key={assignment.memberId} className="rounded-lg border border-gray-100 p-4">
+                      <h4 className="text-sm font-semibold text-gray-900">{assignment.position}</h4>
+                      <p className="mt-1 text-sm text-gray-700">{member?.name ?? 'Unassigned'}</p>
+                      <p className="mt-1 text-xs text-gray-500">{member?.email} · {member?.phone}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {preparedReport.id === 'excuses' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total</p><p className="mt-1 text-lg font-bold text-gray-900">{excuses.length}</p></div>
+                  <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Approved</p><p className="mt-1 text-lg font-bold text-green-600">{excuses.filter((item) => item.status === 'Approved').length}</p></div>
+                  <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pending</p><p className="mt-1 text-lg font-bold text-yellow-600">{pendingExcuses.length}</p></div>
+                </div>
+                <div className="space-y-3">
+                  {excuses.map((excuse) => (
+                    <div key={excuse.id} className="rounded-lg border border-gray-100 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900">{excuse.memberName}</h4>
+                          <p className="mt-1 text-xs text-gray-500">{formatDateShort(excuse.date)} · {excuse.reason}</p>
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(excuse.status)}`}>{excuse.status}</span>
+                      </div>
+                      {excuse.notes && <p className="mt-2 text-xs text-gray-500">{excuse.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
@@ -1137,6 +1315,7 @@ function SettingsPage() {
   const [ruleModal, setRuleModal] = useState(false)
   const [editingRule, setEditingRule] = useState(null)
   const [ruleForm, setRuleForm] = useState({ title: '', category: 'General', description: '', status: 'active' })
+  const [deleteRuleConfirm, setDeleteRuleConfirm] = useState(null)
 
   function openRuleModal(rule) {
     if (rule) {
@@ -1162,6 +1341,7 @@ function SettingsPage() {
 
   function handleDeleteRule(id) {
     setRuleList((prev) => prev.filter((rule) => rule.id !== id))
+    setDeleteRuleConfirm(null)
   }
 
   return (
@@ -1196,7 +1376,7 @@ function SettingsPage() {
               </div>
               <div className="mt-3 flex justify-end gap-1 border-t border-gray-50 pt-3">
                 <button onClick={() => openRuleModal(rule)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Pencil size={13} /></button>
-                <button onClick={() => handleDeleteRule(rule.id)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 size={13} /></button>
+                <button onClick={() => setDeleteRuleConfirm(rule)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 size={13} /></button>
               </div>
             </div>
           ))}
@@ -1288,6 +1468,22 @@ function SettingsPage() {
           </div>
         </div>
       </Modal>
+      <Modal
+        open={!!deleteRuleConfirm}
+        onClose={() => setDeleteRuleConfirm(null)}
+        title="Remove Choir Rule"
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => setDeleteRuleConfirm(null)} className="btn-secondary">Cancel</button>
+            <button onClick={() => handleDeleteRule(deleteRuleConfirm.id)} className="btn-danger">Yes, Remove</button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600">
+          Are you sure you want to remove <strong>{deleteRuleConfirm?.title}</strong>? This action cannot be undone.
+        </p>
+      </Modal>
     </div>
   )
 }
@@ -1319,7 +1515,7 @@ export default function App() {
               </RequireActiveSemester>
             }
           />
-          <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester}><Reports /></RequireActiveSemester>} />
+          <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester}><Reports currentSemester={currentSemester} /></RequireActiveSemester>} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route
             path="*"
