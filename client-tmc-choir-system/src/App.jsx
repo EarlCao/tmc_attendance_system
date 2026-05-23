@@ -4,7 +4,6 @@ import { BarChart3, CalendarDays, CheckCircle2, Clock, Eye, FileText, Lock, Penc
 import MainLayout from './layouts/MainLayout'
 import Dashboard from './pages/Dashboard'
 import Attendance from './pages/Attendance'
-import Absences from './pages/Absences'
 import Members from './pages/Members'
 import Auditions from './pages/Auditions'
 import Modal from './components/common/Modal'
@@ -40,6 +39,14 @@ function summarizeAttendance(records) {
 
 function getSessionSummary(sessionId, records) {
   return summarizeAttendance(records.filter((record) => record.sessionId === sessionId))
+}
+
+function getSessionRecords(sessionId, records) {
+  return records.filter((record) => record.sessionId === sessionId)
+}
+
+function getMemberAttendanceSummary(memberId, records) {
+  return summarizeAttendance(records.filter((record) => record.memberId === memberId))
 }
 
 function getSemesterExcuses(semester) {
@@ -87,6 +94,16 @@ function Semesters() {
         ? members.filter((member) => officerMap[member.id])
         : [],
     [selectedSemester]
+  )
+  const selectedMemberSummaries = useMemo(
+    () =>
+      selectedSemester
+        ? members.map((member) => ({
+          ...member,
+          attendanceSummary: getMemberAttendanceSummary(member.id, selectedAttendance),
+        }))
+        : [],
+    [selectedAttendance, selectedSemester]
   )
 
   return (
@@ -242,6 +259,7 @@ function Semesters() {
                   </div>
                   <div className="divide-y divide-gray-100">
                     {selectedSessions.map((session) => {
+                      const sessionRecords = getSessionRecords(session.id, selectedAttendance)
                       const summary = getSessionSummary(session.id, selectedAttendance)
                       const total = Object.values(summary).reduce((sum, value) => sum + value, 0) || 1
                       return (
@@ -263,6 +281,43 @@ function Semesters() {
                               </div>
                             ))}
                           </div>
+                          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                            {(['Present', 'Late', 'Absent', 'Excused']).map((status) => {
+                              const statusRecords = sessionRecords.filter((record) => record.status === status)
+
+                              return (
+                                <div key={status} className="rounded-lg border border-gray-100 p-3">
+                                  <div className="mb-2 flex items-center justify-between gap-2">
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${getAttendanceColor(status)}`}>
+                                      {status}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">{statusRecords.length} members</span>
+                                  </div>
+                                  <div className="space-y-2">
+                                    {statusRecords.map((record) => (
+                                      <div key={record.id} className="text-xs">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="font-medium text-gray-800">{record.memberName}</span>
+                                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${getVoicePartColor(record.voicePart)}`}>
+                                            {record.voicePart}
+                                          </span>
+                                        </div>
+                                        {(record.notes || record.excuseReason) && (
+                                          <p className="mt-1 text-gray-400">{record.notes || record.excuseReason}</p>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {statusRecords.length === 0 && (
+                                      <p className="text-xs text-gray-400">No members under this status.</p>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                          {session.notes && (
+                            <p className="mt-3 rounded-lg bg-gray-50 p-3 text-xs text-gray-500">Session notes: {session.notes}</p>
+                          )}
                         </div>
                       )
                     })}
@@ -307,36 +362,33 @@ function Semesters() {
             {selectedTab === 'People' && (
               <div className="space-y-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Officers involved</p>
-                  <div className="space-y-2">
-                    {selectedOfficers.map((member) => (
-                      <div key={member.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={member.name} voicePart={member.voicePart} size="sm" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                            <p className="text-xs text-gray-500">{member.course} · {member.yearLevel}</p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-medium text-blue-600">{officerMap[member.id]}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Choir members included</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Choir members and officers included</p>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {members.map((member) => (
+                    {selectedMemberSummaries.map((member) => (
                       <div key={member.id} className="rounded-lg border border-gray-100 p-3">
                         <div className="flex items-start gap-3">
                           <Avatar name={member.name} voicePart={member.voicePart} size="sm" />
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
+                              {officerMap[member.id] && (
+                                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                                  {officerMap[member.id]}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-500">{member.course} · {member.yearLevel}</p>
                             <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${getVoicePartColor(member.voicePart)}`}>
                               {member.voicePart}
                             </span>
+                            <div className="mt-3 grid grid-cols-4 gap-1">
+                              {(['Present', 'Late', 'Absent', 'Excused']).map((status) => (
+                                <div key={status} className={`rounded-md px-1.5 py-1 text-center text-[10px] font-medium ${getAttendanceColor(status)}`}>
+                                  <p>{status}</p>
+                                  <p className="text-xs font-bold">{member.attendanceSummary[status]}</p>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -408,7 +460,6 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/semesters" element={<Semesters />} />
           <Route path="/attendance" element={<Attendance />} />
-          <Route path="/absences" element={<Absences />} />
           <Route path="/members" element={<Members />} />
           <Route path="/auditions" element={<Auditions />} />
           <Route path="/judges" element={<Judges />} />

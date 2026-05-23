@@ -3,10 +3,8 @@ import { UserPlus, LayoutGrid, List, Pencil, Trash2, Phone, Mail, MapPin } from 
 import { members as initialMembers } from '../data/mockData'
 import { getVoicePartColor, getStatusColor, cn } from '../lib/utils'
 import SearchBar from '../components/common/SearchBar'
-import Badge from '../components/common/Badge'
 import Avatar from '../components/common/Avatar'
 import Modal from '../components/common/Modal'
-import StatCard from '../components/common/StatCard'
 import EmptyState from '../components/common/EmptyState'
 
 const VOICE_PARTS = ['Soprano', 'Alto', 'Tenor', 'Bass']

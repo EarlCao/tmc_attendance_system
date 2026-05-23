@@ -6,7 +6,6 @@ const crumbMap = {
   '/':           'Dashboard',
   '/semesters':  'Semester Management',
   '/attendance': 'Attendance Management',
-  '/absences':   'Absences & Excuses',
   '/members':    'Choir Members',
   '/auditions':  'Audition Management',
   '/judges':     'Judge Management',

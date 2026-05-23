@@ -1,17 +1,15 @@
 import { useNavigate } from 'react-router-dom'
 import {
-  Users, CheckCircle2, XCircle, Clock, CalendarDays,
-  ClipboardList, Mic2, ArrowRight, TrendingUp, BarChart3,
-  FileX2, AlertCircle,
+  Users, CheckCircle2, XCircle, CalendarDays,
+  ClipboardList, Mic2, ArrowRight, BarChart3,
 } from 'lucide-react'
 import StatCard from '../components/common/StatCard'
-import Badge from '../components/common/Badge'
 import Avatar from '../components/common/Avatar'
 import {
   members, getDashboardStats, upcomingActivities,
   attendanceSessions, auditionees, activeSemester,
 } from '../data/mockData'
-import { formatDateShort, getVoicePartColor, getStatusColor } from '../lib/utils'
+import { formatDateShort, getStatusColor } from '../lib/utils'
 
 const stats = getDashboardStats()
 
@@ -41,7 +39,7 @@ export default function Dashboard() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Operations overview</p>
           <h2 className="mt-1 text-2xl font-bold text-gray-900">Welcome back, Admin</h2>
-          <p className="mt-1 text-sm text-gray-500">Monitor attendance, members, auditions, and pending excuse reviews in one place.</p>
+          <p className="mt-1 text-sm text-gray-500">Monitor attendance, members, auditions, and semester activity in one place.</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => navigate('/attendance')} className="btn-primary">
@@ -56,7 +54,7 @@ export default function Dashboard() {
         <StatCard label="Total Members"     value={stats.totalMembers}     icon={Users}        color="blue"   sub={`${stats.activeMembers} active`} />
         <StatCard label="Present Today"     value={stats.presentToday}     icon={CheckCircle2} color="green"  sub="Last session" />
         <StatCard label="Absent Today"      value={stats.absentToday}      icon={XCircle}      color="red"    sub="Last session" />
-        <StatCard label="Pending Excuses"   value={stats.pendingExcuses}   icon={AlertCircle}  color="yellow" sub="Awaiting review" />
+        <StatCard label="Active Semester"   value={activeSemester?.status === 'active' ? 'Open' : 'Closed'} icon={CalendarDays} color="yellow" sub={activeSemester?.name ?? 'No active semester'} />
       </div>
 
       {/* Row 2 */}
@@ -198,7 +196,6 @@ export default function Dashboard() {
             { label: 'New Audition',         icon: Mic2,          to: '/auditions',  color: 'btn-secondary' },
             { label: 'View Reports',         icon: BarChart3,     to: '/reports',    color: 'btn-secondary' },
             { label: 'Manage Semesters',     icon: CalendarDays,  to: '/semesters',  color: 'btn-secondary' },
-            { label: 'Review Excuses',       icon: FileX2,        to: '/absences',   color: 'btn-secondary' },
           ].map(({ label, icon: Icon, to, color }) => (
             <button key={label} onClick={() => navigate(to)} className={color}>
               <Icon size={14} /> {label}

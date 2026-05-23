@@ -3,7 +3,7 @@ export const semesters = [
   { id: 1, name: '1st Semester SY 2023-2024', startDate: '2023-08-07', endDate: '2023-12-15', status: 'archived', totalSessions: 24 },
   { id: 2, name: '2nd Semester SY 2023-2024', startDate: '2024-01-08', endDate: '2024-05-31', status: 'archived', totalSessions: 22 },
   { id: 3, name: '1st Semester SY 2024-2025', startDate: '2024-08-05', endDate: '2024-12-20', status: 'archived', totalSessions: 26 },
-  { id: 4, name: '2nd Semester SY 2024-2025', startDate: '2025-01-06', endDate: '2025-05-30', status: 'archived', totalSessions: 24 },
+  { id: 4, name: '2nd Semester SY 2024-2025', startDate: '2025-01-06', endDate: '2025-05-30', status: 'archived', totalSessions: 5 },
   { id: 5, name: '1st Semester SY 2025-2026', startDate: '2025-08-04', endDate: '2025-12-19', status: 'active', totalSessions: 18 },
 ]
 
@@ -44,6 +44,11 @@ export const members = [
 
 // ─── ATTENDANCE SESSIONS ────────────────────────────────────────────────────
 export const attendanceSessions = [
+  { id: 401, date: '2025-01-13', semesterId: 4, type: 'Practice', notes: 'Opening rehearsal for 2nd semester' },
+  { id: 402, date: '2025-02-03', semesterId: 4, type: 'Practice', notes: 'Sectional rehearsal for hymn arrangement' },
+  { id: 403, date: '2025-03-10', semesterId: 4, type: 'Meeting', notes: 'Choir planning and attendance policy review' },
+  { id: 404, date: '2025-04-07', semesterId: 4, type: 'Performance', notes: 'Lenten program performance' },
+  { id: 405, date: '2025-05-19', semesterId: 4, type: 'Practice', notes: 'Final rehearsal and semester wrap-up' },
   { id: 1, date: '2025-08-04', semesterId: 5, type: 'Practice', notes: 'Opening rehearsal for 1st sem' },
   { id: 2, date: '2025-08-11', semesterId: 5, type: 'Practice', notes: '' },
   { id: 3, date: '2025-08-18', semesterId: 5, type: 'Practice', notes: '' },
@@ -55,25 +60,39 @@ export const attendanceSessions = [
 ]
 
 // ─── ATTENDANCE RECORDS ──────────────────────────────────────────────────────
-const statusPool = ['Present','Present','Present','Present','Late','Absent','Present']
+const statusPool = ['Present','Present','Present','Present','Late','Absent','Excused']
 function rndStatus() { return statusPool[Math.floor(Math.random() * statusPool.length)] }
 
+function statusNote(status) {
+  if (status === 'Late') return 'Arrived after warm-up.'
+  if (status === 'Absent') return 'No attendance mark for this session.'
+  if (status === 'Excused') return 'Excuse noted for review or approval.'
+  return ''
+}
+
 export const attendanceRecords = attendanceSessions.flatMap((session) =>
-  members.map((member) => ({
-    id: `${session.id}-${member.id}`,
-    sessionId: session.id,
-    memberId: member.id,
-    memberName: member.name,
-    voicePart: member.voicePart,
-    status: rndStatus(),
-    notes: '',
-    excuseReason: '',
-    date: session.date,
-  }))
+  members.map((member) => {
+    const status = rndStatus()
+
+    return {
+      id: `${session.id}-${member.id}`,
+      sessionId: session.id,
+      memberId: member.id,
+      memberName: member.name,
+      voicePart: member.voicePart,
+      status,
+      notes: statusNote(status),
+      excuseReason: status === 'Excused' ? 'Academic or family reason submitted.' : '',
+      date: session.date,
+    }
+  })
 )
 
 // ─── ABSENCES & EXCUSES ─────────────────────────────────────────────────────
 export const excuses = [
+  { id: 101, memberId: 5,  memberName: 'Catherine Terce',          voicePart: 'Alto',    date: '2025-02-03', reason: 'Academic requirement — scheduled class presentation.', status: 'Approved', submittedAt: '2025-02-02', reviewedAt: '2025-02-03', notes: 'Approved by choir adviser.' },
+  { id: 102, memberId: 11, memberName: 'John Lee Ranque',          voicePart: 'Tenor',   date: '2025-03-10', reason: 'Medical appointment — follow-up check-up.', status: 'Approved', submittedAt: '2025-03-09', reviewedAt: '2025-03-10', notes: 'With appointment slip.' },
+  { id: 103, memberId: 17, memberName: 'Kristopher Jay Garcia',    voicePart: 'Bass',    date: '2025-04-07', reason: 'Family obligation — out of town travel.', status: 'Rejected', submittedAt: '2025-04-06', reviewedAt: '2025-04-07', notes: 'Performance attendance was required.' },
   { id: 1, memberId: 4,  memberName: 'Grace Dela Cruz',  voicePart: 'Soprano', date: '2025-08-25', reason: 'Family emergency — hospitalization of parent.', status: 'Approved', submittedAt: '2025-08-24', reviewedAt: '2025-08-25', notes: 'With supporting document.' },
   { id: 2, memberId: 7,  memberName: 'Joy Fernandez',    voicePart: 'Alto',    date: '2025-09-08', reason: 'Academic exam — midterm examination schedule.', status: 'Approved', submittedAt: '2025-09-07', reviewedAt: '2025-09-08', notes: '' },
   { id: 3, memberId: 11, memberName: 'Paolo Cruz',       voicePart: 'Tenor',   date: '2025-09-15', reason: 'Medical appointment — scheduled check-up.', status: 'Pending',  submittedAt: '2025-09-14', reviewedAt: null, notes: '' },
