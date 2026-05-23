@@ -1128,13 +1128,79 @@ function SettingsPage() {
     passingRating: 7,
     archiveMode: 'Lock ended semesters',
   })
+  const [ruleList, setRuleList] = useState([
+    { id: 1, title: 'Attendance Requirement', category: 'Attendance', description: 'Members must attend regular practices, performances, meetings, and required choir activities unless excused by the adviser or officers.', status: 'active' },
+    { id: 2, title: 'Absence Notification', category: 'Attendance', description: 'Members should submit absence or excuse reasons before the scheduled activity whenever possible.', status: 'active' },
+    { id: 3, title: 'Performance Discipline', category: 'Conduct', description: 'Members must observe proper decorum, attire, punctuality, and respect during performances and official choir engagements.', status: 'active' },
+    { id: 4, title: 'Audition and Membership', category: 'Membership', description: 'New members must complete the audition process and comply with choir standards before being accepted into the group.', status: 'active' },
+  ])
+  const [ruleModal, setRuleModal] = useState(false)
+  const [editingRule, setEditingRule] = useState(null)
+  const [ruleForm, setRuleForm] = useState({ title: '', category: 'General', description: '', status: 'active' })
+
+  function openRuleModal(rule) {
+    if (rule) {
+      setEditingRule(rule)
+      setRuleForm({ ...rule })
+    } else {
+      setEditingRule(null)
+      setRuleForm({ title: '', category: 'General', description: '', status: 'active' })
+    }
+    setRuleModal(true)
+  }
+
+  function handleSaveRule() {
+    if (!ruleForm.title.trim()) return
+
+    if (editingRule) {
+      setRuleList((prev) => prev.map((rule) => rule.id === editingRule.id ? { ...rule, ...ruleForm } : rule))
+    } else {
+      setRuleList((prev) => [...prev, { ...ruleForm, id: Date.now() }])
+    }
+    setRuleModal(false)
+  }
+
+  function handleDeleteRule(id) {
+    setRuleList((prev) => prev.filter((rule) => rule.id !== id))
+  }
 
   return (
     <div className="page-shell">
       <div className="card p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">System setup</p>
         <h2 className="mt-1 text-2xl font-bold text-gray-900">Settings</h2>
-        <p className="mt-1 text-sm text-gray-500">Use this area for choir profile details, attendance rules, audition scoring defaults, and semester locking behavior.</p>
+        <p className="mt-1 text-sm text-gray-500">Use this area for choir profile details, lifetime choir rules, audition scoring defaults, and semester locking behavior.</p>
+      </div>
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Choir Rules and Regulations</h3>
+            <p className="mt-1 text-sm text-gray-500">These are lifetime choir policies. They are not tied to a semester and remain part of the organization record.</p>
+          </div>
+          <button onClick={() => openRuleModal()} className="btn-primary">
+            <Plus size={14} /> Add Rule
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {ruleList.map((rule) => (
+            <div key={rule.id} className="rounded-lg border border-gray-100 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm font-semibold text-gray-900">{rule.title}</h4>
+                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">{rule.category}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">{rule.description}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${getStatusColor(rule.status)}`}>{rule.status}</span>
+              </div>
+              <div className="mt-3 flex justify-end gap-1 border-t border-gray-50 pt-3">
+                <button onClick={() => openRuleModal(rule)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Pencil size={13} /></button>
+                <button onClick={() => handleDeleteRule(rule.id)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 size={13} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="card p-5">
@@ -1178,6 +1244,50 @@ function SettingsPage() {
           </div>
         </div>
       </div>
+      <Modal
+        open={ruleModal}
+        onClose={() => setRuleModal(false)}
+        title={editingRule ? 'Edit Choir Rule' : 'Add Choir Rule'}
+        size="md"
+        footer={
+          <>
+            <button onClick={() => setRuleModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={handleSaveRule} className="btn-primary">Save Rule</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="label">Rule Title *</label>
+            <input className="input" value={ruleForm.title} onChange={e => setRuleForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Attendance Requirement" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Category</label>
+              <select className="input" value={ruleForm.category} onChange={e => setRuleForm(p => ({ ...p, category: e.target.value }))}>
+                <option>General</option>
+                <option>Attendance</option>
+                <option>Conduct</option>
+                <option>Membership</option>
+                <option>Auditions</option>
+                <option>Performances</option>
+                <option>Officers</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Status</label>
+              <select className="input" value={ruleForm.status} onChange={e => setRuleForm(p => ({ ...p, status: e.target.value }))}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label">Rule / Regulation Details</label>
+            <textarea className="input min-h-32 resize-y" value={ruleForm.description} onChange={e => setRuleForm(p => ({ ...p, description: e.target.value }))} placeholder="Write the rule, policy, or regulation here" />
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

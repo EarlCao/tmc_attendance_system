@@ -55,6 +55,11 @@ const emptyRatingForm = {
   comments: '',
 }
 
+const emptyEvaluationForm = {
+  auditioneeId: '',
+  ...emptyRatingForm,
+}
+
 export default function Auditions() {
   const [auditionees, setAuditionees] = useState(initialAuditionees)
   const [search, setSearch]           = useState('')
@@ -62,9 +67,12 @@ export default function Auditions() {
   const [partFilter, setPartFilter]   = useState('All')
   const [evalModal, setEvalModal]     = useState(null)
   const [addModal, setAddModal]       = useState(false)
+  const [editModal, setEditModal]     = useState(null)
   const [form, setForm]               = useState(emptyForm)
   const [ratingForm, setRatingForm]   = useState(emptyRatingForm)
   const [editingRatingId, setEditingRatingId] = useState(null)
+  const [evaluationModal, setEvaluationModal] = useState(false)
+  const [evaluationForm, setEvaluationForm] = useState(emptyEvaluationForm)
 
   const filtered = useMemo(() =>
     auditionees.filter((a) => {
@@ -94,6 +102,26 @@ export default function Auditions() {
     const newEntry = { ...form, id: Date.now(), age: Number(form.age), status: 'Pending', ratings: [] }
     setAuditionees(prev => [...prev, newEntry])
     setAddModal(false)
+    setForm(emptyForm)
+  }
+
+  function openEditAuditionee(auditionee) {
+    setEditModal(auditionee)
+    setForm({ ...auditionee, age: String(auditionee.age ?? '') })
+  }
+
+  function handleEditAuditionee() {
+    if (!editModal) return
+
+    const nextAuditionee = {
+      ...editModal,
+      ...form,
+      age: Number(form.age),
+    }
+
+    setAuditionees((prev) => prev.map((auditionee) => auditionee.id === editModal.id ? nextAuditionee : auditionee))
+    setEvalModal((prev) => prev?.id === editModal.id ? nextAuditionee : prev)
+    setEditModal(null)
     setForm(emptyForm)
   }
 
@@ -152,6 +180,44 @@ export default function Auditions() {
     resetRatingForm()
   }
 
+  function openEvaluationModal(auditionee) {
+    const targetAuditionee = auditionee ?? filtered[0] ?? auditionees[0]
+    const ratedJudgeIds = new Set(targetAuditionee?.ratings.map((rating) => rating.judgeId))
+    const nextJudge = judges.find((judge) => !ratedJudgeIds.has(judge.id)) ?? judges[0]
+
+    setEvaluationForm({
+      ...emptyEvaluationForm,
+      auditioneeId: targetAuditionee ? String(targetAuditionee.id) : '',
+      judgeId: nextJudge ? String(nextJudge.id) : '',
+    })
+    setEvaluationModal(true)
+  }
+
+  function handleSaveEvaluation() {
+    const auditionee = auditionees.find((item) => item.id === Number(evaluationForm.auditioneeId))
+    const judge = judges.find((item) => item.id === Number(evaluationForm.judgeId))
+    if (!auditionee || !judge) return
+
+    const nextRating = {
+      judgeId: judge.id,
+      judgeName: judge.name,
+      ...Object.fromEntries(CATEGORIES.map((cat) => [cat, Number(evaluationForm[cat]) || 0])),
+      comments: evaluationForm.comments,
+    }
+    const nextAuditionee = {
+      ...auditionee,
+      ratings: [
+        ...auditionee.ratings.filter((rating) => rating.judgeId !== judge.id),
+        nextRating,
+      ],
+    }
+
+    setAuditionees((prev) => prev.map((item) => item.id === auditionee.id ? nextAuditionee : item))
+    setEvalModal((prev) => prev?.id === auditionee.id ? nextAuditionee : prev)
+    setEvaluationModal(false)
+    setEvaluationForm(emptyEvaluationForm)
+  }
+
   return (
     <div className="page-shell">
       {/* Stats */}
@@ -177,9 +243,14 @@ export default function Auditions() {
           <option value="All">All Parts</option>
           {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
         </select>
-        <button onClick={() => setAddModal(true)} className="btn-primary ml-auto">
-          <UserPlus size={14}/> Register Auditionee
-        </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button onClick={() => openEvaluationModal()} disabled={auditionees.length === 0} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
+            <Star size={14}/> Add Evaluation
+          </button>
+          <button onClick={() => setAddModal(true)} className="btn-primary">
+            <UserPlus size={14}/> Register Auditionee
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -228,9 +299,17 @@ export default function Auditions() {
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getStatusColor(a.status)}`}>{a.status}</span>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <button onClick={() => setEvalModal(a)} className="btn-secondary text-xs py-1.5">
-                      <Eye size={12}/> Evaluation
-                    </button>
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => openEditAuditionee(a)} className="btn-secondary text-xs py-1.5">
+                        <Pencil size={12}/> Edit
+                      </button>
+                      <button onClick={() => openEvaluationModal(a)} className="btn-secondary text-xs py-1.5">
+                        <Star size={12}/> Add
+                      </button>
+                      <button onClick={() => setEvalModal(a)} className="btn-secondary text-xs py-1.5">
+                        <Eye size={12}/> Evaluation
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )
@@ -415,9 +494,101 @@ export default function Auditions() {
         )}
       </Modal>
 
+      {/* Add Evaluation Modal */}
+      <Modal
+        open={evaluationModal}
+        onClose={() => {
+          setEvaluationModal(false)
+          setEvaluationForm(emptyEvaluationForm)
+        }}
+        title="Add Judge Evaluation"
+        size="lg"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setEvaluationModal(false)
+                setEvaluationForm(emptyEvaluationForm)
+              }}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button onClick={handleSaveEvaluation} className="btn-primary">Save Evaluation</button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="label">Auditionee *</label>
+              <select
+                className="input"
+                value={evaluationForm.auditioneeId}
+                onChange={e => {
+                  const auditionee = auditionees.find((item) => item.id === Number(e.target.value))
+                  const ratedJudgeIds = new Set(auditionee?.ratings.map((rating) => rating.judgeId))
+                  const nextJudge = judges.find((judge) => !ratedJudgeIds.has(judge.id)) ?? judges[0]
+
+                  setEvaluationForm(p => ({
+                    ...p,
+                    auditioneeId: e.target.value,
+                    judgeId: nextJudge ? String(nextJudge.id) : '',
+                  }))
+                }}
+              >
+                {auditionees.map((auditionee) => (
+                  <option key={auditionee.id} value={auditionee.id}>{auditionee.name} - {auditionee.targetPart}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Judge *</label>
+              <select
+                className="input"
+                value={evaluationForm.judgeId}
+                onChange={e => setEvaluationForm(p => ({ ...p, judgeId: e.target.value }))}
+              >
+                {judges.map((judge) => (
+                  <option key={judge.id} value={judge.id}>{judge.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-gray-50 p-3">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {CATEGORIES.map((cat) => (
+                <div key={cat}>
+                  <label className="label">{CATEGORY_LABELS[cat]}</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={evaluationForm[cat]}
+                    onChange={e => setEvaluationForm(p => ({ ...p, [cat]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Notes / Comments / Evaluation</label>
+            <textarea
+              className="input min-h-28 resize-y"
+              value={evaluationForm.comments}
+              onChange={e => setEvaluationForm(p => ({ ...p, comments: e.target.value }))}
+              placeholder="Type the judge's comments, recommendation, or evaluation notes"
+            />
+          </div>
+        </div>
+      </Modal>
+
       {/* Add Modal */}
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Register New Auditionee" size="md"
-        footer={<><button onClick={() => setAddModal(false)} className="btn-secondary">Cancel</button><button onClick={handleAdd} className="btn-primary">Register</button></>}>
+        footer={<><button onClick={() => { setAddModal(false); setForm(emptyForm) }} className="btn-secondary">Cancel</button><button onClick={handleAdd} className="btn-primary">Register</button></>}>
         <div className="space-y-3">
           <div>
             <label className="label">Full Name *</label>
@@ -477,6 +648,72 @@ export default function Auditions() {
           <div>
             <label className="label">Audition Date</label>
             <input className="input" type="date" value={form.auditionDate} onChange={e => setForm(p => ({...p, auditionDate: e.target.value}))} />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Registry Modal */}
+      <Modal open={!!editModal} onClose={() => { setEditModal(null); setForm(emptyForm) }} title="Edit Auditionee Registry" size="md"
+        footer={<><button onClick={() => { setEditModal(null); setForm(emptyForm) }} className="btn-secondary">Cancel</button><button onClick={handleEditAuditionee} className="btn-primary">Save Registry</button></>}>
+        <div className="space-y-3">
+          <div>
+            <label className="label">Full Name *</label>
+            <input className="input" value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="Full name" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Target Voice Part</label>
+              <select className="input" value={form.targetPart} onChange={e => setForm(p => ({...p, targetPart: e.target.value}))}>
+                {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Age</label>
+              <input className="input" type="number" value={form.age} onChange={e => setForm(p => ({...p, age: e.target.value}))} placeholder="Age" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Course</label>
+              <select className="input" value={form.course} onChange={e => setForm(p => ({...p, course: e.target.value}))}>
+                <option value="">Select course</option>
+                {(form.course && !COURSE_OPTIONS.includes(form.course) ? [form.course, ...COURSE_OPTIONS] : COURSE_OPTIONS).map((course) => <option key={course} value={course}>{course}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Year Level</label>
+              <select className="input" value={form.yearLevel} onChange={e => setForm(p => ({...p, yearLevel: e.target.value}))}>
+                <option value="">Select year</option>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label">Religion / Denomination</label>
+            <input className="input" value={form.religionDenomination ?? ''} onChange={e => setForm(p => ({...p, religionDenomination: e.target.value}))} placeholder="e.g. Roman Catholic" />
+          </div>
+          <div>
+            <label className="label">Contact Number</label>
+            <input className="input" value={form.contact ?? ''} onChange={e => setForm(p => ({...p, contact: e.target.value}))} placeholder="09XXXXXXXXX" />
+          </div>
+          <div>
+            <label className="label">Email/FB Acct</label>
+            <input className="input" value={form.email ?? ''} onChange={e => setForm(p => ({...p, email: e.target.value}))} placeholder="email or Facebook account" />
+          </div>
+          <div>
+            <label className="label">Address</label>
+            <input className="input" value={form.address ?? ''} onChange={e => setForm(p => ({...p, address: e.target.value}))} placeholder="City, Province" />
+          </div>
+          <div>
+            <label className="label">Registry Notes</label>
+            <textarea className="input min-h-24 resize-y" value={form.notes ?? ''} onChange={e => setForm(p => ({...p, notes: e.target.value}))} placeholder="Audition notes, availability, or reminders" />
+          </div>
+          <div>
+            <label className="label">Audition Date</label>
+            <input className="input" type="date" value={form.auditionDate ?? ''} onChange={e => setForm(p => ({...p, auditionDate: e.target.value}))} />
           </div>
         </div>
       </Modal>
