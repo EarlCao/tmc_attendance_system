@@ -10,7 +10,7 @@ import StatCard from '../components/common/StatCard'
 import EmptyState from '../components/common/EmptyState'
 
 const VOICE_PARTS = ['Soprano', 'Alto', 'Tenor', 'Bass']
-const emptyForm = { name: '', voicePart: 'Soprano', email: '', phone: '', address: '', status: 'active' }
+const emptyForm = { name: '', voicePart: 'Soprano', course: '', yearLevel: '', email: '', phone: '', address: '', status: 'active' }
 
 export default function Members() {
   const [memberList, setMemberList] = useState(initialMembers)
@@ -75,6 +75,20 @@ export default function Members() {
           <label className="label">Voice Part *</label>
           <select className="input" value={form.voicePart} onChange={e => setForm(p => ({...p, voicePart: e.target.value}))}>
             {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Course</label>
+          <input className="input" value={form.course} onChange={e => setForm(p => ({...p, course: e.target.value}))} placeholder="e.g. BSIT" />
+        </div>
+        <div>
+          <label className="label">Year Level</label>
+          <select className="input" value={form.yearLevel} onChange={e => setForm(p => ({...p, yearLevel: e.target.value}))}>
+            <option value="">Select year</option>
+            <option value="1st Year">1st Year</option>
+            <option value="2nd Year">2nd Year</option>
+            <option value="3rd Year">3rd Year</option>
+            <option value="4th Year">4th Year</option>
           </select>
         </div>
         <div>
@@ -179,6 +193,7 @@ export default function Members() {
                       <div>
                         <button onClick={() => setProfileDrawer(m)} className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">{m.name}</button>
                         <p className="text-xs text-gray-400">{m.email}</p>
+                        <p className="text-xs text-gray-400">{m.course}{m.yearLevel ? ` • ${m.yearLevel}` : ''}</p>
                       </div>
                     </div>
                   </td>
@@ -233,6 +248,7 @@ export default function Members() {
               </div>
               <button onClick={() => setProfileDrawer(m)} className="text-sm font-semibold text-gray-900 hover:text-blue-600 text-left transition-colors">{m.name}</button>
               <span className={`mt-1 inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${getVoicePartColor(m.voicePart)}`}>{m.voicePart}</span>
+              <p className="mt-1 text-[11px] text-gray-500">{m.course}{m.yearLevel ? ` • ${m.yearLevel}` : ''}</p>
               <div className="mt-3 space-y-1">
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500"><Mail size={11}/>{m.email}</div>
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500"><Phone size={11}/>{m.phone}</div>
@@ -267,6 +283,7 @@ export default function Members() {
               <Avatar name={profileDrawer.name} voicePart={profileDrawer.voicePart} size="xl" />
               <h3 className="text-lg font-bold text-gray-900 mt-3">{profileDrawer.name}</h3>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getVoicePartColor(profileDrawer.voicePart)}`}>{profileDrawer.voicePart}</span>
+              <p className="mt-2 text-sm text-gray-500">{profileDrawer.course}{profileDrawer.yearLevel ? ` • ${profileDrawer.yearLevel}` : ''}</p>
             </div>
             <div className="p-6 space-y-4">
               <div>

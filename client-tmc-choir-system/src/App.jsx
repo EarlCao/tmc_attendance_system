@@ -1,13 +1,53 @@
+import { useMemo, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { BarChart3, CalendarDays, Settings, UserCheck } from 'lucide-react'
+import { BarChart3, CalendarDays, CheckCircle2, Clock, Eye, FileText, Lock, Pencil, Settings, UserCheck, Users, XCircle } from 'lucide-react'
 import MainLayout from './layouts/MainLayout'
 import Dashboard from './pages/Dashboard'
 import Attendance from './pages/Attendance'
 import Absences from './pages/Absences'
 import Members from './pages/Members'
 import Auditions from './pages/Auditions'
-import { activeSemester, judges, semesters } from './data/mockData'
-import { formatDateShort, getStatusColor } from './lib/utils'
+import Modal from './components/common/Modal'
+import Avatar from './components/common/Avatar'
+import { activeSemester, attendanceRecords, attendanceSessions, excuses, judges, members, officerAssignments, semesters } from './data/mockData'
+import { cn, formatDateShort, getAttendanceColor, getStatusColor, getVoicePartColor } from './lib/utils'
+
+const semesterTabs = ['Overview', 'Attendance', 'Sessions', 'People']
+const attendanceIcons = {
+  Present: CheckCircle2,
+  Late: Clock,
+  Absent: XCircle,
+  Excused: FileText,
+}
+
+const officerMap = Object.fromEntries(officerAssignments.map((officer) => [officer.memberId, officer.position]))
+
+function getSemesterSessions(semesterId) {
+  return attendanceSessions.filter((session) => session.semesterId === semesterId)
+}
+
+function getSemesterAttendance(semesterId) {
+  const sessionIds = new Set(getSemesterSessions(semesterId).map((session) => session.id))
+  return attendanceRecords.filter((record) => sessionIds.has(record.sessionId))
+}
+
+function summarizeAttendance(records) {
+  return records.reduce((summary, record) => {
+    summary[record.status] = (summary[record.status] || 0) + 1
+    return summary
+  }, { Present: 0, Late: 0, Absent: 0, Excused: 0 })
+}
+
+function getSessionSummary(sessionId, records) {
+  return summarizeAttendance(records.filter((record) => record.sessionId === sessionId))
+}
+
+function getSemesterExcuses(semester) {
+  return excuses.filter((excuse) => {
+    const date = excuse.date.slice(0, 10)
+    return date >= semester.startDate && date <= semester.endDate
+  })
+}
 
 function PlaceholderPage({ icon: Icon, title, description }) {
   return (
@@ -22,28 +62,292 @@ function PlaceholderPage({ icon: Icon, title, description }) {
 }
 
 function Semesters() {
+  const [selectedSemester, setSelectedSemester] = useState(null)
+  const [selectedTab, setSelectedTab] = useState('Overview')
+
+  const selectedSessions = useMemo(
+    () => (selectedSemester ? getSemesterSessions(selectedSemester.id) : []),
+    [selectedSemester]
+  )
+  const selectedAttendance = useMemo(
+    () => (selectedSemester ? getSemesterAttendance(selectedSemester.id) : []),
+    [selectedSemester]
+  )
+  const selectedAttendanceSummary = useMemo(
+    () => summarizeAttendance(selectedAttendance),
+    [selectedAttendance]
+  )
+  const selectedExcuses = useMemo(
+    () => (selectedSemester ? getSemesterExcuses(selectedSemester) : []),
+    [selectedSemester]
+  )
+  const selectedOfficers = useMemo(
+    () =>
+      selectedSemester
+        ? members.filter((member) => officerMap[member.id])
+        : [],
+    [selectedSemester]
+  )
+
   return (
     <div className="page-shell">
+      <div className="card p-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Semester records</p>
+          <h2 className="mt-1 text-2xl font-bold text-gray-900">Semester Management</h2>
+          <p className="mt-1 text-sm text-gray-500">Ended semesters remain available for viewing, but archived records cannot be edited.</p>
+        </div>
+      </div>
+
       <div className="grid gap-4">
-        {semesters.map((semester) => (
-          <div key={semester.id} className="card p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900">{semester.name}</h2>
-                <p className="mt-1 text-xs text-gray-500">
-                  {formatDateShort(semester.startDate)} to {formatDateShort(semester.endDate)}
-                </p>
+        {semesters.map((semester) => {
+          const isEnded = semester.status !== 'active'
+
+          return (
+            <div key={semester.id} className="card p-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-sm font-semibold text-gray-900">{semester.name}</h2>
+                    {isEnded && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+                        <Lock size={10} /> View only
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formatDateShort(semester.startDate)} to {formatDateShort(semester.endDate)}
+                  </p>
+                  {isEnded && (
+                    <p className="mt-1 text-xs text-gray-400">This semester has ended and is locked from editing.</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-xs font-medium text-gray-500">{semester.totalSessions} sessions</span>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(semester.status)}`}>
+                    {semester.status === 'active' ? 'Active' : 'Archived'}
+                  </span>
+                  <button onClick={() => { setSelectedSemester(semester); setSelectedTab('Overview') }} className="btn-secondary text-xs py-1.5">
+                    <Eye size={13} /> View
+                  </button>
+                  <button
+                    disabled={isEnded}
+                    title={isEnded ? 'Ended semesters cannot be edited' : 'Edit active semester'}
+                    className="btn-secondary text-xs py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Pencil size={13} /> Edit
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-gray-500">{semester.totalSessions} sessions</span>
-                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(semester.status)}`}>
-                  {semester.status === 'active' ? 'Active' : 'Archived'}
+            </div>
+          )
+        })}
+      </div>
+
+      <Modal
+        open={!!selectedSemester}
+        onClose={() => {
+          setSelectedSemester(null)
+          setSelectedTab('Overview')
+        }}
+        title="Semester Details"
+        size="lg"
+        footer={<button onClick={() => { setSelectedSemester(null); setSelectedTab('Overview') }} className="btn-secondary">Close</button>}
+      >
+        {selectedSemester && (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-gray-50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">{selectedSemester.name}</h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formatDateShort(selectedSemester.startDate)} to {formatDateShort(selectedSemester.endDate)}
+                  </p>
+                </div>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(selectedSemester.status)}`}>
+                  {selectedSemester.status === 'active' ? 'Active' : 'Archived'}
                 </span>
               </div>
             </div>
+
+            <div className="flex flex-wrap gap-2">
+              {semesterTabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setSelectedTab(tab)}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    selectedTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  )}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {selectedTab === 'Overview' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Sessions</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{selectedSessions.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Attendance records</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{selectedAttendance.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Officers involved</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{selectedOfficers.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Excuses logged</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{selectedExcuses.length}</p>
+                  </div>
+                </div>
+
+                {selectedSemester.status !== 'active' && (
+                  <div className="rounded-lg bg-yellow-50 p-3 text-xs text-yellow-800">
+                    This semester has ended. Records can be viewed for history and reports, but editing is locked.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedTab === 'Attendance' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {(['Present', 'Late', 'Absent', 'Excused']).map((status) => {
+                    const Icon = attendanceIcons[status]
+                    const total = selectedAttendance.length || 1
+                    const value = selectedAttendanceSummary[status]
+                    return (
+                      <div key={status} className="rounded-lg border border-gray-100 p-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{status}</p>
+                          <div className={`rounded-full p-1.5 ${getAttendanceColor(status)}`}>
+                            <Icon size={12} />
+                          </div>
+                        </div>
+                        <p className="mt-1 text-lg font-bold text-gray-900">{value}</p>
+                        <p className="text-xs text-gray-400">{Math.round((value / total) * 100)}% of records</p>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="rounded-lg border border-gray-100">
+                  <div className="border-b border-gray-100 px-4 py-3">
+                    <p className="text-sm font-semibold text-gray-900">Attendance by session</p>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {selectedSessions.map((session) => {
+                      const summary = getSessionSummary(session.id, selectedAttendance)
+                      const total = Object.values(summary).reduce((sum, value) => sum + value, 0) || 1
+                      return (
+                        <div key={session.id} className="p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{session.title || session.notes || session.type}</p>
+                              <p className="text-xs text-gray-500">
+                                {formatDateShort(session.date)}{session.time ? ` at ${session.time}` : ''} · {session.location || 'TMC Music Room'}
+                              </p>
+                            </div>
+                            <span className="text-xs text-gray-400">{total} records</span>
+                          </div>
+                          <div className="mt-3 grid grid-cols-4 gap-2">
+                            {(['Present', 'Late', 'Absent', 'Excused']).map((status) => (
+                              <div key={status} className={`rounded-md px-2 py-2 text-center text-[11px] font-medium ${getAttendanceColor(status)}`}>
+                                <p>{status}</p>
+                                <p className="mt-1 text-sm font-bold">{summary[status]}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedTab === 'Sessions' && (
+              <div className="space-y-3">
+                {selectedSessions.map((session) => {
+                  const summary = getSessionSummary(session.id, selectedAttendance)
+                  return (
+                    <div key={session.id} className="rounded-lg border border-gray-100 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{session.title || session.notes || session.type}</p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {formatDateShort(session.date)}{session.time ? ` at ${session.time}` : ''} · {session.type}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-400">{session.location || 'TMC Music Room'}</p>
+                        </div>
+                        <div className="text-right text-xs text-gray-500">
+                          <p>{summary.Present} present</p>
+                          <p>{summary.Late} late</p>
+                          <p>{summary.Absent} absent</p>
+                          <p>{summary.Excused} excused</p>
+                        </div>
+                      </div>
+                      {session.notes && (
+                        <p className="mt-3 text-xs text-gray-600">{session.notes}</p>
+                      )}
+                    </div>
+                  )
+                })}
+                {selectedSessions.length === 0 && (
+                  <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-500">No sessions are linked to this semester yet.</div>
+                )}
+              </div>
+            )}
+
+            {selectedTab === 'People' && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Officers involved</p>
+                  <div className="space-y-2">
+                    {selectedOfficers.map((member) => (
+                      <div key={member.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={member.name} voicePart={member.voicePart} size="sm" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                            <p className="text-xs text-gray-500">{member.course} · {member.yearLevel}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-medium text-blue-600">{officerMap[member.id]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Choir members included</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {members.map((member) => (
+                      <div key={member.id} className="rounded-lg border border-gray-100 p-3">
+                        <div className="flex items-start gap-3">
+                          <Avatar name={member.name} voicePart={member.voicePart} size="sm" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{member.name}</p>
+                            <p className="text-xs text-gray-500">{member.course} · {member.yearLevel}</p>
+                            <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${getVoicePartColor(member.voicePart)}`}>
+                              {member.voicePart}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        ))}
-      </div>
+        )}
+      </Modal>
     </div>
   )
 }
