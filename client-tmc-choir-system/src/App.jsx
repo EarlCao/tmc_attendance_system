@@ -1163,8 +1163,12 @@ function Reports({ currentSemester }) {
         }
       >
         {preparedReport && (
-          <div className="space-y-5">
-            <div className="rounded-lg bg-gray-50 p-4">
+          <div className="print-report space-y-3">
+            <div className="hidden print:block">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">TMC Choir Attendance System</p>
+              <h2 className="mt-1 text-lg font-bold text-gray-900">{preparedReport.title}</h2>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Prepared for</p>
               <h3 className="mt-1 text-base font-bold text-gray-900">{currentSemester?.name ?? activeSemester?.name ?? 'Current semester'}</h3>
               <p className="mt-1 text-sm text-gray-500">Trinidad Municipal College Choir</p>
@@ -1172,7 +1176,7 @@ function Reports({ currentSemester }) {
             </div>
 
             {preparedReport.id === 'attendance' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                   <div className="rounded-lg border border-gray-100 p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Members</p>
@@ -1221,72 +1225,102 @@ function Reports({ currentSemester }) {
             )}
 
             {preparedReport.id === 'auditions' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                   <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Auditionees</p><p className="mt-1 text-lg font-bold text-gray-900">{totalAuditions}</p></div>
                   <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Passed</p><p className="mt-1 text-lg font-bold text-green-600">{passedAuditions}</p></div>
                   <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Failed</p><p className="mt-1 text-lg font-bold text-red-600">{auditionees.filter((item) => item.status === 'Failed').length}</p></div>
                   <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pending</p><p className="mt-1 text-lg font-bold text-yellow-600">{auditionees.filter((item) => item.status === 'Pending').length}</p></div>
                 </div>
-                <div className="space-y-3">
-                  {auditionees.map((auditionee) => (
-                    <div key={auditionee.id} className="rounded-lg border border-gray-100 p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900">{auditionee.name}</h4>
-                          <p className="mt-1 text-xs text-gray-500">{auditionee.targetPart} · {formatDateShort(auditionee.auditionDate)}</p>
-                        </div>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(auditionee.status)}`}>{auditionee.status}</span>
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500">Average rating: {getAuditionAverage(auditionee.ratings) ?? 'Not rated'}</p>
-                      <div className="mt-3 space-y-2">
-                        {auditionee.ratings.map((rating) => (
-                          <p key={rating.judgeId} className="rounded-lg bg-gray-50 p-2 text-xs text-gray-600">
-                            <strong>{rating.judgeName}:</strong> {rating.comments || 'No comment recorded.'}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-hidden rounded-lg border border-gray-100">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-xs text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Auditionee</th>
+                        <th className="px-4 py-3 text-left">Part</th>
+                        <th className="px-4 py-3 text-left">Date</th>
+                        <th className="px-4 py-3 text-left">Status</th>
+                        <th className="px-4 py-3 text-left">Avg</th>
+                        <th className="px-4 py-3 text-left">Judge Comments</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {auditionees.map((auditionee) => (
+                        <tr key={auditionee.id}>
+                          <td className="px-4 py-3 font-medium text-gray-900">{auditionee.name}</td>
+                          <td className="px-4 py-3 text-gray-500">{auditionee.targetPart}</td>
+                          <td className="px-4 py-3 text-gray-500">{formatDateShort(auditionee.auditionDate)}</td>
+                          <td className="px-4 py-3 text-gray-500">{auditionee.status}</td>
+                          <td className="px-4 py-3 text-gray-500">{getAuditionAverage(auditionee.ratings) ?? 'Not rated'}</td>
+                          <td className="px-4 py-3 text-gray-500">
+                            {auditionee.ratings.map((rating) => `${rating.judgeName}: ${rating.comments || 'No comment'}`).join(' | ') || 'No judge comments'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
             {preparedReport.id === 'officers' && (
-              <div className="space-y-3">
-                {officerAssignments.map((assignment) => {
-                  const member = members.find((item) => item.id === assignment.memberId)
-                  return (
-                    <div key={assignment.memberId} className="rounded-lg border border-gray-100 p-4">
-                      <h4 className="text-sm font-semibold text-gray-900">{assignment.position}</h4>
-                      <p className="mt-1 text-sm text-gray-700">{member?.name ?? 'Unassigned'}</p>
-                      <p className="mt-1 text-xs text-gray-500">{member?.email} · {member?.phone}</p>
-                    </div>
-                  )
-                })}
+              <div className="overflow-hidden rounded-lg border border-gray-100">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-xs text-gray-500">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Position</th>
+                      <th className="px-4 py-3 text-left">Officer</th>
+                      <th className="px-4 py-3 text-left">Email</th>
+                      <th className="px-4 py-3 text-left">Phone</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {officerAssignments.map((assignment) => {
+                      const member = members.find((item) => item.id === assignment.memberId)
+                      return (
+                        <tr key={assignment.memberId}>
+                          <td className="px-4 py-3 font-medium text-gray-900">{assignment.position}</td>
+                          <td className="px-4 py-3 text-gray-500">{member?.name ?? 'Unassigned'}</td>
+                          <td className="px-4 py-3 text-gray-500">{member?.email ?? ''}</td>
+                          <td className="px-4 py-3 text-gray-500">{member?.phone ?? ''}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
 
             {preparedReport.id === 'excuses' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-3">
                   <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total</p><p className="mt-1 text-lg font-bold text-gray-900">{excuses.length}</p></div>
                   <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Approved</p><p className="mt-1 text-lg font-bold text-green-600">{excuses.filter((item) => item.status === 'Approved').length}</p></div>
                   <div className="rounded-lg border border-gray-100 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pending</p><p className="mt-1 text-lg font-bold text-yellow-600">{pendingExcuses.length}</p></div>
                 </div>
-                <div className="space-y-3">
-                  {excuses.map((excuse) => (
-                    <div key={excuse.id} className="rounded-lg border border-gray-100 p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900">{excuse.memberName}</h4>
-                          <p className="mt-1 text-xs text-gray-500">{formatDateShort(excuse.date)} · {excuse.reason}</p>
-                        </div>
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(excuse.status)}`}>{excuse.status}</span>
-                      </div>
-                      {excuse.notes && <p className="mt-2 text-xs text-gray-500">{excuse.notes}</p>}
-                    </div>
-                  ))}
+                <div className="overflow-hidden rounded-lg border border-gray-100">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-xs text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Member</th>
+                        <th className="px-4 py-3 text-left">Date</th>
+                        <th className="px-4 py-3 text-left">Reason</th>
+                        <th className="px-4 py-3 text-left">Status</th>
+                        <th className="px-4 py-3 text-left">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {excuses.map((excuse) => (
+                        <tr key={excuse.id}>
+                          <td className="px-4 py-3 font-medium text-gray-900">{excuse.memberName}</td>
+                          <td className="px-4 py-3 text-gray-500">{formatDateShort(excuse.date)}</td>
+                          <td className="px-4 py-3 text-gray-500">{excuse.reason}</td>
+                          <td className="px-4 py-3 text-gray-500">{excuse.status}</td>
+                          <td className="px-4 py-3 text-gray-500">{excuse.notes || ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

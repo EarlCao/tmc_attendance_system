@@ -84,3 +84,157 @@
     @apply text-gray-500;
   }
 }
+
+@media print {
+  @page {
+    size: Letter portrait;
+    margin: 0.22in;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #111827 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body::before {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-report,
+  .print-report * {
+    visibility: visible !important;
+  }
+
+  .print-report {
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    width: 7.8in !important;
+    max-width: 8.05in !important;
+    background: #fff !important;
+    color: #111827 !important;
+    font-size: 7px !important;
+    line-height: 1.08 !important;
+    zoom: 0.76;
+  }
+
+  .print-report,
+  .print-report .space-y-3,
+  .print-report .space-y-4,
+  .print-report .space-y-5 {
+    gap: 0 !important;
+  }
+
+  .print-report > * + *,
+  .print-report .space-y-2 > * + *,
+  .print-report .space-y-3 > * + *,
+  .print-report .space-y-4 > * + *,
+  .print-report .space-y-5 > * + * {
+    margin-top: 2px !important;
+  }
+
+  .print-report .rounded-lg,
+  .print-report .rounded-full {
+    border-radius: 2px !important;
+  }
+
+  .print-report .p-2,
+  .print-report .p-3,
+  .print-report .p-4,
+  .print-report .p-5 {
+    padding: 3px !important;
+  }
+
+  .print-report .px-2,
+  .print-report .px-3,
+  .print-report .px-4,
+  .print-report .py-2,
+  .print-report .py-3 {
+    padding: 2px 3px !important;
+  }
+
+  .print-report h2,
+  .print-report h3,
+  .print-report h4,
+  .print-report p,
+  .print-report span,
+  .print-report th,
+  .print-report td {
+    color: #111827 !important;
+    font-size: 7px !important;
+    line-height: 1.08 !important;
+  }
+
+  .print-report h2 {
+    font-size: 11px !important;
+  }
+
+  .print-report h3,
+  .print-report .text-base,
+  .print-report .text-lg {
+    font-size: 8px !important;
+  }
+
+  .print-report .text-2xl,
+  .print-report .text-xl {
+    font-size: 9px !important;
+  }
+
+  .print-report table {
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+  }
+
+  .print-report th,
+  .print-report td {
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 1px 2px !important;
+    vertical-align: top !important;
+  }
+
+  .print-report tr,
+  .print-report .rounded-lg,
+  .print-report .grid,
+  .print-report table {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-report .grid {
+    display: grid !important;
+  }
+
+  .print-report .lg\:grid-cols-4,
+  .print-report .grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .print-report .lg\:grid-cols-2,
+  .print-report .grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .print-report .grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .print-report .gap-2,
+  .print-report .gap-3,
+  .print-report .gap-4 {
+    gap: 2px !important;
+  }
+
+  .print-report .bg-gray-50,
+  .print-report .bg-blue-50,
+  .print-report .bg-green-100,
+  .print-report .bg-yellow-100,
+  .print-report .bg-red-100 {
+    background: #f9fafb !important;
+  }
+}
