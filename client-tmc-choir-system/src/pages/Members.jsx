@@ -10,7 +10,65 @@ import StatCard from '../components/common/StatCard'
 import EmptyState from '../components/common/EmptyState'
 
 const VOICE_PARTS = ['Soprano', 'Alto', 'Tenor', 'Bass']
+const COURSE_OPTIONS = ['BSIT', 'BSOA', 'BSCRIM', 'BSPOL', 'BSCOM', 'BEED', 'BSED']
 const emptyForm = { name: '', voicePart: 'Soprano', course: '', yearLevel: '', email: '', phone: '', address: '', status: 'active' }
+
+function MemberForm({ form, setForm }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className="label">Full Name *</label>
+          <input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Maria Santos" />
+        </div>
+        <div>
+          <label className="label">Voice Part *</label>
+          <select className="input" value={form.voicePart} onChange={e => setForm(p => ({ ...p, voicePart: e.target.value }))}>
+            {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="label">Course</label>
+          <select className="input" value={form.course} onChange={e => setForm(p => ({ ...p, course: e.target.value }))}>
+            <option value="">Select course</option>
+            {(form.course && !COURSE_OPTIONS.includes(form.course) ? [form.course, ...COURSE_OPTIONS] : COURSE_OPTIONS).map((course) => (
+              <option key={course} value={course}>{course}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Year Level</label>
+          <select className="input" value={form.yearLevel} onChange={e => setForm(p => ({ ...p, yearLevel: e.target.value }))}>
+            <option value="">Select year</option>
+            <option value="1st Year">1st Year</option>
+            <option value="2nd Year">2nd Year</option>
+            <option value="3rd Year">3rd Year</option>
+            <option value="4th Year">4th Year</option>
+          </select>
+        </div>
+        <div>
+          <label className="label">Status</label>
+          <select className="input" value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <label className="label">Email/FB Acct</label>
+          <input className="input" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="email or Facebook account" />
+        </div>
+        <div>
+          <label className="label">Phone</label>
+          <input className="input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="09XXXXXXXXX" />
+        </div>
+        <div className="col-span-2">
+          <label className="label">Address</label>
+          <input className="input" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="City, Province" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Members() {
   const [memberList, setMemberList] = useState(initialMembers)
@@ -63,56 +121,6 @@ export default function Members() {
     setDeleteConfirm(null)
     if (profileDrawer?.id === id) setProfileDrawer(null)
   }
-
-  const MemberForm = () => (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className="label">Full Name *</label>
-          <input className="input" value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} placeholder="e.g. Maria Santos" />
-        </div>
-        <div>
-          <label className="label">Voice Part *</label>
-          <select className="input" value={form.voicePart} onChange={e => setForm(p => ({...p, voicePart: e.target.value}))}>
-            {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="label">Course</label>
-          <input className="input" value={form.course} onChange={e => setForm(p => ({...p, course: e.target.value}))} placeholder="e.g. BSIT" />
-        </div>
-        <div>
-          <label className="label">Year Level</label>
-          <select className="input" value={form.yearLevel} onChange={e => setForm(p => ({...p, yearLevel: e.target.value}))}>
-            <option value="">Select year</option>
-            <option value="1st Year">1st Year</option>
-            <option value="2nd Year">2nd Year</option>
-            <option value="3rd Year">3rd Year</option>
-            <option value="4th Year">4th Year</option>
-          </select>
-        </div>
-        <div>
-          <label className="label">Status</label>
-          <select className="input" value={form.status} onChange={e => setForm(p => ({...p, status: e.target.value}))}>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-        <div>
-          <label className="label">Email</label>
-          <input className="input" type="email" value={form.email} onChange={e => setForm(p => ({...p, email: e.target.value}))} placeholder="email@example.com" />
-        </div>
-        <div>
-          <label className="label">Phone</label>
-          <input className="input" value={form.phone} onChange={e => setForm(p => ({...p, phone: e.target.value}))} placeholder="09XXXXXXXXX" />
-        </div>
-        <div className="col-span-2">
-          <label className="label">Address</label>
-          <input className="input" value={form.address} onChange={e => setForm(p => ({...p, address: e.target.value}))} placeholder="City, Province" />
-        </div>
-      </div>
-    </div>
-  )
 
   return (
     <div className="page-shell">
@@ -331,13 +339,13 @@ export default function Members() {
       {/* Add Modal */}
       <Modal open={addModal} onClose={() => setAddModal(false)} title="Add New Member" size="md"
         footer={<><button onClick={() => setAddModal(false)} className="btn-secondary">Cancel</button><button onClick={handleAdd} className="btn-primary">Add Member</button></>}>
-        <MemberForm />
+        <MemberForm form={form} setForm={setForm} />
       </Modal>
 
       {/* Edit Modal */}
       <Modal open={!!editModal} onClose={() => setEditModal(null)} title="Edit Member" size="md"
         footer={<><button onClick={() => setEditModal(null)} className="btn-secondary">Cancel</button><button onClick={handleEdit} className="btn-primary">Save Changes</button></>}>
-        <MemberForm />
+        <MemberForm form={form} setForm={setForm} />
       </Modal>
 
       {/* Delete Confirm */}
