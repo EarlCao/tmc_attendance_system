@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { BarChart3, CalendarDays, CheckCircle2, Clock, Eye, FileText, Lock, Pencil, Settings, UserCheck, Users, XCircle } from 'lucide-react'
+import { BarChart3, CalendarDays, CheckCircle2, Clock, Eye, FileText, Lock, Mail, Pencil, Phone, Plus, Save, Settings, Trash2, UserCheck, Users, XCircle } from 'lucide-react'
 import MainLayout from './layouts/MainLayout'
 import Dashboard from './pages/Dashboard'
 import Attendance from './pages/Attendance'
@@ -8,7 +8,7 @@ import Members from './pages/Members'
 import Auditions from './pages/Auditions'
 import Modal from './components/common/Modal'
 import Avatar from './components/common/Avatar'
-import { activeSemester, attendanceRecords, attendanceSessions, excuses, judges, members, officerAssignments, semesters } from './data/mockData'
+import { activeSemester, attendanceRecords, attendanceSessions, auditionees, excuses, judges, members, officerAssignments, semesters } from './data/mockData'
 import { cn, formatDateShort, getAttendanceColor, getStatusColor, getVoicePartColor } from './lib/utils'
 
 const semesterTabs = ['Overview', 'Attendance', 'Sessions', 'People']
@@ -56,6 +56,13 @@ function getSemesterExcuses(semester) {
   })
 }
 
+function formatSemesterRange(semester) {
+  if (!semester.startDate && !semester.endDate) return 'Dates not set'
+  if (!semester.startDate) return `Until ${formatDateShort(semester.endDate)}`
+  if (!semester.endDate) return `From ${formatDateShort(semester.startDate)}`
+  return `${formatDateShort(semester.startDate)} to ${formatDateShort(semester.endDate)}`
+}
+
 function PlaceholderPage({ icon: Icon, title, description }) {
   return (
     <div className="card p-8 text-center">
@@ -69,8 +76,46 @@ function PlaceholderPage({ icon: Icon, title, description }) {
 }
 
 function Semesters() {
+  const [semesterList, setSemesterList] = useState(semesters)
   const [selectedSemester, setSelectedSemester] = useState(null)
   const [selectedTab, setSelectedTab] = useState('Overview')
+  const [semesterModal, setSemesterModal] = useState(false)
+  const [semesterForm, setSemesterForm] = useState({ name: '', startDate: '', endDate: '' })
+
+  const currentSemester = semesterList.find((semester) => semester.status === 'active')
+
+  function handleEndSemester() {
+    if (!currentSemester) return
+
+    setSemesterList((prev) =>
+      prev.map((semester) =>
+        semester.id === currentSemester.id ? { ...semester, status: 'archived' } : semester
+      )
+    )
+    setSelectedSemester((prev) =>
+      prev?.id === currentSemester.id ? { ...prev, status: 'archived' } : prev
+    )
+  }
+
+  function handleCreateSemester() {
+    if (!semesterForm.name.trim()) return
+
+    const newSemester = {
+      id: Date.now(),
+      name: semesterForm.name.trim(),
+      startDate: semesterForm.startDate,
+      endDate: semesterForm.endDate,
+      status: 'active',
+      totalSessions: 0,
+    }
+
+    setSemesterList((prev) => [
+      ...prev.map((semester) => semester.status === 'active' ? { ...semester, status: 'archived' } : semester),
+      newSemester,
+    ])
+    setSemesterForm({ name: '', startDate: '', endDate: '' })
+    setSemesterModal(false)
+  }
 
   const selectedSessions = useMemo(
     () => (selectedSemester ? getSemesterSessions(selectedSemester.id) : []),
@@ -114,10 +159,23 @@ function Semesters() {
           <h2 className="mt-1 text-2xl font-bold text-gray-900">Semester Management</h2>
           <p className="mt-1 text-sm text-gray-500">Ended semesters remain available for viewing, but archived records cannot be edited.</p>
         </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button onClick={() => setSemesterModal(true)} className="btn-primary">
+            <Plus size={14} /> New Semester
+          </button>
+          <button
+            onClick={handleEndSemester}
+            disabled={!currentSemester}
+            className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
+            title={currentSemester ? 'End the active semester and lock it from editing' : 'No active semester to end'}
+          >
+            <Lock size={14} /> End Current Semester
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-4">
-        {semesters.map((semester) => {
+        {semesterList.map((semester) => {
           const isEnded = semester.status !== 'active'
 
           return (
@@ -133,7 +191,7 @@ function Semesters() {
                     )}
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
-                    {formatDateShort(semester.startDate)} to {formatDateShort(semester.endDate)}
+                    {formatSemesterRange(semester)}
                   </p>
                   {isEnded && (
                     <p className="mt-1 text-xs text-gray-400">This semester has ended and is locked from editing.</p>
@@ -178,7 +236,7 @@ function Semesters() {
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900">{selectedSemester.name}</h3>
                   <p className="mt-1 text-xs text-gray-500">
-                    {formatDateShort(selectedSemester.startDate)} to {formatDateShort(selectedSemester.endDate)}
+                    {formatSemesterRange(selectedSemester)}
                   </p>
                 </div>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(selectedSemester.status)}`}>
@@ -400,55 +458,483 @@ function Semesters() {
           </div>
         )}
       </Modal>
+
+      <Modal
+        open={semesterModal}
+        onClose={() => setSemesterModal(false)}
+        title="Create New Semester"
+        size="md"
+        footer={
+          <>
+            <button onClick={() => setSemesterModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={handleCreateSemester} className="btn-primary">Create Semester</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-700">
+            Creating a new semester will archive the current active semester and lock it as view-only.
+          </div>
+          <div>
+            <label className="label">Semester Name *</label>
+            <input className="input" value={semesterForm.name} onChange={e => setSemesterForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. 2nd Semester SY 2025-2026" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Start Date</label>
+              <input className="input" type="date" value={semesterForm.startDate} onChange={e => setSemesterForm(p => ({ ...p, startDate: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">End Date</label>
+              <input className="input" type="date" value={semesterForm.endDate} onChange={e => setSemesterForm(p => ({ ...p, endDate: e.target.value }))} />
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
 
 function Judges() {
+  const [judgeList, setJudgeList] = useState(judges.map((judge) => ({ ...judge, semesterId: activeSemester?.id })))
+  const [judgeModal, setJudgeModal] = useState(false)
+  const [editingJudge, setEditingJudge] = useState(null)
+  const [judgeForm, setJudgeForm] = useState({
+    name: '',
+    title: '',
+    specialization: '',
+    contact: '',
+    email: '',
+    semesterId: activeSemester?.id ?? semesters[0]?.id,
+    status: 'active',
+  })
+
+  function openJudgeModal(judge) {
+    if (judge) {
+      setEditingJudge(judge)
+      setJudgeForm({ ...judge })
+    } else {
+      setEditingJudge(null)
+      setJudgeForm({
+        name: '',
+        title: '',
+        specialization: '',
+        contact: '',
+        email: '',
+        semesterId: activeSemester?.id ?? semesters[0]?.id,
+        status: 'active',
+      })
+    }
+    setJudgeModal(true)
+  }
+
+  function handleSaveJudge() {
+    if (!judgeForm.name.trim()) return
+
+    if (editingJudge) {
+      setJudgeList((prev) => prev.map((judge) => judge.id === editingJudge.id ? { ...judge, ...judgeForm } : judge))
+    } else {
+      setJudgeList((prev) => [...prev, { ...judgeForm, id: Date.now(), ratingsGiven: 0 }])
+    }
+    setJudgeModal(false)
+  }
+
   return (
-    <div className="page-shell grid gap-4 lg:grid-cols-3">
-      {judges.map((judge) => (
-        <div key={judge.id} className="card p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">{judge.name}</h2>
-              <p className="mt-1 text-xs text-gray-500">{judge.title}</p>
+    <div className="page-shell">
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Audition panel</p>
+            <h2 className="mt-1 text-2xl font-bold text-gray-900">Judges</h2>
+            <p className="mt-1 text-sm text-gray-500">Add the judges assigned to each semester and use Auditions to manually enter their ratings and comments.</p>
+          </div>
+          <button onClick={() => openJudgeModal()} className="btn-primary">
+            <Plus size={14} /> Add Judge
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {judgeList.map((judge) => {
+          const semester = semesters.find((item) => item.id === Number(judge.semesterId))
+
+          return (
+            <div key={judge.id} className="card p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900">{judge.name}</h2>
+                  <p className="mt-1 text-xs text-gray-500">{judge.title || 'Judge'}</p>
+                </div>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(judge.status)}`}>
+                  {judge.status}
+                </span>
+              </div>
+              <div className="mt-4 space-y-2 text-xs text-gray-500">
+                <p>{judge.specialization || 'General audition evaluation'}</p>
+                <p className="flex items-center gap-2"><Mail size={12} /> {judge.email || 'No email listed'}</p>
+                <p className="flex items-center gap-2"><Phone size={12} /> {judge.contact || 'No contact listed'}</p>
+                <p className="rounded-lg bg-gray-50 p-2 text-gray-600">{semester?.name ?? 'Semester not selected'}</p>
+              </div>
+              <div className="mt-4 flex items-center justify-between border-t border-gray-50 pt-3">
+                <span className="text-xs font-medium text-gray-700">{judge.ratingsGiven ?? 0} ratings submitted</span>
+                <button onClick={() => openJudgeModal(judge)} className="btn-secondary text-xs py-1.5">
+                  <Pencil size={12} /> Edit
+                </button>
+              </div>
             </div>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(judge.status)}`}>
-              {judge.status}
-            </span>
+          )
+        })}
+      </div>
+
+      <Modal
+        open={judgeModal}
+        onClose={() => setJudgeModal(false)}
+        title={editingJudge ? 'Edit Judge' : 'Add Judge'}
+        size="md"
+        footer={
+          <>
+            <button onClick={() => setJudgeModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={handleSaveJudge} className="btn-primary">Save Judge</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="label">Name *</label>
+            <input className="input" value={judgeForm.name} onChange={e => setJudgeForm(p => ({ ...p, name: e.target.value }))} placeholder="Judge name" />
           </div>
-          <div className="mt-4 space-y-2 text-xs text-gray-500">
-            <p>{judge.specialization}</p>
-            <p>{judge.email}</p>
-            <p>{judge.contact}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Title / Role</label>
+              <input className="input" value={judgeForm.title} onChange={e => setJudgeForm(p => ({ ...p, title: e.target.value }))} placeholder="Music Director" />
+            </div>
+            <div>
+              <label className="label">Semester</label>
+              <select className="input" value={judgeForm.semesterId} onChange={e => setJudgeForm(p => ({ ...p, semesterId: Number(e.target.value) }))}>
+                {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
+              </select>
+            </div>
           </div>
-          <div className="mt-4 border-t border-gray-50 pt-3 text-xs font-medium text-gray-700">
-            {judge.ratingsGiven} ratings submitted
+          <div>
+            <label className="label">Specialization</label>
+            <input className="input" value={judgeForm.specialization} onChange={e => setJudgeForm(p => ({ ...p, specialization: e.target.value }))} placeholder="Vocal performance, choral conducting" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Contact</label>
+              <input className="input" value={judgeForm.contact} onChange={e => setJudgeForm(p => ({ ...p, contact: e.target.value }))} placeholder="09XXXXXXXXX" />
+            </div>
+            <div>
+              <label className="label">Email / FB</label>
+              <input className="input" value={judgeForm.email} onChange={e => setJudgeForm(p => ({ ...p, email: e.target.value }))} placeholder="email or Facebook account" />
+            </div>
+          </div>
+          <div>
+            <label className="label">Status</label>
+            <select className="input" value={judgeForm.status} onChange={e => setJudgeForm(p => ({ ...p, status: e.target.value }))}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
           </div>
         </div>
-      ))}
+      </Modal>
+    </div>
+  )
+}
+
+function Officers() {
+  const [officerList, setOfficerList] = useState(officerAssignments.map((assignment, index) => {
+    const member = members.find((item) => item.id === assignment.memberId)
+    return {
+      id: index + 1,
+      memberId: assignment.memberId,
+      name: member?.name ?? '',
+      position: assignment.position,
+      semesterId: activeSemester?.id ?? semesters[0]?.id,
+      contact: member?.phone ?? '',
+      email: member?.email ?? '',
+      duties: '',
+      status: 'active',
+    }
+  }))
+  const [officerModal, setOfficerModal] = useState(false)
+  const [editingOfficer, setEditingOfficer] = useState(null)
+  const [officerForm, setOfficerForm] = useState({
+    name: '',
+    position: '',
+    semesterId: activeSemester?.id ?? semesters[0]?.id,
+    contact: '',
+    email: '',
+    duties: '',
+    status: 'active',
+  })
+
+  function openOfficerModal(officer) {
+    if (officer) {
+      setEditingOfficer(officer)
+      setOfficerForm({ ...officer })
+    } else {
+      setEditingOfficer(null)
+      setOfficerForm({
+        name: '',
+        position: '',
+        semesterId: activeSemester?.id ?? semesters[0]?.id,
+        contact: '',
+        email: '',
+        duties: '',
+        status: 'active',
+      })
+    }
+    setOfficerModal(true)
+  }
+
+  function handleSaveOfficer() {
+    if (!officerForm.name.trim() || !officerForm.position.trim()) return
+
+    if (editingOfficer) {
+      setOfficerList((prev) => prev.map((officer) => officer.id === editingOfficer.id ? { ...officer, ...officerForm } : officer))
+    } else {
+      setOfficerList((prev) => [...prev, { ...officerForm, id: Date.now() }])
+    }
+    setOfficerModal(false)
+  }
+
+  function handleDeleteOfficer(id) {
+    setOfficerList((prev) => prev.filter((officer) => officer.id !== id))
+  }
+
+  return (
+    <div className="page-shell">
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Choir leadership</p>
+            <h2 className="mt-1 text-2xl font-bold text-gray-900">Officers</h2>
+            <p className="mt-1 text-sm text-gray-500">Manually add officers, keep their positions, and edit the list per semester.</p>
+          </div>
+          <button onClick={() => openOfficerModal()} className="btn-primary">
+            <Plus size={14} /> Add Officer
+          </button>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/50">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500">Officer</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Position</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Semester</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Contact</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500">Status</th>
+                <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {officerList.map((officer) => {
+                const semester = semesters.find((item) => item.id === Number(officer.semesterId))
+
+                return (
+                  <tr key={officer.id} className="hover:bg-gray-50/50">
+                    <td className="px-5 py-3">
+                      <p className="font-medium text-gray-900">{officer.name}</p>
+                      {officer.duties && <p className="mt-1 text-xs text-gray-400">{officer.duties}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-xs font-medium text-gray-700">{officer.position}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{semester?.name ?? 'No semester'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      <p>{officer.email || 'No email listed'}</p>
+                      <p>{officer.contact || 'No contact listed'}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(officer.status)}`}>{officer.status}</span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => openOfficerModal(officer)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"><Pencil size={13} /></button>
+                        <button onClick={() => handleDeleteOfficer(officer.id)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash2 size={13} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <Modal
+        open={officerModal}
+        onClose={() => setOfficerModal(false)}
+        title={editingOfficer ? 'Edit Officer' : 'Add Officer'}
+        size="md"
+        footer={
+          <>
+            <button onClick={() => setOfficerModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={handleSaveOfficer} className="btn-primary">Save Officer</button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="label">Name *</label>
+            <input className="input" value={officerForm.name} onChange={e => setOfficerForm(p => ({ ...p, name: e.target.value }))} placeholder="Officer name" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Position *</label>
+              <input className="input" value={officerForm.position} onChange={e => setOfficerForm(p => ({ ...p, position: e.target.value }))} placeholder="President" />
+            </div>
+            <div>
+              <label className="label">Semester</label>
+              <select className="input" value={officerForm.semesterId} onChange={e => setOfficerForm(p => ({ ...p, semesterId: Number(e.target.value) }))}>
+                {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Contact</label>
+              <input className="input" value={officerForm.contact} onChange={e => setOfficerForm(p => ({ ...p, contact: e.target.value }))} placeholder="09XXXXXXXXX" />
+            </div>
+            <div>
+              <label className="label">Email / FB</label>
+              <input className="input" value={officerForm.email} onChange={e => setOfficerForm(p => ({ ...p, email: e.target.value }))} placeholder="email or Facebook account" />
+            </div>
+          </div>
+          <div>
+            <label className="label">Duties / Notes</label>
+            <textarea className="input min-h-24 resize-y" value={officerForm.duties} onChange={e => setOfficerForm(p => ({ ...p, duties: e.target.value }))} placeholder="Responsibilities, assignments, reminders" />
+          </div>
+          <div>
+            <label className="label">Status</label>
+            <select className="input" value={officerForm.status} onChange={e => setOfficerForm(p => ({ ...p, status: e.target.value }))}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
 
 function Reports() {
+  const totalAuditions = auditionees.length
+  const passedAuditions = auditionees.filter((auditionee) => auditionee.status === 'Passed').length
+  const averageAttendance = Math.round(members.reduce((sum, member) => sum + member.attendanceRate, 0) / members.length)
+
   return (
-    <PlaceholderPage
-      icon={BarChart3}
-      title="Reports"
-      description={`Attendance and audition summaries are ready to be connected for ${activeSemester?.name ?? 'the active semester'}.`}
-    />
+    <div className="page-shell">
+      <div className="card p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Printable summaries</p>
+        <h2 className="mt-1 text-2xl font-bold text-gray-900">Reports</h2>
+        <p className="mt-1 text-sm text-gray-500">This panel can hold semester-end summaries for attendance, auditions, members, officers, and absences.</p>
+      </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="card p-5">
+          <p className="text-xs font-medium text-gray-500">Average Attendance</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{averageAttendance}%</p>
+        </div>
+        <div className="card p-5">
+          <p className="text-xs font-medium text-gray-500">Active Members</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{members.filter((member) => member.status === 'active').length}</p>
+        </div>
+        <div className="card p-5">
+          <p className="text-xs font-medium text-gray-500">Audition Pass Rate</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{Math.round((passedAuditions / totalAuditions) * 100)}%</p>
+        </div>
+        <div className="card p-5">
+          <p className="text-xs font-medium text-gray-500">Pending Excuses</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{excuses.filter((excuse) => excuse.status === 'Pending').length}</p>
+        </div>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {[
+          { title: 'Semester Attendance Report', details: 'Member totals for present, late, absent, excused, attendance rate, and session history.' },
+          { title: 'Audition Evaluation Report', details: 'Auditionee status, assigned judges, per-category ratings, comments, and final recommendation.' },
+          { title: 'Officers Report', details: 'Officer list by semester, positions, contact details, duties, and active/inactive status.' },
+          { title: 'Absence and Excuse Report', details: 'Excuse requests with reasons, review status, notes, and affected attendance sessions.' },
+        ].map((report) => (
+          <div key={report.title} className="card p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <FileText size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">{report.title}</h3>
+                <p className="mt-1 text-sm text-gray-500">{report.details}</p>
+                <button className="btn-secondary mt-4 text-xs py-1.5">Prepare Report</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
 function SettingsPage() {
+  const [settingsForm, setSettingsForm] = useState({
+    choirName: 'TMC Choir',
+    institution: 'Trinidad Municipal College',
+    defaultVenue: 'TMC Music Room',
+    attendanceGrace: 15,
+    passingRating: 7,
+    archiveMode: 'Lock ended semesters',
+  })
+
   return (
-    <PlaceholderPage
-      icon={Settings}
-      title="Settings"
-      description="System preferences, roles, and choir profile settings can be configured here."
-    />
+    <div className="page-shell">
+      <div className="card p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">System setup</p>
+        <h2 className="mt-1 text-2xl font-bold text-gray-900">Settings</h2>
+        <p className="mt-1 text-sm text-gray-500">Use this area for choir profile details, attendance rules, audition scoring defaults, and semester locking behavior.</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="card p-5">
+          <h3 className="text-sm font-semibold text-gray-900">Choir Profile</h3>
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="label">Choir Name</label>
+              <input className="input" value={settingsForm.choirName} onChange={e => setSettingsForm(p => ({ ...p, choirName: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Institution</label>
+              <input className="input" value={settingsForm.institution} onChange={e => setSettingsForm(p => ({ ...p, institution: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Default Venue</label>
+              <input className="input" value={settingsForm.defaultVenue} onChange={e => setSettingsForm(p => ({ ...p, defaultVenue: e.target.value }))} />
+            </div>
+          </div>
+        </div>
+        <div className="card p-5">
+          <h3 className="text-sm font-semibold text-gray-900">Rules and Defaults</h3>
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="label">Late Grace Period (minutes)</label>
+              <input className="input" type="number" value={settingsForm.attendanceGrace} onChange={e => setSettingsForm(p => ({ ...p, attendanceGrace: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Audition Passing Rating</label>
+              <input className="input" type="number" min="1" max="10" value={settingsForm.passingRating} onChange={e => setSettingsForm(p => ({ ...p, passingRating: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label">Ended Semester Behavior</label>
+              <select className="input" value={settingsForm.archiveMode} onChange={e => setSettingsForm(p => ({ ...p, archiveMode: e.target.value }))}>
+                <option>Lock ended semesters</option>
+                <option>Allow admin edits</option>
+              </select>
+            </div>
+            <button className="btn-primary">
+              <Save size={14} /> Save Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -463,16 +949,7 @@ export default function App() {
           <Route path="/members" element={<Members />} />
           <Route path="/auditions" element={<Auditions />} />
           <Route path="/judges" element={<Judges />} />
-          <Route
-            path="/officers"
-            element={
-              <PlaceholderPage
-                icon={UserCheck}
-                title="Officers"
-                description="Officer records, terms, and responsibilities are ready for backend connection."
-              />
-            }
-          />
+          <Route path="/officers" element={<Officers />} />
           <Route
             path="/elections"
             element={

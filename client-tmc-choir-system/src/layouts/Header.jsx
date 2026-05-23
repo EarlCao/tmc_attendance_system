@@ -10,7 +10,6 @@ const crumbMap = {
   '/auditions':  'Audition Management',
   '/judges':     'Judge Management',
   '/officers':   'Officers',
-  '/elections':  'Officer Elections',
   '/reports':    'Reports',
   '/settings':   'Settings',
 }

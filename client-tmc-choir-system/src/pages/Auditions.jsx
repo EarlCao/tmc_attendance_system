@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { UserPlus, Star, Eye, CheckCircle2, XCircle, Clock, Mic2 } from 'lucide-react'
+import { UserPlus, Star, Eye, CheckCircle2, XCircle, Clock, Mic2, Pencil } from 'lucide-react'
 import { auditionees as initialAuditionees, judges } from '../data/mockData'
 import { getStatusColor, getVoicePartColor, formatDateShort, cn } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
@@ -44,6 +44,17 @@ const emptyForm = {
   auditionDate: '',
 }
 
+const emptyRatingForm = {
+  judgeId: '',
+  vocalQuality: 8,
+  pitchAccuracy: 8,
+  tone: 8,
+  rhythm: 8,
+  confidence: 8,
+  stagePresence: 8,
+  comments: '',
+}
+
 export default function Auditions() {
   const [auditionees, setAuditionees] = useState(initialAuditionees)
   const [search, setSearch]           = useState('')
@@ -52,6 +63,8 @@ export default function Auditions() {
   const [evalModal, setEvalModal]     = useState(null)
   const [addModal, setAddModal]       = useState(false)
   const [form, setForm]               = useState(emptyForm)
+  const [ratingForm, setRatingForm]   = useState(emptyRatingForm)
+  const [editingRatingId, setEditingRatingId] = useState(null)
 
   const filtered = useMemo(() =>
     auditionees.filter((a) => {
@@ -87,6 +100,56 @@ export default function Auditions() {
   function handleUpdateStatus(id, status) {
     setAuditionees(prev => prev.map(a => a.id === id ? { ...a, status } : a))
     setEvalModal(prev => prev ? { ...prev, status } : null)
+  }
+
+  function openRatingForm(rating) {
+    if (rating) {
+      setEditingRatingId(rating.judgeId)
+      setRatingForm({
+        judgeId: String(rating.judgeId),
+        vocalQuality: rating.vocalQuality,
+        pitchAccuracy: rating.pitchAccuracy,
+        tone: rating.tone,
+        rhythm: rating.rhythm,
+        confidence: rating.confidence,
+        stagePresence: rating.stagePresence,
+        comments: rating.comments ?? '',
+      })
+      return
+    }
+
+    const ratedJudgeIds = new Set(evalModal?.ratings.map((rating) => rating.judgeId))
+    const nextJudge = judges.find((judge) => !ratedJudgeIds.has(judge.id)) ?? judges[0]
+    setEditingRatingId(null)
+    setRatingForm({ ...emptyRatingForm, judgeId: nextJudge ? String(nextJudge.id) : '' })
+  }
+
+  function resetRatingForm() {
+    setEditingRatingId(null)
+    setRatingForm(emptyRatingForm)
+  }
+
+  function handleSaveRating() {
+    const judge = judges.find((j) => j.id === Number(ratingForm.judgeId))
+    if (!evalModal || !judge) return
+
+    const nextRating = {
+      judgeId: judge.id,
+      judgeName: judge.name,
+      ...Object.fromEntries(CATEGORIES.map((cat) => [cat, Number(ratingForm[cat]) || 0])),
+      comments: ratingForm.comments,
+    }
+
+    const nextAuditionee = {
+      ...evalModal,
+      ratings: editingRatingId
+        ? evalModal.ratings.map((rating) => rating.judgeId === editingRatingId ? nextRating : rating)
+        : [...evalModal.ratings.filter((rating) => rating.judgeId !== judge.id), nextRating],
+    }
+
+    setAuditionees((prev) => prev.map((auditionee) => auditionee.id === nextAuditionee.id ? nextAuditionee : auditionee))
+    setEvalModal(nextAuditionee)
+    resetRatingForm()
   }
 
   return (
@@ -252,16 +315,26 @@ export default function Auditions() {
             {/* Per-judge ratings */}
             {evalModal.ratings.length > 0 ? (
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Judge Evaluations</p>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Judge Evaluations</p>
+                  <button onClick={() => openRatingForm()} className="btn-secondary text-xs py-1.5">
+                    <UserPlus size={12} /> Add Evaluation
+                  </button>
+                </div>
                 <div className="space-y-4">
                   {evalModal.ratings.map((r, i) => (
                     <div key={i} className="p-4 border border-gray-100 rounded-xl">
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-sm font-semibold text-gray-900">{r.judgeName}</p>
-                        <span className="text-sm font-bold text-yellow-500 flex items-center gap-1">
-                          <Star size={13} fill="currentColor"/>
-                          {(CATEGORIES.reduce((s, c) => s + r[c], 0) / CATEGORIES.length).toFixed(1)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-yellow-500 flex items-center gap-1">
+                            <Star size={13} fill="currentColor"/>
+                            {(CATEGORIES.reduce((s, c) => s + r[c], 0) / CATEGORIES.length).toFixed(1)}
+                          </span>
+                          <button onClick={() => openRatingForm(r)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600">
+                            <Pencil size={13} />
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-3 gap-2 mb-3">
                         {CATEGORIES.map((cat) => (
@@ -282,7 +355,60 @@ export default function Auditions() {
               <div className="py-8 text-center">
                 <Mic2 size={32} className="text-gray-300 mx-auto mb-2" />
                 <p className="text-sm text-gray-500">No evaluations submitted yet.</p>
-                <p className="text-xs text-gray-400">Judges have not rated this auditionee.</p>
+                <button onClick={() => openRatingForm()} className="btn-primary mt-4 text-xs">
+                  <UserPlus size={12} /> Add Judge Evaluation
+                </button>
+              </div>
+            )}
+
+            {ratingForm.judgeId && (
+              <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-gray-900">{editingRatingId ? 'Edit evaluation' : 'Manual judge evaluation'}</p>
+                  <button onClick={resetRatingForm} className="text-xs font-medium text-gray-500 hover:text-gray-800">Cancel</button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">Judge</label>
+                    <select
+                      className="input"
+                      value={ratingForm.judgeId}
+                      disabled={!!editingRatingId}
+                      onChange={e => setRatingForm(p => ({ ...p, judgeId: e.target.value }))}
+                    >
+                      {judges.map((judge) => (
+                        <option key={judge.id} value={judge.id}>{judge.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                    {CATEGORIES.map((cat) => (
+                      <div key={cat}>
+                        <label className="label">{CATEGORY_LABELS[cat]}</label>
+                        <input
+                          className="input"
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={ratingForm[cat]}
+                          onChange={e => setRatingForm(p => ({ ...p, [cat]: e.target.value }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="label">Notes / Comments / Evaluation</label>
+                    <textarea
+                      className="input min-h-24 resize-y"
+                      value={ratingForm.comments}
+                      onChange={e => setRatingForm(p => ({ ...p, comments: e.target.value }))}
+                      placeholder="Type the judge's comments or evaluation notes"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button onClick={handleSaveRating} className="btn-primary text-xs">Save Evaluation</button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

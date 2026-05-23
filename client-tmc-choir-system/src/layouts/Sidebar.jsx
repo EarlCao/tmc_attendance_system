@@ -13,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Award,
-  Vote,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
@@ -25,7 +24,6 @@ const navItems = [
   { to: '/auditions',  icon: Mic2,            label: 'Auditions' },
   { to: '/judges',     icon: UserCheck,       label: 'Judges' },
   { to: '/officers',   icon: Award,           label: 'Officers' },
-  { to: '/elections',  icon: Vote,            label: 'Elections' },
   { to: '/reports',    icon: BarChart3,       label: 'Reports' },
 ]
 
