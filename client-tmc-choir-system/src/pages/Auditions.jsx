@@ -11,6 +11,7 @@ import StatCard from '../components/common/StatCard'
 const CATEGORIES = ['vocalQuality','pitchAccuracy','tone','rhythm','confidence','stagePresence']
 const CATEGORY_LABELS = { vocalQuality: 'Vocal Quality', pitchAccuracy: 'Pitch Accuracy', tone: 'Tone', rhythm: 'Rhythm', confidence: 'Confidence', stagePresence: 'Stage Presence' }
 const VOICE_PARTS = ['Soprano','Alto','Tenor','Bass']
+const COURSE_OPTIONS = ['BSIT', 'BSOA', 'BSCRIM', 'BSPOL', 'BSCOM', 'BEED', 'BSED']
 
 function avgRating(ratings) {
   if (!ratings.length) return null
@@ -29,7 +30,19 @@ function RatingStars({ value }) {
   )
 }
 
-const emptyForm = { name: '', targetPart: 'Soprano', age: '', contact: '', email: '', auditionDate: '' }
+const emptyForm = {
+  name: '',
+  targetPart: 'Soprano',
+  age: '',
+  course: '',
+  yearLevel: '',
+  religionDenomination: '',
+  contact: '',
+  email: '',
+  address: '',
+  notes: '',
+  auditionDate: '',
+}
 
 export default function Auditions() {
   const [auditionees, setAuditionees] = useState(initialAuditionees)
@@ -42,7 +55,14 @@ export default function Auditions() {
 
   const filtered = useMemo(() =>
     auditionees.filter((a) => {
-      const matchSearch = a.name.toLowerCase().includes(search.toLowerCase())
+      const normalizedSearch = search.toLowerCase()
+      const matchSearch = a.name.toLowerCase().includes(normalizedSearch) ||
+        (a.email ?? '').toLowerCase().includes(normalizedSearch) ||
+        (a.course ?? '').toLowerCase().includes(normalizedSearch) ||
+        (a.yearLevel ?? '').toLowerCase().includes(normalizedSearch) ||
+        (a.religionDenomination ?? '').toLowerCase().includes(normalizedSearch) ||
+        (a.address ?? '').toLowerCase().includes(normalizedSearch) ||
+        (a.notes ?? '').toLowerCase().includes(normalizedSearch)
       const matchStatus = statusFilter === 'All' || a.status === statusFilter
       const matchPart   = partFilter === 'All' || a.targetPart === partFilter
       return matchSearch && matchStatus && matchPart
@@ -125,6 +145,8 @@ export default function Auditions() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">{a.name}</p>
                         <p className="text-xs text-gray-400">{a.email}</p>
+                        <p className="text-xs text-gray-400">{a.course}{a.yearLevel ? ` · ${a.yearLevel}` : ''}</p>
+                        {a.religionDenomination && <p className="text-xs text-gray-400">{a.religionDenomination}</p>}
                       </div>
                     </div>
                   </td>
@@ -180,6 +202,10 @@ export default function Auditions() {
               <div className="flex-1">
                 <p className="text-base font-bold text-gray-900">{evalModal.name}</p>
                 <p className="text-xs text-gray-500">{evalModal.contact} · {evalModal.email}</p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {evalModal.course}{evalModal.yearLevel ? ` · ${evalModal.yearLevel}` : ''}{evalModal.religionDenomination ? ` · ${evalModal.religionDenomination}` : ''}
+                </p>
+                {evalModal.address && <p className="mt-0.5 text-xs text-gray-400">{evalModal.address}</p>}
                 <div className="flex items-center gap-2 mt-1">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getVoicePartColor(evalModal.targetPart)}`}>{evalModal.targetPart}</span>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getStatusColor(evalModal.status)}`}>{evalModal.status}</span>
@@ -192,6 +218,13 @@ export default function Auditions() {
                 </div>
               )}
             </div>
+
+            {evalModal.notes && (
+              <div className="rounded-xl bg-gray-50 p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</p>
+                <p className="text-sm text-gray-600">{evalModal.notes}</p>
+              </div>
+            )}
 
             {/* Category summary if rated */}
             {evalModal.ratings.length > 0 && (
@@ -276,13 +309,44 @@ export default function Auditions() {
               <input className="input" type="number" value={form.age} onChange={e => setForm(p => ({...p, age: e.target.value}))} placeholder="Age" />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Course</label>
+              <select className="input" value={form.course} onChange={e => setForm(p => ({...p, course: e.target.value}))}>
+                <option value="">Select course</option>
+                {COURSE_OPTIONS.map((course) => <option key={course} value={course}>{course}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Year Level</label>
+              <select className="input" value={form.yearLevel} onChange={e => setForm(p => ({...p, yearLevel: e.target.value}))}>
+                <option value="">Select year</option>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="label">Religion / Denomination</label>
+            <input className="input" value={form.religionDenomination} onChange={e => setForm(p => ({...p, religionDenomination: e.target.value}))} placeholder="e.g. Roman Catholic" />
+          </div>
           <div>
             <label className="label">Contact Number</label>
             <input className="input" value={form.contact} onChange={e => setForm(p => ({...p, contact: e.target.value}))} placeholder="09XXXXXXXXX" />
           </div>
           <div>
-            <label className="label">Email</label>
-            <input className="input" type="email" value={form.email} onChange={e => setForm(p => ({...p, email: e.target.value}))} placeholder="email@example.com" />
+            <label className="label">Email/FB Acct</label>
+            <input className="input" value={form.email} onChange={e => setForm(p => ({...p, email: e.target.value}))} placeholder="email or Facebook account" />
+          </div>
+          <div>
+            <label className="label">Address</label>
+            <input className="input" value={form.address} onChange={e => setForm(p => ({...p, address: e.target.value}))} placeholder="City, Province" />
+          </div>
+          <div>
+            <label className="label">Notes</label>
+            <textarea className="input min-h-24 resize-y" value={form.notes} onChange={e => setForm(p => ({...p, notes: e.target.value}))} placeholder="Audition notes, availability, or reminders" />
           </div>
           <div>
             <label className="label">Audition Date</label>

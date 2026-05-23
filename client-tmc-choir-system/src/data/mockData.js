@@ -20,25 +20,25 @@ export const officerAssignments = [
 
 // ─── MEMBERS ────────────────────────────────────────────────────────────────
 export const members = [
-  { id: 1,  name: 'Reign Van Kylle Israel',     voicePart: 'Soprano', course: 'BSED Music', yearLevel: '3rd Year', email: 'reign.israel@email.com',     phone: '09171234001', status: 'active',   attendanceRate: 94, present: 17, late: 1, absent: 0, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
-  { id: 2,  name: 'Michelle Nocalan',        voicePart: 'Soprano', course: 'BSBA', yearLevel: '2nd Year', email: 'michelle.nocalan@email.com',         phone: '09171234002', status: 'active',   attendanceRate: 89, present: 15, late: 1, absent: 2, excused: 0, joinedDate: '2023-08-01', address: 'Carmen, Bohol' },
-  { id: 3,  name: 'Villa Mae Cajes',      voicePart: 'Soprano', course: 'BSED English', yearLevel: '4th Year', email: 'villa.cajes@email.com',       phone: '09171234003', status: 'active',   attendanceRate: 100, present: 18, late: 0, absent: 0, excused: 0, joinedDate: '2024-01-08', address: 'Tagbilaran City' },
-  { id: 4,  name: 'Geraldine Timario',  voicePart: 'Soprano', course: 'BSIT', yearLevel: '1st Year', email: 'geraldine.timario@email.com',   phone: '09171234004', status: 'inactive', attendanceRate: 72, present: 13, late: 0, absent: 5, excused: 0, joinedDate: '2023-08-01', address: 'Ubay, Bohol' },
-  { id: 5,  name: 'Catherine Terce',     voicePart: 'Alto',    course: 'BSED Science', yearLevel: '3rd Year', email: 'catherine.terce@email.com',     phone: '09181234005', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
-  { id: 6,  name: 'Loi Benisse Trago',     voicePart: 'Alto',    course: 'BSCrim', yearLevel: '2nd Year', email: 'loi.trago@email.com',     phone: '09181234006', status: 'active',   attendanceRate: 94, present: 17, late: 0, absent: 1, excused: 0, joinedDate: '2024-08-05', address: 'Talibon, Bohol' },
-  { id: 7,  name: 'Lyca Lajato',    voicePart: 'Alto',    course: 'BSPsych', yearLevel: '4th Year', email: 'lyca.lajato@email.com',     phone: '09181234007', status: 'active',   attendanceRate: 78, present: 13, late: 2, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Bien Unido, Bohol' },
-  { id: 8,  name: 'Lhorrmae De Castro',   voicePart: 'Alto',    course: 'BSHM', yearLevel: '1st Year', email: 'lhorrmae.decastro@email.com',   phone: '09181234008', status: 'active',   attendanceRate: 89, present: 16, late: 0, absent: 2, excused: 0, joinedDate: '2024-01-08', address: 'Jetafe, Bohol' },
-  { id: 9,  name: 'Mica Omolon',      voicePart: 'Alto',   course: 'BSA', yearLevel: '3rd Year', email: 'mica.omolon@email.com',       phone: '09191234009', status: 'active',   attendanceRate: 94, present: 17, late: 0, absent: 1, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
-  { id: 10, name: 'Kenndey Saberon',    voicePart: 'Tenor',   course: 'BSIT', yearLevel: '2nd Year', email: 'kenndey.saberon@email.com',     phone: '09191234010', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2024-08-05', address: 'Sierra Bullones, Bohol' },
-  { id: 11, name: 'John Lee Ranque',       voicePart: 'Tenor',   course: 'BSED Filipino', yearLevel: '4th Year', email: 'john.ranque@email.com',       phone: '09191234011', status: 'active',   attendanceRate: 72, present: 12, late: 1, absent: 5, excused: 0, joinedDate: '2023-08-01', address: 'Candijay, Bohol' },
-  { id: 12, name: 'Evander Legaspi',      voicePart: 'Tenor',   course: 'BSA', yearLevel: '1st Year', email: 'evander.legaspi@email.com',       phone: '09191234012', status: 'inactive', attendanceRate: 61, present: 11, late: 0, absent: 7, excused: 0, joinedDate: '2023-08-01', address: 'Mabini, Bohol' },
-  { id: 13, name: 'Ian Borja',     voicePart: 'Tenor',    course: 'BSCS', yearLevel: '3rd Year', email: 'ian.borja@email.com',     phone: '09201234013', status: 'active',   attendanceRate: 100, present: 18, late: 0, absent: 0, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
-  { id: 14, name: 'Kim Gerald',       voicePart: 'Tenor',    course: 'BSHM', yearLevel: '2nd Year', email: 'kim.gerald@email.com',       phone: '09201234014', status: 'active',   attendanceRate: 89, present: 16, late: 0, absent: 2, excused: 0, joinedDate: '2024-01-08', address: 'Dagohoy, Bohol' },
-  { id: 15, name: 'Marquee Gabisan',       voicePart: 'Bass',    course: 'BSBA', yearLevel: '4th Year', email: 'marquee.gabisan@email.com',       phone: '09201234015', status: 'active',   attendanceRate: 78, present: 14, late: 0, absent: 4, excused: 0, joinedDate: '2024-08-05', address: 'Danao, Bohol' },
-  { id: 16, name: 'Earl Francis Cao',        voicePart: 'Bass',    course: 'BSED Mathematics', yearLevel: '3rd Year', email: 'earl.cao@email.com',         phone: '09201234016', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
-  { id: 17, name: 'Kristopher Jay Garcia',        voicePart: 'Bass',    course: 'BSIT', yearLevel: '2nd Year', email: 'kristopher.garcia@email.com',         phone: '09201234018', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
-  { id: 18, name: 'John Rey Hoylar',        voicePart: 'Bass',    course: 'BSCrim', yearLevel: '1st Year', email: 'john.hoylar@email.com',         phone: '09201234019', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
-  { id: 19, name: 'Julius Bardos',        voicePart: 'Bass',    course: 'BSED Social Studies', yearLevel: '4th Year', email: 'julius.bardos@email.com',         phone: '09201234021', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
+  { id: 1,  name: 'Reign Van Kylle Israel',     voicePart: 'Soprano', course: 'BSED Music', yearLevel: '3rd Year', religionDenomination: 'Roman Catholic', notes: 'Reliable soprano section lead for warm-ups.', email: 'reign.israel@email.com',     phone: '09171234001', status: 'active',   attendanceRate: 94, present: 17, late: 1, absent: 0, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
+  { id: 2,  name: 'Michelle Nocalan',        voicePart: 'Soprano', course: 'BSBA', yearLevel: '2nd Year', religionDenomination: 'Roman Catholic', notes: 'Prefers weekend reminders for practices.', email: 'michelle.nocalan@email.com',         phone: '09171234002', status: 'active',   attendanceRate: 89, present: 15, late: 1, absent: 2, excused: 0, joinedDate: '2023-08-01', address: 'Carmen, Bohol' },
+  { id: 3,  name: 'Villa Mae Cajes',      voicePart: 'Soprano', course: 'BSED English', yearLevel: '4th Year', religionDenomination: 'UCCP', notes: 'Can assist with program hosting.', email: 'villa.cajes@email.com',       phone: '09171234003', status: 'active',   attendanceRate: 100, present: 18, late: 0, absent: 0, excused: 0, joinedDate: '2024-01-08', address: 'Tagbilaran City' },
+  { id: 4,  name: 'Geraldine Timario',  voicePart: 'Soprano', course: 'BSIT', yearLevel: '1st Year', religionDenomination: 'Born Again Christian', notes: 'Inactive this semester due to schedule conflict.', email: 'geraldine.timario@email.com',   phone: '09171234004', status: 'inactive', attendanceRate: 72, present: 13, late: 0, absent: 5, excused: 0, joinedDate: '2023-08-01', address: 'Ubay, Bohol' },
+  { id: 5,  name: 'Catherine Terce',     voicePart: 'Alto',    course: 'BSED Science', yearLevel: '3rd Year', religionDenomination: 'Roman Catholic', notes: 'Strong alto blend, assign near new members.', email: 'catherine.terce@email.com',     phone: '09181234005', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
+  { id: 6,  name: 'Loi Benisse Trago',     voicePart: 'Alto',    course: 'BSCrim', yearLevel: '2nd Year', religionDenomination: 'Iglesia ni Cristo', notes: 'Vice president; helps coordinate attendance.', email: 'loi.trago@email.com',     phone: '09181234006', status: 'active',   attendanceRate: 94, present: 17, late: 0, absent: 1, excused: 0, joinedDate: '2024-08-05', address: 'Talibon, Bohol' },
+  { id: 7,  name: 'Lyca Lajato',    voicePart: 'Alto',    course: 'BSPsych', yearLevel: '4th Year', religionDenomination: 'Seventh-day Adventist', notes: 'May request schedule consideration on Saturdays.', email: 'lyca.lajato@email.com',     phone: '09181234007', status: 'active',   attendanceRate: 78, present: 13, late: 2, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Bien Unido, Bohol' },
+  { id: 8,  name: 'Lhorrmae De Castro',   voicePart: 'Alto',    course: 'BSHM', yearLevel: '1st Year', religionDenomination: 'Roman Catholic', notes: 'Secretary; keeps rehearsal notes.', email: 'lhorrmae.decastro@email.com',   phone: '09181234008', status: 'active',   attendanceRate: 89, present: 16, late: 0, absent: 2, excused: 0, joinedDate: '2024-01-08', address: 'Jetafe, Bohol' },
+  { id: 9,  name: 'Mica Omolon',      voicePart: 'Alto',   course: 'BSA', yearLevel: '3rd Year', religionDenomination: 'Roman Catholic', notes: 'Available for weekday practices.', email: 'mica.omolon@email.com',       phone: '09191234009', status: 'active',   attendanceRate: 94, present: 17, late: 0, absent: 1, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
+  { id: 10, name: 'Kenndey Saberon',    voicePart: 'Tenor',   course: 'BSIT', yearLevel: '2nd Year', religionDenomination: 'Baptist', notes: 'Treasurer; can assist with equipment setup.', email: 'kenndey.saberon@email.com',     phone: '09191234010', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2024-08-05', address: 'Sierra Bullones, Bohol' },
+  { id: 11, name: 'John Lee Ranque',       voicePart: 'Tenor',   course: 'BSED Filipino', yearLevel: '4th Year', religionDenomination: 'Roman Catholic', notes: 'Needs early notice for performance call time.', email: 'john.ranque@email.com',       phone: '09191234011', status: 'active',   attendanceRate: 72, present: 12, late: 1, absent: 5, excused: 0, joinedDate: '2023-08-01', address: 'Candijay, Bohol' },
+  { id: 12, name: 'Evander Legaspi',      voicePart: 'Tenor',   course: 'BSA', yearLevel: '1st Year', religionDenomination: 'UCCP', notes: 'Inactive; follow up before next auditions.', email: 'evander.legaspi@email.com',       phone: '09191234012', status: 'inactive', attendanceRate: 61, present: 11, late: 0, absent: 7, excused: 0, joinedDate: '2023-08-01', address: 'Mabini, Bohol' },
+  { id: 13, name: 'Ian Borja',     voicePart: 'Tenor',    course: 'BSCS', yearLevel: '3rd Year', religionDenomination: 'Born Again Christian', notes: 'Consistent tenor support.', email: 'ian.borja@email.com',     phone: '09201234013', status: 'active',   attendanceRate: 100, present: 18, late: 0, absent: 0, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
+  { id: 14, name: 'Kim Gerald',       voicePart: 'Tenor',    course: 'BSHM', yearLevel: '2nd Year', religionDenomination: 'Roman Catholic', notes: 'Good for leading tenor sectional drills.', email: 'kim.gerald@email.com',       phone: '09201234014', status: 'active',   attendanceRate: 89, present: 16, late: 0, absent: 2, excused: 0, joinedDate: '2024-01-08', address: 'Dagohoy, Bohol' },
+  { id: 15, name: 'Marquee Gabisan',       voicePart: 'Bass',    course: 'BSBA', yearLevel: '4th Year', religionDenomination: 'Roman Catholic', notes: 'Bass anchor for performance pieces.', email: 'marquee.gabisan@email.com',       phone: '09201234015', status: 'active',   attendanceRate: 78, present: 14, late: 0, absent: 4, excused: 0, joinedDate: '2024-08-05', address: 'Danao, Bohol' },
+  { id: 16, name: 'Earl Francis Cao',        voicePart: 'Bass',    course: 'BSED Mathematics', yearLevel: '3rd Year', religionDenomination: 'Roman Catholic', notes: 'President; primary contact for semester planning.', email: 'earl.cao@email.com',         phone: '09201234016', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
+  { id: 17, name: 'Kristopher Jay Garcia',        voicePart: 'Bass',    course: 'BSIT', yearLevel: '2nd Year', religionDenomination: 'Baptist', notes: 'Can help with sound system setup.', email: 'kristopher.garcia@email.com',         phone: '09201234018', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
+  { id: 18, name: 'John Rey Hoylar',        voicePart: 'Bass',    course: 'BSCrim', yearLevel: '1st Year', religionDenomination: 'Roman Catholic', notes: 'Newer bass member; pair with senior bass.', email: 'john.hoylar@email.com',         phone: '09201234019', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
+  { id: 19, name: 'Julius Bardos',        voicePart: 'Bass',    course: 'BSED Social Studies', yearLevel: '4th Year', religionDenomination: 'Iglesia ni Cristo', notes: 'Available for community performances.', email: 'julius.bardos@email.com',         phone: '09201234021', status: 'active',   attendanceRate: 83, present: 14, late: 1, absent: 3, excused: 0, joinedDate: '2023-08-01', address: 'Trinidad, Bohol' },
 
 ]
 
@@ -112,7 +112,7 @@ export const judges = [
 // ─── AUDITIONS ───────────────────────────────────────────────────────────────
 export const auditionees = [
   {
-    id: 1, name: 'Bianca Lim',     targetPart: 'Soprano', age: 19, contact: '09271110001', email: 'bianca@example.com', status: 'Passed', auditionDate: '2025-08-02',
+    id: 1, name: 'Bianca Lim',     targetPart: 'Soprano', age: 19, course: 'BEED', yearLevel: '2nd Year', religionDenomination: 'Roman Catholic', contact: '09271110001', email: 'bianca@example.com', address: 'Trinidad, Bohol', notes: 'Clear soprano tone and confident stage presence.', status: 'Passed', auditionDate: '2025-08-02',
     ratings: [
       { judgeId: 1, judgeName: 'Dr. Melanie Uy',    vocalQuality: 9, pitchAccuracy: 8, tone: 9, rhythm: 8, confidence: 9, stagePresence: 8, comments: 'Excellent range, clean head voice.' },
       { judgeId: 2, judgeName: 'Mr. Roberto Tan',   vocalQuality: 8, pitchAccuracy: 9, tone: 8, rhythm: 9, confidence: 8, stagePresence: 9, comments: 'Good musicality and rhythm sense.' },
@@ -120,7 +120,7 @@ export const auditionees = [
     ],
   },
   {
-    id: 2, name: 'Kevin Dela Pena', targetPart: 'Bass',    age: 21, contact: '09271110002', email: 'kevin@example.com',  status: 'Passed', auditionDate: '2025-08-02',
+    id: 2, name: 'Kevin Dela Pena', targetPart: 'Bass',    age: 21, course: 'BSCRIM', yearLevel: '3rd Year', religionDenomination: 'Baptist', contact: '09271110002', email: 'kevin@example.com', address: 'Talibon, Bohol', notes: 'Promising bass range; needs projection practice.', status: 'Passed', auditionDate: '2025-08-02',
     ratings: [
       { judgeId: 1, judgeName: 'Dr. Melanie Uy',    vocalQuality: 8, pitchAccuracy: 7, tone: 8, rhythm: 8, confidence: 7, stagePresence: 7, comments: 'Good low range. Needs projection work.' },
       { judgeId: 2, judgeName: 'Mr. Roberto Tan',   vocalQuality: 7, pitchAccuracy: 8, tone: 8, rhythm: 7, confidence: 8, stagePresence: 7, comments: 'Solid bass tone.' },
@@ -128,7 +128,7 @@ export const auditionees = [
     ],
   },
   {
-    id: 3, name: 'Diane Castro',    targetPart: 'Alto',    age: 20, contact: '09271110003', email: 'diane@example.com',  status: 'Passed', auditionDate: '2025-08-02',
+    id: 3, name: 'Diane Castro',    targetPart: 'Alto',    age: 20, course: 'BSED', yearLevel: '2nd Year', religionDenomination: 'UCCP', contact: '09271110003', email: 'diane@example.com', address: 'Carmen, Bohol', notes: 'Stable pitch and good ensemble awareness.', status: 'Passed', auditionDate: '2025-08-02',
     ratings: [
       { judgeId: 1, judgeName: 'Dr. Melanie Uy',    vocalQuality: 7, pitchAccuracy: 8, tone: 7, rhythm: 8, confidence: 8, stagePresence: 7, comments: 'Stable pitch. Continue developing lower register.' },
       { judgeId: 2, judgeName: 'Mr. Roberto Tan',   vocalQuality: 8, pitchAccuracy: 7, tone: 8, rhythm: 7, confidence: 7, stagePresence: 8, comments: 'Good ensemble potential.' },
@@ -136,7 +136,7 @@ export const auditionees = [
     ],
   },
   {
-    id: 4, name: 'Ryan Bautista',   targetPart: 'Tenor',   age: 22, contact: '09271110004', email: 'ryan@example.com',   status: 'Failed', auditionDate: '2025-08-02',
+    id: 4, name: 'Ryan Bautista',   targetPart: 'Tenor',   age: 22, course: 'BSIT', yearLevel: '4th Year', religionDenomination: 'Born Again Christian', contact: '09271110004', email: 'ryan@example.com', address: 'Ubay, Bohol', notes: 'Recommended to take vocal coaching before re-audition.', status: 'Failed', auditionDate: '2025-08-02',
     ratings: [
       { judgeId: 1, judgeName: 'Dr. Melanie Uy',    vocalQuality: 5, pitchAccuracy: 5, tone: 5, rhythm: 6, confidence: 5, stagePresence: 5, comments: 'Significant pitch issues throughout.' },
       { judgeId: 2, judgeName: 'Mr. Roberto Tan',   vocalQuality: 5, pitchAccuracy: 5, tone: 5, rhythm: 5, confidence: 6, stagePresence: 5, comments: 'Needs more voice training before re-auditioning.' },
@@ -144,15 +144,15 @@ export const auditionees = [
     ],
   },
   {
-    id: 5, name: 'Patricia Flores', targetPart: 'Soprano', age: 18, contact: '09271110005', email: 'patricia@example.com', status: 'Pending', auditionDate: '2025-09-06',
+    id: 5, name: 'Patricia Flores', targetPart: 'Soprano', age: 18, course: 'BSOA', yearLevel: '1st Year', religionDenomination: 'Roman Catholic', contact: '09271110005', email: 'patricia@example.com', address: 'Tagbilaran City', notes: 'Pending evaluation from assigned judges.', status: 'Pending', auditionDate: '2025-09-06',
     ratings: [],
   },
   {
-    id: 6, name: 'Renz Morales',    targetPart: 'Bass',    age: 20, contact: '09271110006', email: 'renz@example.com',    status: 'Pending', auditionDate: '2025-09-06',
+    id: 6, name: 'Renz Morales',    targetPart: 'Bass',    age: 20, course: 'BSCOM', yearLevel: '2nd Year', religionDenomination: 'Iglesia ni Cristo', contact: '09271110006', email: 'renz@example.com', address: 'Danao, Bohol', notes: 'Available for evening rehearsals.', status: 'Pending', auditionDate: '2025-09-06',
     ratings: [],
   },
   {
-    id: 7, name: 'Sheila Abad',     targetPart: 'Alto',    age: 21, contact: '09271110007', email: 'sheila@example.com',  status: 'Passed', auditionDate: '2025-08-02',
+    id: 7, name: 'Sheila Abad',     targetPart: 'Alto',    age: 21, course: 'BSPOL', yearLevel: '3rd Year', religionDenomination: 'Seventh-day Adventist', contact: '09271110007', email: 'sheila@example.com', address: 'Jetafe, Bohol', notes: 'Strong musical ear and reliable alto placement.', status: 'Passed', auditionDate: '2025-08-02',
     ratings: [
       { judgeId: 1, judgeName: 'Dr. Melanie Uy',    vocalQuality: 8, pitchAccuracy: 9, tone: 8, rhythm: 9, confidence: 8, stagePresence: 8, comments: 'Very accurate pitch, great ear.' },
       { judgeId: 2, judgeName: 'Mr. Roberto Tan',   vocalQuality: 8, pitchAccuracy: 8, tone: 9, rhythm: 8, confidence: 9, stagePresence: 8, comments: 'Strong performance presence.' },

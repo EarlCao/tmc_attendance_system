@@ -49,7 +49,7 @@ const newSessionForm = {
 }
 
 function buildInitialAttendance(memberList) {
-  return Object.fromEntries(memberList.map((m) => [m.id, 'Present']))
+  return Object.fromEntries(memberList.filter((m) => m.status === 'active').map((m) => [m.id, 'Present']))
 }
 
 function buildSessionRecords(sessions) {
@@ -61,7 +61,10 @@ function buildSessionNotes(sessions) {
 }
 
 function countStatuses(attendance = {}) {
-  const all = Object.values(attendance)
+  const all = members
+    .filter((member) => member.status === 'active')
+    .map((member) => attendance[member.id])
+
   return {
     Present: all.filter((status) => status === 'Present').length,
     Late: all.filter((status) => status === 'Late').length,
@@ -223,6 +226,9 @@ export default function Attendance() {
 
   function setStatus(memberId, status) {
     if (!selectedSession || readOnly) return
+    const member = members.find((m) => m.id === memberId)
+    if (member?.status === 'inactive') return
+
     setAttendanceBySession((prev) => ({
       ...prev,
       [selectedSession.id]: {
@@ -236,7 +242,9 @@ export default function Attendance() {
   function markAll(status) {
     if (!selectedSession || readOnly) return
     const updated = {}
-    filteredMembers.forEach((member) => { updated[member.id] = status })
+    filteredMembers.forEach((member) => {
+      if (member.status === 'active') updated[member.id] = status
+    })
     setAttendanceBySession((prev) => ({
       ...prev,
       [selectedSession.id]: {
@@ -588,6 +596,7 @@ export default function Attendance() {
             const status = currentAttendance[member.id]
             const hasNote = !!currentNotes[member.id]
             const officerPosition = officerMap[member.id]
+            const isInactive = member.status === 'inactive'
             return (
               <div key={member.id} className="flex flex-col gap-3 px-5 py-3 transition-colors hover:bg-gray-50/50 sm:flex-row sm:items-center sm:gap-4">
                 <Avatar name={member.name} voicePart={member.voicePart} size="md" />
@@ -611,6 +620,9 @@ export default function Attendance() {
                         <FileText size={10} /> Note added
                       </span>
                     )}
+                    {isInactive && (
+                      <span className="text-[10px] text-gray-400">Not included in attendance</span>
+                    )}
                   </div>
                 </div>
 
@@ -621,8 +633,8 @@ export default function Attendance() {
                       <button
                         key={option}
                         onClick={() => setStatus(member.id, option)}
-                        title={option}
-                        disabled={readOnly}
+                        title={isInactive ? 'Inactive members cannot be marked for attendance' : option}
+                        disabled={readOnly || isInactive}
                         className={cn(
                           'flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-75',
                           status === option

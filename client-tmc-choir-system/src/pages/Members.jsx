@@ -9,7 +9,7 @@ import EmptyState from '../components/common/EmptyState'
 
 const VOICE_PARTS = ['Soprano', 'Alto', 'Tenor', 'Bass']
 const COURSE_OPTIONS = ['BSIT', 'BSOA', 'BSCRIM', 'BSPOL', 'BSCOM', 'BEED', 'BSED']
-const emptyForm = { name: '', voicePart: 'Soprano', course: '', yearLevel: '', email: '', phone: '', address: '', status: 'active' }
+const emptyForm = { name: '', voicePart: 'Soprano', course: '', yearLevel: '', religionDenomination: '', notes: '', email: '', phone: '', address: '', status: 'active' }
 
 function MemberForm({ form, setForm }) {
   return (
@@ -52,6 +52,10 @@ function MemberForm({ form, setForm }) {
           </select>
         </div>
         <div>
+          <label className="label">Religion / Denomination</label>
+          <input className="input" value={form.religionDenomination ?? ''} onChange={e => setForm(p => ({ ...p, religionDenomination: e.target.value }))} placeholder="e.g. Roman Catholic" />
+        </div>
+        <div>
           <label className="label">Email/FB Acct</label>
           <input className="input" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="email or Facebook account" />
         </div>
@@ -62,6 +66,10 @@ function MemberForm({ form, setForm }) {
         <div className="col-span-2">
           <label className="label">Address</label>
           <input className="input" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="City, Province" />
+        </div>
+        <div className="col-span-2">
+          <label className="label">Notes</label>
+          <textarea className="input min-h-24 resize-y" value={form.notes ?? ''} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Member notes, availability, or reminders" />
         </div>
       </div>
     </div>
@@ -83,7 +91,9 @@ export default function Members() {
   const filtered = useMemo(() =>
     memberList.filter((m) => {
       const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
-                          m.email.toLowerCase().includes(search.toLowerCase())
+                          m.email.toLowerCase().includes(search.toLowerCase()) ||
+                          (m.religionDenomination ?? '').toLowerCase().includes(search.toLowerCase()) ||
+                          (m.notes ?? '').toLowerCase().includes(search.toLowerCase())
       const matchVoice  = voiceFilter === 'All' || m.voicePart === voiceFilter
       const matchStatus = statusFilter === 'All' || m.status === statusFilter
       return matchSearch && matchVoice && matchStatus
@@ -200,6 +210,7 @@ export default function Members() {
                         <button onClick={() => setProfileDrawer(m)} className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">{m.name}</button>
                         <p className="text-xs text-gray-400">{m.email}</p>
                         <p className="text-xs text-gray-400">{m.course}{m.yearLevel ? ` • ${m.yearLevel}` : ''}</p>
+                        {m.religionDenomination && <p className="text-xs text-gray-400">{m.religionDenomination}</p>}
                       </div>
                     </div>
                   </td>
@@ -255,6 +266,7 @@ export default function Members() {
               <button onClick={() => setProfileDrawer(m)} className="text-sm font-semibold text-gray-900 hover:text-blue-600 text-left transition-colors">{m.name}</button>
               <span className={`mt-1 inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${getVoicePartColor(m.voicePart)}`}>{m.voicePart}</span>
               <p className="mt-1 text-[11px] text-gray-500">{m.course}{m.yearLevel ? ` • ${m.yearLevel}` : ''}</p>
+              {m.religionDenomination && <p className="mt-1 text-[11px] text-gray-500">{m.religionDenomination}</p>}
               <div className="mt-3 space-y-1">
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500"><Mail size={11}/>{m.email}</div>
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500"><Phone size={11}/>{m.phone}</div>
@@ -290,8 +302,15 @@ export default function Members() {
               <h3 className="text-lg font-bold text-gray-900 mt-3">{profileDrawer.name}</h3>
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getVoicePartColor(profileDrawer.voicePart)}`}>{profileDrawer.voicePart}</span>
               <p className="mt-2 text-sm text-gray-500">{profileDrawer.course}{profileDrawer.yearLevel ? ` • ${profileDrawer.yearLevel}` : ''}</p>
+              {profileDrawer.religionDenomination && <p className="mt-1 text-sm text-gray-500">{profileDrawer.religionDenomination}</p>}
             </div>
             <div className="p-6 space-y-4">
+              {profileDrawer.notes && (
+                <div>
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Notes</p>
+                  <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">{profileDrawer.notes}</p>
+                </div>
+              )}
               <div>
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Contact</p>
                 <div className="space-y-2">
