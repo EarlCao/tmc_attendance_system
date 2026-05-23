@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom'
 import { Music4 } from 'lucide-react'
-import { activeSemester } from '../data/mockData'
+import { activeSemester as initialActiveSemester } from '../data/mockData'
 
 const crumbMap = {
   '/':           'Dashboard',
@@ -14,7 +14,7 @@ const crumbMap = {
   '/settings':   'Settings',
 }
 
-export default function Header() {
+export default function Header({ currentSemester = initialActiveSemester }) {
   const location = useLocation()
   const pageTitle = crumbMap[location.pathname] ?? 'Page'
 
@@ -34,10 +34,14 @@ export default function Header() {
       {/* Right: Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Active semester badge */}
-        {activeSemester && (
+        {currentSemester ? (
           <span className="hidden items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 lg:inline-flex">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            {activeSemester.name}
+            {currentSemester.name}
+          </span>
+        ) : (
+          <span className="hidden items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 lg:inline-flex">
+            No active semester
           </span>
         )}
 

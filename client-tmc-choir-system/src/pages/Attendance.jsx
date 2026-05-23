@@ -12,7 +12,7 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react'
-import { activeSemester, attendanceSessions, members, officerAssignments, semesters } from '../data/mockData'
+import { activeSemester as initialActiveSemester, attendanceSessions, members, officerAssignments, semesters as initialSemesters } from '../data/mockData'
 import { cn, formatDateShort, getVoicePartColor } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Badge from '../components/common/Badge'
@@ -81,8 +81,8 @@ function sessionTimestamp(session) {
   return new Date(`${session.date}T${session.time || '00:00'}`).getTime()
 }
 
-export default function Attendance() {
-  const [selectedSemId, setSelectedSemId] = useState(activeSemester?.id ?? semesters[semesters.length - 1].id)
+export default function Attendance({ semesterList = initialSemesters, currentSemester = initialActiveSemester }) {
+  const [selectedSemId, setSelectedSemId] = useState(currentSemester?.id ?? semesterList[semesterList.length - 1]?.id)
   const [sessions, setSessions] = useState(() =>
     attendanceSessions.map((session) => ({
       ...session,
@@ -109,7 +109,7 @@ export default function Attendance() {
   const [saved, setSaved] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
-  const selectedSemester = semesters.find((semester) => semester.id === selectedSemId)
+  const selectedSemester = semesterList.find((semester) => semester.id === selectedSemId)
   const readOnly = selectedSemester?.status !== 'active'
   const semesterSessions = useMemo(
     () => sessions.filter((session) => session.semesterId === selectedSemId),
@@ -304,7 +304,7 @@ export default function Attendance() {
                 }}
                 className="input w-auto text-xs"
               >
-                {semesters.map((semester) => (
+                {semesterList.map((semester) => (
                   <option key={semester.id} value={semester.id}>{semester.name}</option>
                 ))}
               </select>

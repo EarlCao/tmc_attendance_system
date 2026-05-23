@@ -7,7 +7,7 @@ import StatCard from '../components/common/StatCard'
 import Avatar from '../components/common/Avatar'
 import {
   members, getDashboardStats, upcomingActivities,
-  attendanceSessions, auditionees, activeSemester,
+  attendanceSessions, auditionees, activeSemester as initialActiveSemester,
 } from '../data/mockData'
 import { formatDateShort, getStatusColor } from '../lib/utils'
 
@@ -28,7 +28,7 @@ const activityTypeColor = {
   Audition:    'bg-purple-100 text-purple-700',
 }
 
-export default function Dashboard() {
+export default function Dashboard({ currentSemester = initialActiveSemester }) {
   const navigate = useNavigate()
 
   return (
@@ -54,7 +54,7 @@ export default function Dashboard() {
         <StatCard label="Total Members"     value={stats.totalMembers}     icon={Users}        color="blue"   sub={`${stats.activeMembers} active`} />
         <StatCard label="Present Today"     value={stats.presentToday}     icon={CheckCircle2} color="green"  sub="Last session" />
         <StatCard label="Absent Today"      value={stats.absentToday}      icon={XCircle}      color="red"    sub="Last session" />
-        <StatCard label="Active Semester"   value={activeSemester?.status === 'active' ? 'Open' : 'Closed'} icon={CalendarDays} color="yellow" sub={activeSemester?.name ?? 'No active semester'} />
+        <StatCard label="Active Semester"   value={currentSemester?.status === 'active' ? 'Open' : 'Closed'} icon={CalendarDays} color="yellow" sub={currentSemester?.name ?? 'No active semester'} />
       </div>
 
       {/* Row 2 */}

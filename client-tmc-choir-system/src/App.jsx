@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import { BarChart3, CalendarDays, CheckCircle2, Clock, Eye, FileText, Lock, Mail, Pencil, Phone, Plus, Save, Settings, Trash2, UserCheck, Users, XCircle } from 'lucide-react'
 import MainLayout from './layouts/MainLayout'
 import Dashboard from './pages/Dashboard'
@@ -11,7 +11,7 @@ import Avatar from './components/common/Avatar'
 import { activeSemester, attendanceRecords, attendanceSessions, auditionees, excuses, judges, members, officerAssignments, semesters } from './data/mockData'
 import { cn, formatDateShort, getAttendanceColor, getStatusColor, getVoicePartColor } from './lib/utils'
 
-const semesterTabs = ['Overview', 'Attendance', 'Sessions', 'People']
+const semesterTabs = ['Overview', 'Attendance', 'Sessions', 'People', 'Auditions']
 const attendanceIcons = {
   Present: CheckCircle2,
   Late: Clock,
@@ -56,6 +56,28 @@ function getSemesterExcuses(semester) {
   })
 }
 
+function isDateWithinSemester(dateStr, semester) {
+  if (!dateStr) return false
+
+  const date = dateStr.slice(0, 10)
+  if (semester.startDate && date < semester.startDate) return false
+  if (semester.endDate && date > semester.endDate) return false
+  return true
+}
+
+function getSemesterAuditionees(semester) {
+  return auditionees.filter((auditionee) => isDateWithinSemester(auditionee.auditionDate, semester))
+}
+
+function getSemesterJudges(semester, semesterAuditionees) {
+  const judgeIdsFromRatings = new Set(
+    semesterAuditionees.flatMap((auditionee) => auditionee.ratings.map((rating) => rating.judgeId))
+  )
+  const defaultActiveSemester = activeSemester?.id === semester.id
+
+  return judges.filter((judge) => judge.semesterId === semester.id || judgeIdsFromRatings.has(judge.id) || defaultActiveSemester)
+}
+
 function formatSemesterRange(semester) {
   if (!semester.startDate && !semester.endDate) return 'Dates not set'
   if (!semester.startDate) return `Until ${formatDateShort(semester.endDate)}`
@@ -75,14 +97,34 @@ function PlaceholderPage({ icon: Icon, title, description }) {
   )
 }
 
-function Semesters() {
-  const [semesterList, setSemesterList] = useState(semesters)
+function RequireActiveSemester({ currentSemester, children }) {
+  if (currentSemester) return children
+
+  return (
+    <div className="page-shell">
+      <div className="card p-8 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600">
+          <Lock size={22} />
+        </div>
+        <h2 className="text-lg font-semibold text-gray-900">No ongoing semester</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">
+          This panel is locked because the previous semester has ended. Create a new active semester before adding or editing records.
+        </p>
+        <Link to="/semesters" className="btn-primary mt-5">
+          <CalendarDays size={14} /> Go to Semesters
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function Semesters({ semesterList, setSemesterList, currentSemester }) {
   const [selectedSemester, setSelectedSemester] = useState(null)
   const [selectedTab, setSelectedTab] = useState('Overview')
   const [semesterModal, setSemesterModal] = useState(false)
   const [semesterForm, setSemesterForm] = useState({ name: '', startDate: '', endDate: '' })
-
-  const currentSemester = semesterList.find((semester) => semester.status === 'active')
+  const [endConfirmModal, setEndConfirmModal] = useState(false)
+  const [endConfirmText, setEndConfirmText] = useState('')
 
   function handleEndSemester() {
     if (!currentSemester) return
@@ -95,6 +137,8 @@ function Semesters() {
     setSelectedSemester((prev) =>
       prev?.id === currentSemester.id ? { ...prev, status: 'archived' } : prev
     )
+    setEndConfirmText('')
+    setEndConfirmModal(false)
   }
 
   function handleCreateSemester() {
@@ -150,6 +194,22 @@ function Semesters() {
         : [],
     [selectedAttendance, selectedSemester]
   )
+  const selectedAuditionees = useMemo(
+    () => (selectedSemester ? getSemesterAuditionees(selectedSemester) : []),
+    [selectedSemester]
+  )
+  const selectedJudges = useMemo(
+    () => (selectedSemester ? getSemesterJudges(selectedSemester, selectedAuditionees) : []),
+    [selectedAuditionees, selectedSemester]
+  )
+  const selectedAuditionSummary = useMemo(
+    () => ({
+      passed: selectedAuditionees.filter((auditionee) => auditionee.status === 'Passed').length,
+      failed: selectedAuditionees.filter((auditionee) => auditionee.status === 'Failed').length,
+      pending: selectedAuditionees.filter((auditionee) => auditionee.status === 'Pending').length,
+    }),
+    [selectedAuditionees]
+  )
 
   return (
     <div className="page-shell">
@@ -164,7 +224,10 @@ function Semesters() {
             <Plus size={14} /> New Semester
           </button>
           <button
-            onClick={handleEndSemester}
+            onClick={() => {
+              setEndConfirmText('')
+              setEndConfirmModal(true)
+            }}
             disabled={!currentSemester}
             className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
             title={currentSemester ? 'End the active semester and lock it from editing' : 'No active semester to end'}
@@ -262,7 +325,7 @@ function Semesters() {
 
             {selectedTab === 'Overview' && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
                   <div className="rounded-lg border border-gray-100 p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Sessions</p>
                     <p className="mt-1 text-lg font-bold text-gray-900">{selectedSessions.length}</p>
@@ -278,6 +341,14 @@ function Semesters() {
                   <div className="rounded-lg border border-gray-100 p-3">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Excuses logged</p>
                     <p className="mt-1 text-lg font-bold text-gray-900">{selectedExcuses.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Auditionees</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{selectedAuditionees.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Judges</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{selectedJudges.length}</p>
                   </div>
                 </div>
 
@@ -455,6 +526,134 @@ function Semesters() {
                 </div>
               </div>
             )}
+
+            {selectedTab === 'Auditions' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Auditionees</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{selectedAuditionees.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Passed</p>
+                    <p className="mt-1 text-lg font-bold text-green-600">{selectedAuditionSummary.passed}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Failed</p>
+                    <p className="mt-1 text-lg font-bold text-red-600">{selectedAuditionSummary.failed}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pending</p>
+                    <p className="mt-1 text-lg font-bold text-yellow-600">{selectedAuditionSummary.pending}</p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Judges</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900">{selectedJudges.length}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-100">
+                  <div className="border-b border-gray-100 px-4 py-3">
+                    <p className="text-sm font-semibold text-gray-900">Judges assigned</p>
+                  </div>
+                  <div className="grid gap-3 p-4 sm:grid-cols-2">
+                    {selectedJudges.map((judge) => (
+                      <div key={judge.id} className="rounded-lg bg-gray-50 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{judge.name}</p>
+                            <p className="mt-1 text-xs text-gray-500">{judge.title || 'Judge'}</p>
+                          </div>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${getStatusColor(judge.status)}`}>
+                            {judge.status}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-gray-500">{judge.specialization}</p>
+                        <p className="mt-2 text-xs text-gray-400">{judge.email}</p>
+                      </div>
+                    ))}
+                    {selectedJudges.length === 0 && (
+                      <p className="text-sm text-gray-500">No judges are linked to this semester yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-100">
+                  <div className="border-b border-gray-100 px-4 py-3">
+                    <p className="text-sm font-semibold text-gray-900">Auditionees and evaluations</p>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {selectedAuditionees.map((auditionee) => {
+                      const totalRatings = auditionee.ratings.length
+                      const averageRating = totalRatings
+                        ? (auditionee.ratings.reduce((sum, rating) => {
+                          const categoryAverage = ['vocalQuality', 'pitchAccuracy', 'tone', 'rhythm', 'confidence', 'stagePresence']
+                            .reduce((categorySum, category) => categorySum + rating[category], 0) / 6
+                          return sum + categoryAverage
+                        }, 0) / totalRatings).toFixed(1)
+                        : null
+
+                      return (
+                        <div key={auditionee.id} className="p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              <Avatar name={auditionee.name} voicePart={auditionee.targetPart} size="sm" />
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{auditionee.name}</p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  {formatDateShort(auditionee.auditionDate)} · {auditionee.course}{auditionee.yearLevel ? ` · ${auditionee.yearLevel}` : ''}
+                                </p>
+                                {auditionee.notes && <p className="mt-2 text-xs text-gray-500">{auditionee.notes}</p>}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getVoicePartColor(auditionee.targetPart)}`}>
+                                {auditionee.targetPart}
+                              </span>
+                              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(auditionee.status)}`}>
+                                {auditionee.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                            <div className="rounded-lg bg-gray-50 p-2">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Judges rated</p>
+                              <p className="mt-1 text-sm font-bold text-gray-900">{totalRatings}</p>
+                            </div>
+                            <div className="rounded-lg bg-gray-50 p-2">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Average rating</p>
+                              <p className="mt-1 text-sm font-bold text-gray-900">{averageRating ? `${averageRating}/10` : 'Not rated'}</p>
+                            </div>
+                            <div className="rounded-lg bg-gray-50 p-2">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Comments</p>
+                              <p className="mt-1 text-sm font-bold text-gray-900">{auditionee.ratings.filter((rating) => rating.comments).length}</p>
+                            </div>
+                          </div>
+                          {auditionee.ratings.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {auditionee.ratings.map((rating) => (
+                                <div key={rating.judgeId} className="rounded-lg border border-gray-100 p-3">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-xs font-semibold text-gray-800">{rating.judgeName}</p>
+                                    <span className="text-xs font-bold text-yellow-600">
+                                      {(['vocalQuality', 'pitchAccuracy', 'tone', 'rhythm', 'confidence', 'stagePresence'].reduce((sum, category) => sum + rating[category], 0) / 6).toFixed(1)}/10
+                                    </span>
+                                  </div>
+                                  {rating.comments && <p className="mt-1 text-xs text-gray-500">{rating.comments}</p>}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {selectedAuditionees.length === 0 && (
+                      <p className="p-4 text-sm text-gray-500">No auditionees are linked to this semester yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -491,12 +690,57 @@ function Semesters() {
           </div>
         </div>
       </Modal>
+
+      <Modal
+        open={endConfirmModal}
+        onClose={() => {
+          setEndConfirmModal(false)
+          setEndConfirmText('')
+        }}
+        title="End Current Semester"
+        size="sm"
+        footer={
+          <>
+            <button
+              onClick={() => {
+                setEndConfirmModal(false)
+                setEndConfirmText('')
+              }}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleEndSemester}
+              disabled={endConfirmText !== 'end-semester'}
+              className="btn-danger disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              End Semester
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+            This will lock <strong>{currentSemester?.name}</strong> as view-only. Attendance, officers, and semester records for this semester should no longer be editable after ending it.
+          </div>
+          <div>
+            <label className="label">Type end-semester to confirm</label>
+            <input
+              className="input"
+              value={endConfirmText}
+              onChange={e => setEndConfirmText(e.target.value)}
+              placeholder="end-semester"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
 
-function Judges() {
-  const [judgeList, setJudgeList] = useState(judges.map((judge) => ({ ...judge, semesterId: activeSemester?.id })))
+function Judges({ semesterList = semesters, currentSemester = activeSemester }) {
+  const [judgeList, setJudgeList] = useState(judges.map((judge) => ({ ...judge, semesterId: currentSemester?.id })))
   const [judgeModal, setJudgeModal] = useState(false)
   const [editingJudge, setEditingJudge] = useState(null)
   const [judgeForm, setJudgeForm] = useState({
@@ -505,7 +749,7 @@ function Judges() {
     specialization: '',
     contact: '',
     email: '',
-    semesterId: activeSemester?.id ?? semesters[0]?.id,
+    semesterId: currentSemester?.id ?? semesterList[0]?.id,
     status: 'active',
   })
 
@@ -521,7 +765,7 @@ function Judges() {
         specialization: '',
         contact: '',
         email: '',
-        semesterId: activeSemester?.id ?? semesters[0]?.id,
+        semesterId: currentSemester?.id ?? semesterList[0]?.id,
         status: 'active',
       })
     }
@@ -556,7 +800,7 @@ function Judges() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {judgeList.map((judge) => {
-          const semester = semesters.find((item) => item.id === Number(judge.semesterId))
+          const semester = semesterList.find((item) => item.id === Number(judge.semesterId))
 
           return (
             <div key={judge.id} className="card p-5">
@@ -611,7 +855,7 @@ function Judges() {
             <div>
               <label className="label">Semester</label>
               <select className="input" value={judgeForm.semesterId} onChange={e => setJudgeForm(p => ({ ...p, semesterId: Number(e.target.value) }))}>
-                {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
+                {semesterList.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
               </select>
             </div>
           </div>
@@ -642,7 +886,7 @@ function Judges() {
   )
 }
 
-function Officers() {
+function Officers({ semesterList = semesters, currentSemester = activeSemester }) {
   const [officerList, setOfficerList] = useState(officerAssignments.map((assignment, index) => {
     const member = members.find((item) => item.id === assignment.memberId)
     return {
@@ -650,7 +894,7 @@ function Officers() {
       memberId: assignment.memberId,
       name: member?.name ?? '',
       position: assignment.position,
-      semesterId: activeSemester?.id ?? semesters[0]?.id,
+      semesterId: currentSemester?.id ?? semesterList[0]?.id,
       contact: member?.phone ?? '',
       email: member?.email ?? '',
       duties: '',
@@ -662,7 +906,7 @@ function Officers() {
   const [officerForm, setOfficerForm] = useState({
     name: '',
     position: '',
-    semesterId: activeSemester?.id ?? semesters[0]?.id,
+    semesterId: currentSemester?.id ?? semesterList[0]?.id,
     contact: '',
     email: '',
     duties: '',
@@ -678,7 +922,7 @@ function Officers() {
       setOfficerForm({
         name: '',
         position: '',
-        semesterId: activeSemester?.id ?? semesters[0]?.id,
+        semesterId: currentSemester?.id ?? semesterList[0]?.id,
         contact: '',
         email: '',
         duties: '',
@@ -733,7 +977,7 @@ function Officers() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {officerList.map((officer) => {
-                const semester = semesters.find((item) => item.id === Number(officer.semesterId))
+                const semester = semesterList.find((item) => item.id === Number(officer.semesterId))
 
                 return (
                   <tr key={officer.id} className="hover:bg-gray-50/50">
@@ -789,7 +1033,7 @@ function Officers() {
             <div>
               <label className="label">Semester</label>
               <select className="input" value={officerForm.semesterId} onChange={e => setOfficerForm(p => ({ ...p, semesterId: Number(e.target.value) }))}>
-                {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
+                {semesterList.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
               </select>
             </div>
           </div>
@@ -939,28 +1183,33 @@ function SettingsPage() {
 }
 
 export default function App() {
+  const [semesterList, setSemesterList] = useState(semesters)
+  const currentSemester = semesterList.find((semester) => semester.status === 'active')
+
   return (
     <BrowserRouter>
-      <MainLayout>
+      <MainLayout currentSemester={currentSemester}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/semesters" element={<Semesters />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/members" element={<Members />} />
-          <Route path="/auditions" element={<Auditions />} />
-          <Route path="/judges" element={<Judges />} />
-          <Route path="/officers" element={<Officers />} />
+          <Route path="/" element={<Dashboard currentSemester={currentSemester} />} />
+          <Route path="/semesters" element={<Semesters semesterList={semesterList} setSemesterList={setSemesterList} currentSemester={currentSemester} />} />
+          <Route path="/attendance" element={<RequireActiveSemester currentSemester={currentSemester}><Attendance semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
+          <Route path="/members" element={<RequireActiveSemester currentSemester={currentSemester}><Members /></RequireActiveSemester>} />
+          <Route path="/auditions" element={<RequireActiveSemester currentSemester={currentSemester}><Auditions /></RequireActiveSemester>} />
+          <Route path="/judges" element={<RequireActiveSemester currentSemester={currentSemester}><Judges semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
+          <Route path="/officers" element={<RequireActiveSemester currentSemester={currentSemester}><Officers semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
           <Route
             path="/elections"
             element={
-              <PlaceholderPage
-                icon={UserCheck}
-                title="Officer Elections"
-                description="Election setup, voting windows, and result summaries can be managed here."
-              />
+              <RequireActiveSemester currentSemester={currentSemester}>
+                <PlaceholderPage
+                  icon={UserCheck}
+                  title="Officer Elections"
+                  description="Election setup, voting windows, and result summaries can be managed here."
+                />
+              </RequireActiveSemester>
             }
           />
-          <Route path="/reports" element={<Reports />} />
+          <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester}><Reports /></RequireActiveSemester>} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route
             path="*"
