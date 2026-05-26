@@ -48,21 +48,21 @@ enum OfficerStatus {
 //////////////////////////////////////////////////////
 
 model Semester {
-  id          Int       @id @default(autoincrement())
-  name        String
-  schoolYear  String
-  startDate   DateTime?
-  endDate     DateTime?
-  notes       String?   @db.Text
+  id         Int       @id @default(autoincrement())
+  name       String
+  schoolYear String
+  startDate  DateTime?
+  endDate    DateTime?
+  notes      String?   @db.Text
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  sessions        Session[]
-  officers        Officer[]
-  auditions       Auditionee[]
-  rules           RuleRegulation[]
+  sessions  Session[]
+  officers  Officer[]
+  auditions Auditionee[]
+  rules     RuleRegulation[]
 }
 
 //////////////////////////////////////////////////////
@@ -70,27 +70,20 @@ model Semester {
 //////////////////////////////////////////////////////
 
 model Member {
-  id              Int           @id @default(autoincrement())
-
-  fullName        String
-  voiceType       VoiceType
-
-  contactNo       String?
-  address         String?
-  religion        String?
-  course          String?
-  yearLevel       String?
-
-  email           String?
-  facebookAccount String?
-
-  status          MemberStatus  @default(ACTIVE)
-
-  notes           String?       @db.Text
-
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
+  id                Int                @id @default(autoincrement())
+  fullName          String
+  voiceType         VoiceType
+  contactNo         String?
+  address           String?
+  religion          String?
+  course            String?
+  yearLevel         String?
+  email             String?
+  facebookAccount   String?
+  status            MemberStatus       @default(ACTIVE)
+  notes             String?            @db.Text
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   // Relations
   attendanceRecords AttendanceRecord[]
 }
@@ -100,18 +93,17 @@ model Member {
 //////////////////////////////////////////////////////
 
 model Session {
-  id            Int        @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
+  semesterId  Int
+  title       String
+  sessionDate DateTime
+  description String?  @db.Text
 
-  semesterId    Int
-  title         String
-  sessionDate   DateTime
-  description   String?    @db.Text
-
-  createdAt     DateTime   @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  semester       Semester  @relation(fields: [semesterId], references: [id])
-  attendance     AttendanceRecord[]
+  semester   Semester           @relation(fields: [semesterId], references: [id])
+  attendance AttendanceRecord[]
 }
 
 //////////////////////////////////////////////////////
@@ -119,19 +111,19 @@ model Session {
 //////////////////////////////////////////////////////
 
 model AttendanceRecord {
-  id              Int                @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  sessionId       Int
-  memberId        Int
+  sessionId Int
+  memberId  Int
 
-  status          AttendanceStatus
-  notes           String?            @db.Text
+  status AttendanceStatus
+  notes  String?          @db.Text
 
-  createdAt       DateTime           @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  session         Session            @relation(fields: [sessionId], references: [id])
-  member          Member             @relation(fields: [memberId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
+  member  Member  @relation(fields: [memberId], references: [id])
 
   @@unique([sessionId, memberId])
 }
@@ -141,25 +133,25 @@ model AttendanceRecord {
 //////////////////////////////////////////////////////
 
 model Officer {
-  id               Int             @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  semesterId       Int
+  semesterId Int
 
-  fullName         String
-  position         String
+  fullName String
+  position String
 
-  contactNo        String?
-  email            String?
-  facebookAccount  String?
+  contactNo       String?
+  email           String?
+  facebookAccount String?
 
-  dutiesNotes      String?         @db.Text
+  dutiesNotes String? @db.Text
 
-  status           OfficerStatus   @default(ACTIVE)
+  status OfficerStatus @default(ACTIVE)
 
-  createdAt        DateTime        @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  semester         Semester        @relation(fields: [semesterId], references: [id])
+  semester Semester @relation(fields: [semesterId], references: [id])
 }
 
 //////////////////////////////////////////////////////
@@ -167,22 +159,22 @@ model Officer {
 //////////////////////////////////////////////////////
 
 model Judge {
-  id               Int          @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  fullName         String
-  titleRole        String?
-  specialization   String?
+  fullName       String
+  titleRole      String?
+  specialization String?
 
-  contactNo        String?
-  email            String?
-  facebookAccount  String?
+  contactNo       String?
+  email           String?
+  facebookAccount String?
 
-  notes            String?      @db.Text
+  notes String? @db.Text
 
-  createdAt        DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  evaluations      JudgeEvaluation[]
+  evaluations JudgeEvaluation[]
 }
 
 //////////////////////////////////////////////////////
@@ -190,38 +182,38 @@ model Judge {
 //////////////////////////////////////////////////////
 
 model Auditionee {
-  id                  Int            @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  semesterId          Int
+  semesterId Int
 
-  fullName            String
-  age                 Int?
+  fullName String
+  age      Int?
 
-  targetVoiceType     VoiceType?
+  targetVoiceType VoiceType?
 
-  course              String?
-  yearLevel           String?
+  course    String?
+  yearLevel String?
 
-  contactNo           String?
-  religion            String?
+  contactNo String?
+  religion  String?
 
-  email               String?
-  facebookAccount     String?
+  email           String?
+  facebookAccount String?
 
-  address             String?
+  address String?
 
-  registryNotes       String?        @db.Text
+  registryNotes String? @db.Text
 
-  auditionDate        DateTime
+  auditionDate DateTime
 
-  averageRating       Float?
+  averageRating Float?
 
-  createdAt           DateTime       @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  semester            Semester       @relation(fields: [semesterId], references: [id])
+  semester Semester @relation(fields: [semesterId], references: [id])
 
-  evaluations         JudgeEvaluation[]
+  evaluations JudgeEvaluation[]
 }
 
 //////////////////////////////////////////////////////
@@ -229,17 +221,17 @@ model Auditionee {
 //////////////////////////////////////////////////////
 
 model EvaluationCategory {
-  id              Int        @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  name            String
-  description     String?    @db.Text
+  name        String
+  description String? @db.Text
 
-  percentage      Float
+  percentage Float
 
-  createdAt       DateTime   @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  scores          EvaluationScore[]
+  scores EvaluationScore[]
 }
 
 //////////////////////////////////////////////////////
@@ -247,21 +239,21 @@ model EvaluationCategory {
 //////////////////////////////////////////////////////
 
 model JudgeEvaluation {
-  id                Int          @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  auditioneeId      Int
-  judgeId           Int
+  auditioneeId Int
+  judgeId      Int
 
-  comments          String?      @db.Text
-  overallNotes      String?      @db.Text
+  comments     String? @db.Text
+  overallNotes String? @db.Text
 
-  createdAt         DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  auditionee        Auditionee   @relation(fields: [auditioneeId], references: [id])
-  judge             Judge        @relation(fields: [judgeId], references: [id])
+  auditionee Auditionee @relation(fields: [auditioneeId], references: [id])
+  judge      Judge      @relation(fields: [judgeId], references: [id])
 
-  scores            EvaluationScore[]
+  scores EvaluationScore[]
 
   @@unique([auditioneeId, judgeId])
 }
@@ -271,19 +263,19 @@ model JudgeEvaluation {
 //////////////////////////////////////////////////////
 
 model EvaluationScore {
-  id                  Int                   @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  evaluationId        Int
-  categoryId          Int
+  evaluationId Int
+  categoryId   Int
 
-  score               Float
+  score Float
 
-  createdAt           DateTime              @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  evaluation          JudgeEvaluation       @relation(fields: [evaluationId], references: [id])
+  evaluation JudgeEvaluation @relation(fields: [evaluationId], references: [id])
 
-  category            EvaluationCategory    @relation(fields: [categoryId], references: [id])
+  category EvaluationCategory @relation(fields: [categoryId], references: [id])
 
   @@unique([evaluationId, categoryId])
 }
@@ -293,15 +285,15 @@ model EvaluationScore {
 //////////////////////////////////////////////////////
 
 model RuleRegulation {
-  id              Int         @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  semesterId      Int?
+  semesterId Int?
 
-  title           String
-  content         String      @db.Text
+  title   String
+  content String @db.Text
 
-  createdAt       DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  semester        Semester?   @relation(fields: [semesterId], references: [id])
+  semester Semester? @relation(fields: [semesterId], references: [id])
 }
