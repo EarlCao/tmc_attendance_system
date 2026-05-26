@@ -7,11 +7,11 @@ import helmet from "helmet";
 
 import authRoutes from "./routes/auth.routes.js";
 
-const BACKEND_PORT = process.env.BACKEND_PORT;
+const BACKEND_PORT = process.env.BACKEND_PORT || 3002;
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors({ origin: process.env.FRONTEND_URL }));
+app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
 app.use(helmet());
 app.use(express.json());
 

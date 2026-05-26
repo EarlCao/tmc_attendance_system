@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard'
 import Attendance from './pages/Attendance'
 import Members from './pages/Members'
 import Auditions from './pages/Auditions'
+import Login from './pages/Login'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/common/ProtectedRoute'
 import Modal from './components/common/Modal'
 import Avatar from './components/common/Avatar'
 import { activeSemester, attendanceRecords, attendanceSessions, auditionees, excuses, judges, members, officerAssignments, semesters } from './data/mockData'
@@ -1528,41 +1531,54 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <MainLayout currentSemester={currentSemester}>
+      <AuthProvider>
         <Routes>
-          <Route path="/" element={<Dashboard currentSemester={currentSemester} />} />
-          <Route path="/semesters" element={<Semesters semesterList={semesterList} setSemesterList={setSemesterList} currentSemester={currentSemester} />} />
-          <Route path="/attendance" element={<RequireActiveSemester currentSemester={currentSemester}><Attendance semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
-          <Route path="/members" element={<RequireActiveSemester currentSemester={currentSemester}><Members /></RequireActiveSemester>} />
-          <Route path="/auditions" element={<RequireActiveSemester currentSemester={currentSemester}><Auditions /></RequireActiveSemester>} />
-          <Route path="/judges" element={<RequireActiveSemester currentSemester={currentSemester}><Judges semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
-          <Route path="/officers" element={<RequireActiveSemester currentSemester={currentSemester}><Officers semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
+          <Route path="/login" element={<Login />} />
           <Route
-            path="/elections"
+            path="/*"
             element={
-              <RequireActiveSemester currentSemester={currentSemester}>
-                <PlaceholderPage
-                  icon={UserCheck}
-                  title="Officer Elections"
-                  description="Election setup, voting windows, and result summaries can be managed here."
-                />
-              </RequireActiveSemester>
-            }
-          />
-          <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester}><Reports currentSemester={currentSemester} /></RequireActiveSemester>} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route
-            path="*"
-            element={
-              <PlaceholderPage
-                icon={CalendarDays}
-                title="Page not found"
-                description="Choose a section from the sidebar to continue."
-              />
+              <ProtectedRoute>
+                <MainLayout currentSemester={currentSemester}>
+                  <Routes>
+                    <Route path="/" element={<Dashboard currentSemester={currentSemester} />} />
+                    <Route path="/semesters" element={<Semesters semesterList={semesterList} setSemesterList={setSemesterList} currentSemester={currentSemester} />} />
+                    <Route path="/attendance" element={<RequireActiveSemester currentSemester={currentSemester}><Attendance semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
+                    <Route path="/members" element={<RequireActiveSemester currentSemester={currentSemester}><Members /></RequireActiveSemester>} />
+                    <Route path="/auditions" element={<RequireActiveSemester currentSemester={currentSemester}><Auditions /></RequireActiveSemester>} />
+                    <Route path="/judges" element={<RequireActiveSemester currentSemester={currentSemester}><Judges semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
+                    <Route path="/officers" element={<RequireActiveSemester currentSemester={currentSemester}><Officers semesterList={semesterList} currentSemester={currentSemester} /></RequireActiveSemester>} />
+                    <Route
+                      path="/elections"
+                      element={
+                        <RequireActiveSemester currentSemester={currentSemester}>
+                          <PlaceholderPage
+                            icon={UserCheck}
+                            title="Officer Elections"
+                            description="Election setup, voting windows, and result summaries can be managed here."
+                          />
+                        </RequireActiveSemester>
+                      }
+                    />
+                    <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester}><Reports currentSemester={currentSemester} /></RequireActiveSemester>} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route
+                      path="*"
+                      element={
+                        <PlaceholderPage
+                          icon={CalendarDays}
+                          title="Page not found"
+                          description="Choose a section from the sidebar to continue."
+                        />
+                      }
+                    />
+                  </Routes>
+                </MainLayout>
+              </ProtectedRoute>
             }
           />
         </Routes>
-      </MainLayout>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
+

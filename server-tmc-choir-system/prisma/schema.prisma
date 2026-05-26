@@ -223,7 +223,7 @@ model Auditionee {
 model EvaluationCategory {
   id Int @id @default(autoincrement())
 
-  name        String
+  name        String @unique
   description String? @db.Text
 
   percentage Float

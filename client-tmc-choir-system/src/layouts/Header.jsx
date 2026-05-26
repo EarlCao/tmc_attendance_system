@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom'
-import { Music4 } from 'lucide-react'
+import { Music4, LogOut } from 'lucide-react'
 import { activeSemester as initialActiveSemester } from '../data/mockData'
+import { useAuth } from '../context/AuthContext'
 
 const crumbMap = {
   '/':           'Dashboard',
@@ -17,6 +18,12 @@ const crumbMap = {
 export default function Header({ currentSemester = initialActiveSemester }) {
   const location = useLocation()
   const pageTitle = crumbMap[location.pathname] ?? 'Page'
+  const { user, logout } = useAuth()
+
+  const getInitials = (name) => {
+    if (!name) return 'AD'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 bg-white/92 px-4 backdrop-blur sm:px-6">
@@ -45,17 +52,27 @@ export default function Header({ currentSemester = initialActiveSemester }) {
           </span>
         )}
 
-        {/* Avatar */}
-        <div className="flex items-center gap-2 border-l border-gray-100 pl-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-            <span className="text-xs font-bold text-white">AD</span>
+        {/* Avatar & Logout */}
+        <div className="flex items-center gap-3 border-l border-gray-100 pl-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
+              <span className="text-xs font-bold text-white">{getInitials(user?.username)}</span>
+            </div>
+            <div className="hidden sm:block">
+              <p className="text-xs font-medium text-gray-900">{user?.username || 'Admin Officer'}</p>
+              <p className="text-[10px] text-gray-400">TMC Choir</p>
+            </div>
           </div>
-          <div className="hidden sm:block">
-            <p className="text-xs font-medium text-gray-900">Admin Officer</p>
-            <p className="text-[10px] text-gray-400">TMC Choir</p>
-          </div>
+          <button 
+            onClick={logout}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-red-600 transition-colors"
+            title="Log out"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </header>
   )
 }
+
