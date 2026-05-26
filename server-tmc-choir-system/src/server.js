@@ -9,7 +9,7 @@ const BACKEND_PORT = process.env.BACKEND_PORT;
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_URL }));
 app.use(helmet());
 app.use(express.json());
 
