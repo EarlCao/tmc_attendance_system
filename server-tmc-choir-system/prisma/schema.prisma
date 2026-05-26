@@ -3,11 +3,305 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+// prisma/schema.prisma
+
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
+}
+
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
+
+enum VoiceType {
+  SOPRANO
+  ALTO
+  TENOR
+  BASS
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  ALUMNI
+}
+
+enum OfficerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+//////////////////////////////////////////////////////
+// SEMESTER
+//////////////////////////////////////////////////////
+
+model Semester {
+  id          Int       @id @default(autoincrement())
+  name        String
+  schoolYear  String
+  startDate   DateTime?
+  endDate     DateTime?
+  notes       String?   @db.Text
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  sessions        Session[]
+  officers        Officer[]
+  auditions       Auditionee[]
+  rules           RuleRegulation[]
+}
+
+//////////////////////////////////////////////////////
+// MEMBERS
+//////////////////////////////////////////////////////
+
+model Member {
+  id              Int           @id @default(autoincrement())
+
+  fullName        String
+  voiceType       VoiceType
+
+  contactNo       String?
+  address         String?
+  religion        String?
+  course          String?
+  yearLevel       String?
+
+  email           String?
+  facebookAccount String?
+
+  status          MemberStatus  @default(ACTIVE)
+
+  notes           String?       @db.Text
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  attendanceRecords AttendanceRecord[]
+}
+
+//////////////////////////////////////////////////////
+// ATTENDANCE SESSION
+//////////////////////////////////////////////////////
+
+model Session {
+  id            Int        @id @default(autoincrement())
+
+  semesterId    Int
+  title         String
+  sessionDate   DateTime
+  description   String?    @db.Text
+
+  createdAt     DateTime   @default(now())
+
+  // Relations
+  semester       Semester  @relation(fields: [semesterId], references: [id])
+  attendance     AttendanceRecord[]
+}
+
+//////////////////////////////////////////////////////
+// ATTENDANCE RECORD
+//////////////////////////////////////////////////////
+
+model AttendanceRecord {
+  id              Int                @id @default(autoincrement())
+
+  sessionId       Int
+  memberId        Int
+
+  status          AttendanceStatus
+  notes           String?            @db.Text
+
+  createdAt       DateTime           @default(now())
+
+  // Relations
+  session         Session            @relation(fields: [sessionId], references: [id])
+  member          Member             @relation(fields: [memberId], references: [id])
+
+  @@unique([sessionId, memberId])
+}
+
+//////////////////////////////////////////////////////
+// OFFICERS
+//////////////////////////////////////////////////////
+
+model Officer {
+  id               Int             @id @default(autoincrement())
+
+  semesterId       Int
+
+  fullName         String
+  position         String
+
+  contactNo        String?
+  email            String?
+  facebookAccount  String?
+
+  dutiesNotes      String?         @db.Text
+
+  status           OfficerStatus   @default(ACTIVE)
+
+  createdAt        DateTime        @default(now())
+
+  // Relations
+  semester         Semester        @relation(fields: [semesterId], references: [id])
+}
+
+//////////////////////////////////////////////////////
+// JUDGES
+//////////////////////////////////////////////////////
+
+model Judge {
+  id               Int          @id @default(autoincrement())
+
+  fullName         String
+  titleRole        String?
+  specialization   String?
+
+  contactNo        String?
+  email            String?
+  facebookAccount  String?
+
+  notes            String?      @db.Text
+
+  createdAt        DateTime     @default(now())
+
+  // Relations
+  evaluations      JudgeEvaluation[]
+}
+
+//////////////////////////////////////////////////////
+// AUDITIONEES
+//////////////////////////////////////////////////////
+
+model Auditionee {
+  id                  Int            @id @default(autoincrement())
+
+  semesterId          Int
+
+  fullName            String
+  age                 Int?
+
+  targetVoiceType     VoiceType?
+
+  course              String?
+  yearLevel           String?
+
+  contactNo           String?
+  religion            String?
+
+  email               String?
+  facebookAccount     String?
+
+  address             String?
+
+  registryNotes       String?        @db.Text
+
+  auditionDate        DateTime
+
+  averageRating       Float?
+
+  createdAt           DateTime       @default(now())
+
+  // Relations
+  semester            Semester       @relation(fields: [semesterId], references: [id])
+
+  evaluations         JudgeEvaluation[]
+}
+
+//////////////////////////////////////////////////////
+// EVALUATION CATEGORY
+//////////////////////////////////////////////////////
+
+model EvaluationCategory {
+  id              Int        @id @default(autoincrement())
+
+  name            String
+  description     String?    @db.Text
+
+  percentage      Float
+
+  createdAt       DateTime   @default(now())
+
+  // Relations
+  scores          EvaluationScore[]
+}
+
+//////////////////////////////////////////////////////
+// JUDGE EVALUATIONS
+//////////////////////////////////////////////////////
+
+model JudgeEvaluation {
+  id                Int          @id @default(autoincrement())
+
+  auditioneeId      Int
+  judgeId           Int
+
+  comments          String?      @db.Text
+  overallNotes      String?      @db.Text
+
+  createdAt         DateTime     @default(now())
+
+  // Relations
+  auditionee        Auditionee   @relation(fields: [auditioneeId], references: [id])
+  judge             Judge        @relation(fields: [judgeId], references: [id])
+
+  scores            EvaluationScore[]
+
+  @@unique([auditioneeId, judgeId])
+}
+
+//////////////////////////////////////////////////////
+// EVALUATION SCORES
+//////////////////////////////////////////////////////
+
+model EvaluationScore {
+  id                  Int                   @id @default(autoincrement())
+
+  evaluationId        Int
+  categoryId          Int
+
+  score               Float
+
+  createdAt           DateTime              @default(now())
+
+  // Relations
+  evaluation          JudgeEvaluation       @relation(fields: [evaluationId], references: [id])
+
+  category            EvaluationCategory    @relation(fields: [categoryId], references: [id])
+
+  @@unique([evaluationId, categoryId])
+}
+
+//////////////////////////////////////////////////////
+// RULES & REGULATIONS
+//////////////////////////////////////////////////////
+
+model RuleRegulation {
+  id              Int         @id @default(autoincrement())
+
+  semesterId      Int?
+
+  title           String
+  content         String      @db.Text
+
+  createdAt       DateTime    @default(now())
+
+  // Relations
+  semester        Semester?   @relation(fields: [semesterId], references: [id])
 }
