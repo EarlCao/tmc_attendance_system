@@ -73,6 +73,16 @@ export const protect = async (req, res, next) => {
   }
 };
 
+export const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({
+      status: 'fail',
+      message: 'You do not have permission to perform this action',
+    });
+  }
+  next();
+};
+
 /**
  * Middleware to restrict access to certain roles
  * @param  {...string} roles - Allowed roles (e.g., 'admin', 'editor')

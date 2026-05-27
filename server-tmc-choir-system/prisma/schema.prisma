@@ -48,12 +48,11 @@ enum OfficerStatus {
 //////////////////////////////////////////////////////
 
 model Semester {
-  id         Int       @id @default(autoincrement())
-  name       String
-  schoolYear String
-  startDate  DateTime?
-  endDate    DateTime?
-  notes      String?   @db.Text
+  id        Int       @id @default(autoincrement())
+  name      String
+  startDate DateTime?
+  endDate   DateTime?
+  notes     String?   @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
