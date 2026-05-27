@@ -24,12 +24,12 @@ export const createSemester = async (req, res) => {
   try {
     const { name, startDate, endDate } = req.body;
 
-    // if (!name || !startDate || !endDate) {
-    //   return res.status(400).json({
-    //     status: 'fail',
-    //     message: 'Please provide name, startDate and endDate',
-    //   });
-    // }
+    if (!name || !startDate) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Please provide name and start date.',
+      });
+    }
 
     const newSemester = await prisma.semester.create({
       data: {

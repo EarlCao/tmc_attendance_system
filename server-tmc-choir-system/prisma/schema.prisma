@@ -78,8 +78,7 @@ model Member {
   religion          String?
   course            String?
   yearLevel         String?
-  email             String?
-  facebookAccount   String?
+  emailOrFacebook   String?
   status            MemberStatus       @default(ACTIVE)
   notes             String?            @db.Text
   createdAt         DateTime           @default(now())
@@ -223,7 +222,7 @@ model Auditionee {
 model EvaluationCategory {
   id Int @id @default(autoincrement())
 
-  name        String @unique
+  name        String  @unique
   description String? @db.Text
 
   percentage Float
