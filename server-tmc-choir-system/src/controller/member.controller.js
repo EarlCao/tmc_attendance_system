@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma.js';
 export const getMembers = async (req, res) => {
   try {
     const members = await prisma.member.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: { fullName: 'asc' },
     });
     res.status(200).json({
       status: 'success',
@@ -22,9 +22,9 @@ export const getMembers = async (req, res) => {
 
 export const createMember = async (req, res) => {
   try {
-    const { name, voiceType, course, yearLevel, status, religion, emailOrFacebook, phone, address, notes } = req.body;
+    const { fullName, voiceType, course, yearLevel, status, religion, emailOrFacebook, contactNo, address, notes } = req.body;
 
-    if (!name || !voiceType || !course || !yearLevel || !status || !religion ) {
+    if (!fullName || !voiceType || !course || !yearLevel || !status || !religion ) {
       return res.status(400).json({
         status: 'fail',
         message: 'Please provide all required fields',
@@ -33,15 +33,15 @@ export const createMember = async (req, res) => {
 
     const newMember = await prisma.member.create({
       data: {
-        name,
+        fullName,
         voiceType,
+        contactNo,
+        address,
+        religion,
         course,
         yearLevel,
+        emailOrFacebook,
         status,
-        religion,
-        emailOrFacebook: emailOrFacebook,
-        contactNo: phone,
-        address,
         notes,
       },
     });
@@ -131,12 +131,11 @@ export const searchMembers = async (req, res) => {
 
     const members = await prisma.member.findMany({
       where: {
-        name: {
+        fullName: {
           contains: query,
-          mode: 'insensitive',
         },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { fullName: 'asc' },
     });
 
     res.status(200).json({
@@ -168,7 +167,7 @@ export const filterMembers = async (req, res) => {
 
     const members = await prisma.member.findMany({
       where: whereClause,
-      orderBy: { name: 'asc' },
+      orderBy: { fullName: 'asc' },
     });
 
     res.status(200).json({

@@ -7,6 +7,7 @@ import helmet from "helmet";
 
 import authRoutes from "./routes/auth.routes.js";
 import semesterRoutes from "./routes/semester.route.js";
+import memberRoutes from "./routes/member.route.js";
 
 const BACKEND_PORT = process.env.BACKEND_PORT || 3002;
 const app = express();
@@ -18,6 +19,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/semesters", semesterRoutes);
+app.use("/api/members", memberRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
