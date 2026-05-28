@@ -96,6 +96,8 @@ model Session {
   title       String
   sessionDate DateTime
   description String?  @db.Text
+  type        String   @default("Practice")
+  location    String?  @default("TMC Music Room")
 
   createdAt DateTime @default(now())
 
@@ -116,6 +118,8 @@ model AttendanceRecord {
 
   status AttendanceStatus
   notes  String?          @db.Text
+  excuseStatus String?    @default("Pending")
+  excuseReason String?    @db.Text
 
   createdAt DateTime @default(now())
 
@@ -205,6 +209,7 @@ model Auditionee {
   auditionDate DateTime
 
   averageRating Float?
+  status        String   @default("Pending")
 
   createdAt DateTime @default(now())
 
@@ -287,8 +292,10 @@ model RuleRegulation {
 
   semesterId Int?
 
-  title   String
-  content String @db.Text
+  title    String
+  content  String @db.Text
+  category String @default("General")
+  status   String @default("active")
 
   createdAt DateTime @default(now())
 

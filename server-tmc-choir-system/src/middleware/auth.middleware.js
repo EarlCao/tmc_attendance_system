@@ -74,7 +74,7 @@ export const protect = async (req, res, next) => {
 };
 
 export const requireAdmin = (req, res, next) => {
-  if (req.user.role !== 'ADMIN') {
+  if (!req.user.role || req.user.role.toUpperCase() !== 'ADMIN') {
     return res.status(403).json({
       status: 'fail',
       message: 'You do not have permission to perform this action',
@@ -88,9 +88,9 @@ export const requireAdmin = (req, res, next) => {
  * @param  {...string} roles - Allowed roles (e.g., 'admin', 'editor')
  */
 export const restrictTo = (...roles) => {
+  const upperRoles = roles.map(role => role.toUpperCase());
   return (req, res, next) => {
-    // roles ['admin', 'lead-guide']. role='user'
-    if (!roles.includes(req.user.role)) {
+    if (!req.user.role || !upperRoles.includes(req.user.role.toUpperCase())) {
       return res.status(403).json({
         status: 'fail',
         message: 'You do not have permission to perform this action',

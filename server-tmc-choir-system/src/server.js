@@ -8,6 +8,13 @@ import helmet from "helmet";
 import authRoutes from "./routes/auth.routes.js";
 import semesterRoutes from "./routes/semester.route.js";
 import memberRoutes from "./routes/member.route.js";
+import sessionRoutes from "./routes/session.route.js";
+import attendanceRoutes from "./routes/attendance.route.js";
+import officerRoutes from "./routes/officer.route.js";
+import judgeRoutes from "./routes/judge.route.js";
+import auditionRoutes from "./routes/audition.route.js";
+import ruleRoutes from "./routes/rule.route.js";
+import { globalLimiter } from "./middleware/rateLimit.middleware.js";
 
 const BACKEND_PORT = process.env.BACKEND_PORT || 3002;
 const app = express();
@@ -16,10 +23,17 @@ const httpServer = createServer(app);
 app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
 app.use(helmet());
 app.use(express.json());
+app.use("/api", globalLimiter);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/semesters", semesterRoutes);
 app.use("/api/members", memberRoutes);
+app.use("/api/sessions", sessionRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/officers", officerRoutes);
+app.use("/api/judges", judgeRoutes);
+app.use("/api/auditions", auditionRoutes);
+app.use("/api/rules", ruleRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });

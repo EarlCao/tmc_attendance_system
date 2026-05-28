@@ -50,7 +50,6 @@ async function main() {
     update: {},
     create: {
       name: "1st Semester",
-      schoolYear: "2026-2027",
       notes: "Initial semester setup",
     },
   });

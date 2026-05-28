@@ -1,5 +1,55 @@
 import { prisma } from '../lib/prisma.js';
 
+// Helper to map UI-friendly fields to Database fields and clean enums
+const mapFrontendToDb = (body) => {
+  const {
+    name,
+    fullName,
+    voicePart,
+    voiceType,
+    course,
+    yearLevel,
+    status,
+    religionDenomination,
+    religion,
+    email,
+    emailOrFacebook,
+    phone,
+    contactNo,
+    address,
+    notes,
+  } = body;
+
+  const dbFullName = fullName || name;
+  
+  let dbVoiceType = voiceType || voicePart;
+  if (dbVoiceType) {
+    dbVoiceType = dbVoiceType.toUpperCase();
+  }
+
+  let dbStatus = status;
+  if (dbStatus) {
+    dbStatus = dbStatus.toUpperCase();
+  }
+
+  const dbContactNo = contactNo || phone;
+  const dbEmailOrFacebook = emailOrFacebook || email;
+  const dbReligion = religion || religionDenomination;
+
+  return {
+    fullName: dbFullName,
+    voiceType: dbVoiceType,
+    course,
+    yearLevel,
+    status: dbStatus,
+    religion: dbReligion,
+    emailOrFacebook: dbEmailOrFacebook,
+    contactNo: dbContactNo,
+    address,
+    notes,
+  };
+};
+
 export const getMembers = async (req, res) => {
   try {
     const members = await prisma.member.findMany({
@@ -22,28 +72,17 @@ export const getMembers = async (req, res) => {
 
 export const createMember = async (req, res) => {
   try {
-    const { fullName, voiceType, course, yearLevel, status, religion, emailOrFacebook, contactNo, address, notes } = req.body;
+    const mappedData = mapFrontendToDb(req.body);
 
-    if (!fullName || !voiceType || !course || !yearLevel || !status || !religion ) {
+    if (!mappedData.fullName || !mappedData.voiceType || !mappedData.course || !mappedData.yearLevel || !mappedData.status) {
       return res.status(400).json({
         status: 'fail',
-        message: 'Please provide all required fields',
+        message: 'Please provide all required fields (fullName, voiceType, course, yearLevel, status)',
       });
     }
 
     const newMember = await prisma.member.create({
-      data: {
-        fullName,
-        voiceType,
-        contactNo,
-        address,
-        religion,
-        course,
-        yearLevel,
-        emailOrFacebook,
-        status,
-        notes,
-      },
+      data: mappedData,
     });
 
     res.status(201).json({
@@ -85,22 +124,11 @@ export const deleteMember = async (req, res) => {
 export const updateMember = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, voiceType, course, yearLevel, status, religion, emailOrFacebook, phone, address, notes } = req.body;
+    const mappedData = mapFrontendToDb(req.body);
 
     const updatedMember = await prisma.member.update({
       where: { id: parseInt(id) },
-      data: {
-        name,
-        voiceType,
-        course,
-        yearLevel,
-        status,
-        religion,
-        emailOrFacebook: emailOrFacebook,
-        contactNo: phone,
-        address,
-        notes,
-      },
+      data: mappedData,
     });
 
     res.status(200).json({
