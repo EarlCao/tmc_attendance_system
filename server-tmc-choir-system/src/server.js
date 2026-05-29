@@ -23,7 +23,7 @@ const httpServer = createServer(app);
 app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
 app.use(helmet());
 app.use(express.json());
-app.use("/api", globalLimiter);
+// app.use("/api", globalLimiter);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/semesters", semesterRoutes);

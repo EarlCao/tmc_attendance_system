@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { Music4, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useSemesters } from '../hooks/useSemesters'
 
@@ -29,10 +29,8 @@ export default function Header() {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/50 bg-white/70 px-6 backdrop-blur-xl z-30 transition-all duration-300">
       {/* Left: Breadcrumb */}
-      <div className="flex min-w-0 items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/30 md:hidden">
-          <Music4 size={20} />
-        </div>
+      <div className="flex min-w-0 items-center gap-4">          
+        <img src="/tmc_choir.png" alt="TMC Choir logo" className="h-11 w-11 object-contain md:hidden" />
         <div className="min-w-0">
           <p className="mb-0.5 truncate text-[11px] font-semibold uppercase tracking-widest text-slate-400">TMC Choir Attendance System</p>
           <h1 className="truncate text-lg font-bold text-slate-800 tracking-tight">{pageTitle}</h1>

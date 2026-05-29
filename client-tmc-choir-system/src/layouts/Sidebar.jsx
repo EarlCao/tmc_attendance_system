@@ -9,7 +9,6 @@ import {
   UserCheck,
   BarChart3,
   Settings,
-  Music4,
   ChevronLeft,
   ChevronRight,
   Award,
@@ -44,15 +43,13 @@ export default function Sidebar() {
     >
       {/* Logo */}
       <div className={cn(
-        'flex items-center gap-3 border-b border-slate-200/50 px-6 py-6',
+        'flex items-center gap-3 border-b border-slate-200/50 px-6 py-4',
         collapsed && 'justify-center px-2'
       )}>
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30 text-white">
-          <Music4 size={20} />
-        </div>
+        <img src="/tmc_choir.png" alt="TMC Choir logo" className="w-12 h-12 object-contain" />
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-slate-900 leading-tight truncate tracking-tight">TMC Choir</p>
+            <p className="text-sm font-bold text-slate-950 text-[18px] leading-tight truncate tracking-tight">TMC Choir</p>
             <p className="text-[11px] font-medium text-slate-500 leading-tight truncate">Attendance System</p>
           </div>
         )}
