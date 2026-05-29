@@ -5,10 +5,22 @@ export const getSemesters = async (req, res) => {
     const semesters = await prisma.semester.findMany({
       orderBy: { startDate: 'desc' },
     });
+    const now = new Date();
+    const formattedSemesters = semesters.map(semester => {
+      let status = 'archived';
+      if (semester.startDate && (!semester.endDate || semester.endDate > now)) {
+        status = 'active';
+      }
+      return {
+        ...semester,
+        status
+      };
+    });
+
     res.status(200).json({
       status: 'success',
       data: {
-        semesters,
+        semesters: formattedSemesters,
       },
     });
   } catch (err) {

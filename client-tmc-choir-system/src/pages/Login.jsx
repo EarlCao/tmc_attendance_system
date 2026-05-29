@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { Lock, Mail, User, AlertCircle } from 'lucide-react';
+import { Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../lib/api';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -18,13 +18,13 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await authAPI.login({
         username,
         password,
       });
 
-      if (response.data.status === 'success') {
-        login(response.data.token, response.data.data.user);
+      if (response.status === 'success') {
+        login(response.token, response.data.user);
         navigate('/');
       }
     } catch (err) {

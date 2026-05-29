@@ -38,22 +38,22 @@ export default function Sidebar() {
   return (
     <aside
       className={cn(
-        'relative hidden h-screen shrink-0 flex-col border-r border-gray-100 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 md:flex',
-        collapsed ? 'w-16' : 'w-64'
+        'relative hidden h-screen shrink-0 flex-col border-r border-slate-200/50 bg-white/60 shadow-lg shadow-slate-200/20 backdrop-blur-xl transition-all duration-300 md:flex z-40',
+        collapsed ? 'w-20' : 'w-72'
       )}
     >
       {/* Logo */}
       <div className={cn(
-        'flex items-center gap-3 border-b border-gray-100 px-4 py-5',
+        'flex items-center gap-3 border-b border-slate-200/50 px-6 py-6',
         collapsed && 'justify-center px-2'
       )}>
-        <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/25">
-          <Music4 size={18} className="text-white" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/30 text-white">
+          <Music4 size={20} />
         </div>
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900 leading-tight truncate">TMC Choir</p>
-            <p className="text-[11px] text-gray-400 leading-tight truncate">Attendance System</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-slate-900 leading-tight truncate tracking-tight">TMC Choir</p>
+            <p className="text-[11px] font-medium text-slate-500 leading-tight truncate">Attendance System</p>
           </div>
         )}
       </div>

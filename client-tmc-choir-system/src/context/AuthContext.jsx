@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { authAPI } from '../lib/api';
 
 const AuthContext = createContext();
-
-axios.defaults.baseURL = 'http://localhost:3002';
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -14,7 +12,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       fetchCurrentUser();
     } else {
       setLoading(false);
@@ -23,8 +20,8 @@ export const AuthProvider = ({ children }) => {
 
   const fetchCurrentUser = async () => {
     try {
-      const response = await axios.get('/api/auth/me');
-      setUser(response.data.data.user);
+      const response = await authAPI.getMe();
+      setUser(response.data.user);
     } catch (error) {
       console.error('Error fetching user:', error);
       logout();
@@ -37,14 +34,12 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', newToken);
     setToken(newToken);
     setUser(userData);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   return (

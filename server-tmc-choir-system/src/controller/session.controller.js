@@ -1,103 +1,76 @@
 import { prisma } from '../lib/prisma.js';
 
+// Normalize a session for frontend consumption
+const formatSession = (session, counts = {}) => ({
+  ...session,
+  // Alias fields to what the frontend expects
+  date: session.sessionDate,
+  notes: session.description || '',
+  counts: {
+    Present: counts.Present || 0,
+    Late:    counts.Late    || 0,
+    Absent:  counts.Absent  || 0,
+    Excused: counts.Excused || 0,
+  },
+});
+
 export const getSessions = async (req, res) => {
   try {
     const { semesterId, type, search } = req.query;
 
     const whereClause = {};
-    if (semesterId) {
-      whereClause.semesterId = parseInt(semesterId);
-    }
-    if (type && type !== 'All') {
-      whereClause.type = type;
-    }
+    if (semesterId) whereClause.semesterId = parseInt(semesterId);
+    if (type && type !== 'All') whereClause.type = type;
     if (search) {
       whereClause.OR = [
         { title: { contains: search } },
         { location: { contains: search } },
-        { description: { contains: search } }
+        { description: { contains: search } },
       ];
     }
 
     const sessions = await prisma.session.findMany({
       where: whereClause,
-      include: {
-        attendance: true,
-      },
+      include: { attendance: true },
       orderBy: { sessionDate: 'desc' },
     });
 
-    const formattedSessions = sessions.map((session) => {
-      const counts = {
-        Present: 0,
-        Late: 0,
-        Absent: 0,
-        Excused: 0,
-      };
-
+    const formatted = sessions.map((session) => {
+      const counts = { Present: 0, Late: 0, Absent: 0, Excused: 0 };
       session.attendance.forEach((rec) => {
         if (rec.status === 'PRESENT') counts.Present++;
         else if (rec.status === 'LATE') counts.Late++;
         else if (rec.status === 'ABSENT') counts.Absent++;
         else if (rec.status === 'EXCUSED') counts.Excused++;
       });
-
       const { attendance, ...sessionData } = session;
-      return {
-        ...sessionData,
-        counts,
-      };
+      return formatSession(sessionData, counts);
     });
 
     res.status(200).json({
       status: 'success',
-      data: {
-        sessions: formattedSessions,
-      },
+      data: { sessions: formatted },
     });
   } catch (err) {
     console.error('Get Sessions Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
 export const getSession = async (req, res) => {
   try {
     const { id } = req.params;
-
     const session = await prisma.session.findUnique({
       where: { id: parseInt(id) },
-      include: {
-        attendance: {
-          include: {
-            member: true,
-          },
-        },
-      },
+      include: { attendance: { include: { member: true } } },
     });
-
     if (!session) {
-      return res.status(404).json({
-        status: 'fail',
-        message: 'Session not found',
-      });
+      return res.status(404).json({ status: 'fail', message: 'Session not found' });
     }
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        session,
-      },
-    });
+    res.status(200).json({ status: 'success', data: { session: formatSession(session) } });
   } catch (err) {
     console.error('Get Session Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -105,35 +78,37 @@ export const createSession = async (req, res) => {
   try {
     const { semesterId, title, date, type, location, notes, description } = req.body;
 
-    if (!semesterId || !title || !date) {
+    if (!semesterId || !date) {
       return res.status(400).json({
         status: 'fail',
-        message: 'Please provide semesterId, title, and date.',
+        message: 'Please provide semesterId and date.',
       });
     }
+
+    const sessionType = type || 'Practice';
+    const sessionDate = new Date(date);
+    // Auto-generate title if not provided
+    const sessionTitle = title || `${sessionType} - ${sessionDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
     const newSession = await prisma.session.create({
       data: {
         semesterId: parseInt(semesterId),
-        title,
-        sessionDate: new Date(date),
-        type: type || 'Practice',
+        title: sessionTitle,
+        sessionDate,
+        type: sessionType,
         location: location || 'TMC Music Room',
         description: description || notes || '',
       },
     });
 
-    // Automatically create empty attendance records for all active members in the semester
-    const activeMembers = await prisma.member.findMany({
-      where: { status: 'ACTIVE' },
-    });
-
+    // Create default PRESENT records for all active members
+    const activeMembers = await prisma.member.findMany({ where: { status: 'ACTIVE' } });
     if (activeMembers.length > 0) {
       await prisma.attendanceRecord.createMany({
         data: activeMembers.map((member) => ({
           sessionId: newSession.id,
           memberId: member.id,
-          status: 'PRESENT', // default to PRESENT
+          status: 'PRESENT',
         })),
         skipDuplicates: true,
       });
@@ -141,16 +116,11 @@ export const createSession = async (req, res) => {
 
     res.status(201).json({
       status: 'success',
-      data: {
-        session: newSession,
-      },
+      data: { session: formatSession(newSession) },
     });
   } catch (err) {
     console.error('Create Session Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -160,57 +130,36 @@ export const updateSession = async (req, res) => {
     const { title, date, type, location, notes, description } = req.body;
 
     const data = {};
-    if (title) data.title = title;
-    if (date) data.sessionDate = new Date(date);
-    if (type) data.type = type;
+    if (title !== undefined) data.title = title;
+    if (date !== undefined) data.sessionDate = new Date(date);
+    if (type !== undefined) data.type = type;
     if (location !== undefined) data.location = location;
     if (description !== undefined) data.description = description;
     else if (notes !== undefined) data.description = notes;
 
-    const updatedSession = await prisma.session.update({
+    const updated = await prisma.session.update({
       where: { id: parseInt(id) },
       data,
     });
 
     res.status(200).json({
       status: 'success',
-      data: {
-        session: updatedSession,
-      },
+      data: { session: formatSession(updated) },
     });
   } catch (err) {
     console.error('Update Session Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
 export const deleteSession = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // First delete all attendance records associated with the session
-    await prisma.attendanceRecord.deleteMany({
-      where: { sessionId: parseInt(id) },
-    });
-
-    // Then delete the session
-    await prisma.session.delete({
-      where: { id: parseInt(id) },
-    });
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Session deleted successfully',
-      data: null,
-    });
+    await prisma.attendanceRecord.deleteMany({ where: { sessionId: parseInt(id) } });
+    await prisma.session.delete({ where: { id: parseInt(id) } });
+    res.status(200).json({ status: 'success', message: 'Session deleted', data: null });
   } catch (err) {
     console.error('Delete Session Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };

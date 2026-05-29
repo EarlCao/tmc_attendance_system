@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom'
 import { Music4, LogOut } from 'lucide-react'
-import { activeSemester as initialActiveSemester } from '../data/mockData'
 import { useAuth } from '../context/AuthContext'
+import { useSemesters } from '../hooks/useSemesters'
 
 const crumbMap = {
   '/':           'Dashboard',
@@ -15,10 +15,11 @@ const crumbMap = {
   '/settings':   'Settings',
 }
 
-export default function Header({ currentSemester = initialActiveSemester }) {
+export default function Header() {
   const location = useLocation()
   const pageTitle = crumbMap[location.pathname] ?? 'Page'
   const { user, logout } = useAuth()
+  const { activeSemester } = useSemesters()
 
   const getInitials = (name) => {
     if (!name) return 'AD'
@@ -26,53 +27,55 @@ export default function Header({ currentSemester = initialActiveSemester }) {
   }
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-100 bg-white/92 px-4 backdrop-blur sm:px-6">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/50 bg-white/70 px-6 backdrop-blur-xl z-30 transition-all duration-300">
       {/* Left: Breadcrumb */}
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-600/25 md:hidden">
-          <Music4 size={18} />
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/30 md:hidden">
+          <Music4 size={20} />
         </div>
         <div className="min-w-0">
-          <p className="mb-0.5 truncate text-[11px] text-gray-400">TMC Choir Attendance System</p>
-          <h1 className="truncate text-base font-semibold text-gray-900">{pageTitle}</h1>
+          <p className="mb-0.5 truncate text-[11px] font-semibold uppercase tracking-widest text-slate-400">TMC Choir Attendance System</p>
+          <h1 className="truncate text-lg font-bold text-slate-800 tracking-tight">{pageTitle}</h1>
         </div>
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Active semester badge */}
-        {currentSemester ? (
-          <span className="hidden items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 lg:inline-flex">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            {currentSemester.name}
+        {activeSemester ? (
+          <span className="hidden items-center gap-2 rounded-full border border-blue-200/50 bg-blue-50/50 px-4 py-1.5 text-[13px] font-semibold text-blue-700 shadow-sm lg:inline-flex backdrop-blur-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+            </span>
+            {activeSemester.name}
           </span>
         ) : (
-          <span className="hidden items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600 lg:inline-flex">
+          <span className="hidden items-center gap-2 rounded-full border border-slate-200/50 bg-slate-50/50 px-4 py-1.5 text-[13px] font-semibold text-slate-500 shadow-sm lg:inline-flex backdrop-blur-sm">
             No active semester
           </span>
         )}
 
         {/* Avatar & Logout */}
-        <div className="flex items-center gap-3 border-l border-gray-100 pl-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-              <span className="text-xs font-bold text-white">{getInitials(user?.username)}</span>
+        <div className="flex items-center gap-4 pl-4 border-l border-slate-200/50">
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:block text-right">
+              <p className="text-[13px] font-bold text-slate-800">{user?.username || 'Admin Officer'}</p>
+              <p className="text-[11px] font-medium text-slate-500">{user?.role || 'System Administrator'}</p>
             </div>
-            <div className="hidden sm:block">
-              <p className="text-xs font-medium text-gray-900">{user?.username || 'Admin Officer'}</p>
-              <p className="text-[10px] text-gray-400">TMC Choir</p>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-slate-800 to-slate-700 shadow-md ring-2 ring-white">
+              <span className="text-xs font-bold text-white tracking-wider">{getInitials(user?.username)}</span>
             </div>
           </div>
           <button 
             onClick={logout}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-red-600 transition-colors"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
             title="Log out"
           >
-            <LogOut size={18} />
+            <LogOut size={20} />
           </button>
         </div>
       </div>
     </header>
   )
 }
-
