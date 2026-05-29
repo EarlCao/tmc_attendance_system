@@ -73,8 +73,9 @@
   .tab-btn:not(.active) {
     @apply text-slate-500 hover:bg-slate-100/50 hover:text-slate-700;
   }
+  /* Animation is handled by MainLayout's keyed wrapper — page-shell is layout only */
   .page-shell {
-    @apply mx-auto w-full max-w-7xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out;
+    @apply mx-auto w-full max-w-7xl space-y-8;
   }
   .panel-header {
     @apply flex items-center justify-between gap-3 border-b border-slate-100/50 px-6 py-5;

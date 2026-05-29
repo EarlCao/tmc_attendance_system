@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle2, XCircle, Clock, Eye, Loader2 } from 'lucide-react'
 import { useExcuses } from '../hooks/useExcuses'
-import { getStatusColor, formatDateShort, cn } from '../lib/utils'
+import { getStatusColor, getVoicePartColor, formatDateShort, cn } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Modal from '../components/common/Modal'
 import SearchBar from '../components/common/SearchBar'
@@ -12,7 +12,7 @@ const VOICE_PARTS = ['All', 'Soprano', 'Alto', 'Tenor', 'Bass']
 
 export default function Absences() {
   const { excuses, loading, updateExcuseStatus } = useExcuses()
-  const [tab, setTab]         = useState('Pending') // Pending | Approved | Rejected
+  const [tab, setTab]         = useState('Pending')
   const [search, setSearch]   = useState('')
   const [voiceFilter, setVoiceFilter] = useState('All')
   const [detailModal, setDetailModal] = useState(null)
@@ -22,7 +22,7 @@ export default function Absences() {
   const filtered = useMemo(() =>
     excuses.filter((e) => {
       const matchTab    = e.status === tab
-      const matchSearch = e.memberName.toLowerCase().includes(search.toLowerCase())
+      const matchSearch = (e.memberName || '').toLowerCase().includes(search.toLowerCase())
       const matchVoice  = voiceFilter === 'All' || e.voicePart === voiceFilter
       return matchTab && matchSearch && matchVoice
     }),
@@ -56,7 +56,11 @@ export default function Absences() {
   }
 
   if (loading) {
-    return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
+    return (
+      <div className="page-shell flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+      </div>
+    )
   }
 
   return (
@@ -71,9 +75,8 @@ export default function Absences() {
       {/* Tabs + Filters */}
       <div className="card">
         <div className="flex flex-wrap items-center gap-4 border-b border-slate-100/50 px-6 py-5 bg-gradient-to-r from-white to-slate-50/50">
-          {/* Tabs */}
           <div className="flex gap-1 rounded-xl bg-slate-100/50 p-1.5 shadow-inner">
-            {['Pending','Approved','Rejected'].map((t) => (
+            {['Pending', 'Approved', 'Rejected'].map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -96,7 +99,9 @@ export default function Absences() {
             onChange={e => setVoiceFilter(e.target.value)}
             className="input py-2.5 w-auto text-[13px] font-medium bg-white shadow-sm"
           >
-            {VOICE_PARTS.map(v => <option key={v} value={v}>{v === 'All' ? 'All Voice Parts' : v}</option>)}
+            {VOICE_PARTS.map(v => (
+              <option key={v} value={v}>{v === 'All' ? 'All Voice Parts' : v}</option>
+            ))}
           </select>
         </div>
 
@@ -104,11 +109,11 @@ export default function Absences() {
         <div className="divide-y divide-slate-50">
           {filtered.map((excuse) => (
             <div key={excuse.id} className="flex flex-col gap-4 px-6 py-5 transition-colors hover:bg-blue-50/30 sm:flex-row sm:items-start group">
-              <Avatar name={excuse.memberName} voicePart={excuse.voicePart} size="md" />
+              <Avatar name={excuse.memberName || '?'} voicePart={excuse.voicePart} size="md" />
               <div className="flex-1 min-w-0 mt-1">
                 <div className="flex items-center gap-3 flex-wrap">
                   <p className="text-[14px] font-bold text-slate-800 tracking-tight">{excuse.memberName}</p>
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ring-1 ${getStatusColor(excuse.voicePart === 'Soprano' ? 'pink' : excuse.voicePart)}`}>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ring-1 ${getVoicePartColor(excuse.voicePart)}`}>
                     {excuse.voicePart}
                   </span>
                 </div>
@@ -116,7 +121,9 @@ export default function Absences() {
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md">Absence: {formatDateShort(excuse.date)}</span>
                   <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md">Submitted: {formatDateShort(excuse.submittedAt)}</span>
-                  {excuse.reviewedAt && <span className="text-[11px] font-bold text-blue-400 bg-blue-50 px-2.5 py-1 rounded-md">Reviewed: {formatDateShort(excuse.reviewedAt)}</span>}
+                  {excuse.reviewedAt && (
+                    <span className="text-[11px] font-bold text-blue-400 bg-blue-50 px-2.5 py-1 rounded-md">Reviewed: {formatDateShort(excuse.reviewedAt)}</span>
+                  )}
                 </div>
                 {excuse.notes && (
                   <div className="mt-3 text-[12px] font-medium text-slate-600 bg-amber-50/50 p-3 rounded-lg border border-amber-100/50 italic">
@@ -160,7 +167,9 @@ export default function Absences() {
             <>
               <button onClick={() => setDetailModal(null)} disabled={isSaving} className="btn-secondary">Close</button>
               <button onClick={() => handleReject(detailModal.id)} disabled={isSaving} className="btn-danger shadow-red-500/30">Reject</button>
-              <button onClick={() => handleApprove(detailModal.id)} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Approve'}</button>
+              <button onClick={() => handleApprove(detailModal.id)} disabled={isSaving} className="btn-primary shadow-blue-500/40">
+                {isSaving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Approve'}
+              </button>
             </>
           ) : (
             <button onClick={() => setDetailModal(null)} className="btn-secondary">Close</button>
@@ -170,7 +179,7 @@ export default function Absences() {
         {detailModal && (
           <div className="space-y-5">
             <div className="flex items-center gap-4 p-5 bg-gradient-to-r from-slate-50 to-white border border-slate-100/80 rounded-2xl shadow-sm">
-              <Avatar name={detailModal.memberName} voicePart={detailModal.voicePart} size="lg" />
+              <Avatar name={detailModal.memberName || '?'} voicePart={detailModal.voicePart} size="lg" />
               <div>
                 <p className="text-[15px] font-black text-slate-800">{detailModal.memberName}</p>
                 <p className="text-[12px] font-bold text-slate-500 mt-0.5">{detailModal.voicePart}</p>

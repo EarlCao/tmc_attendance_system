@@ -1,108 +1,122 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, User, AlertCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { authAPI } from '../lib/api';
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Lock, User, AlertCircle, Music4 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { authAPI } from '../lib/api'
 
 export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
+    e.preventDefault()
+    setError('')
+    setLoading(true)
     try {
-      const response = await authAPI.login({
-        username,
-        password,
-      });
-
+      const response = await authAPI.login({ username, password })
       if (response.status === 'success') {
-        login(response.token, response.data.user);
-        navigate('/');
+        login(response.token, response.data.user)
+        navigate('/')
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to login. Please check your credentials.');
+      setError(err.response?.data?.message || 'Failed to sign in. Please check your credentials.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-            <Lock size={32} />
+    <div className="flex min-h-screen items-center justify-center px-4 py-12">
+      {/* Background layer */}
+      <div className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.8), rgba(240,249,255,0.95)), radial-gradient(circle at 10% 0%, rgba(59,130,246,0.18), transparent 45%), radial-gradient(circle at 90% 10%, rgba(139,92,246,0.15), transparent 45%)',
+          filter: 'blur(0px)',
+        }}
+      />
+
+      <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+        {/* Card */}
+        <div className="rounded-3xl border border-white/80 bg-white/80 shadow-[0_20px_60px_rgba(0,0,0,0.08)] backdrop-blur-xl px-8 py-10">
+          {/* Logo & Title */}
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg shadow-blue-500/30">
+              <Music4 size={28} />
+            </div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">TMC Choir System</h1>
+            <p className="mt-1.5 text-sm font-medium text-slate-500">Sign in to access the attendance system</p>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            TMC Choir System
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Sign in to access the attendance system
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+
+          {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 rounded-md bg-red-50 p-4 text-sm text-red-700">
-              <AlertCircle size={18} />
+            <div className="mb-5 flex items-center gap-2.5 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-medium text-red-700">
+              <AlertCircle size={16} className="shrink-0" />
               <span>{error}</span>
             </div>
           )}
-          
-          <div className="-space-y-px rounded-md shadow-sm">
-            <div className="relative">
-              <label htmlFor="username" className="sr-only">Username</label>
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <User className="h-5 w-5 text-gray-400" aria-hidden="true" />
-              </div>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                required
-                className="relative block w-full rounded-none rounded-t-md border border-gray-300 px-10 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
-            <div className="relative">
-              <label htmlFor="password" className="sr-only">Password</label>
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <Lock className="h-5 w-5 text-gray-400" aria-hidden="true" />
-              </div>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="relative block w-full rounded-none rounded-b-md border border-gray-300 px-10 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
 
-          <div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="label">Username</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                  <User size={16} className="text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  autoComplete="username"
+                  className="input pl-10"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Password</label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                  <Lock size={16} className="text-slate-400" />
+                </div>
+                <input
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  className="input pl-10"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+              className="btn-primary w-full justify-center py-3 mt-2 text-base shadow-blue-500/40"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? (
+                <>
+                  <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  Signing in...
+                </>
+              ) : 'Sign In'}
             </button>
-          </div>
-        </form>
+          </form>
+
+          {/* Footer */}
+          <p className="mt-8 text-center text-[11px] font-medium text-slate-400">
+            TMC Choir &copy; {new Date().getFullYear()} · Trinidad Municipal College
+          </p>
+        </div>
       </div>
     </div>
-  );
+  )
 }

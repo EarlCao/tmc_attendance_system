@@ -27,15 +27,20 @@ export default function Officers() {
 
   const loading = sLoading || oLoading || mLoading
 
+  function getMemberName(member) {
+    if (!member) return 'Unknown Member'
+    return `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown Member'
+  }
+
   function openOfficerModal(officer) {
     if (officer) {
       setEditingOfficer(officer)
-      setOfficerForm({ 
-          memberId: officer.memberId || '', 
-          position: officer.position || '', 
-          semesterId: officer.semesterId || currentSemester?.id || semesters[0]?.id || '', 
-          duties: officer.duties || '', 
-          status: officer.status || 'active' 
+      setOfficerForm({
+        memberId: officer.memberId || '',
+        position: officer.position || '',
+        semesterId: officer.semesterId || currentSemester?.id || semesters[0]?.id || '',
+        duties: officer.duties || '',
+        status: officer.status || 'active',
       })
     } else {
       setEditingOfficer(null)
@@ -68,15 +73,19 @@ export default function Officers() {
   async function handleDeleteOfficer(id) {
     setIsSaving(true)
     try {
-        await deleteOfficer(id)
-        setDeleteOfficerConfirm(null)
+      await deleteOfficer(id)
+      setDeleteOfficerConfirm(null)
     } finally {
-        setIsSaving(false)
+      setIsSaving(false)
     }
   }
 
   if (loading) {
-    return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
+    return (
+      <div className="page-shell flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+      </div>
+    )
   }
 
   return (
@@ -96,52 +105,60 @@ export default function Officers() {
 
       <div className="card overflow-hidden">
         {officers.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
-                <th className="px-6 py-4 text-left font-bold text-slate-500">Officer</th>
-                <th className="px-5 py-4 text-left font-bold text-slate-500">Position</th>
-                <th className="px-5 py-4 text-left font-bold text-slate-500">Semester</th>
-                <th className="px-5 py-4 text-left font-bold text-slate-500">Contact</th>
-                <th className="px-5 py-4 text-left font-bold text-slate-500">Status</th>
-                <th className="px-6 py-4 text-right font-bold text-slate-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {officers.map((officer) => {
-                const semester = semesters.find((item) => item.id === Number(officer.semesterId))
-                const member = members.find((item) => item.id === Number(officer.memberId))
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50">
+                  <th className="px-6 py-4 text-left font-bold text-slate-500">Officer</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-500">Position</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-500">Semester</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-500">Contact</th>
+                  <th className="px-5 py-4 text-left font-bold text-slate-500">Status</th>
+                  <th className="px-6 py-4 text-right font-bold text-slate-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {officers.map((officer) => {
+                  const semester = semesters.find((item) => item.id === Number(officer.semesterId))
+                  const member = members.find((item) => item.id === Number(officer.memberId))
 
-                return (
-                  <tr key={officer.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <p className="font-black text-slate-800">{member?.name || 'Unknown Member'}</p>
-                      {officer.duties && <p className="mt-1.5 text-[11px] font-medium text-slate-400 max-w-xs truncate">{officer.duties}</p>}
-                    </td>
-                    <td className="px-5 py-4 font-bold text-slate-700">{officer.position}</td>
-                    <td className="px-5 py-4 font-medium text-slate-500">{semester?.name ?? 'No semester'}</td>
-                    <td className="px-5 py-4 font-medium text-slate-500">
-                      <p>{member?.email || 'No email'}</p>
-                      <p>{member?.phone || 'No phone'}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`rounded-full px-3 py-1 text-[11px] font-bold ring-1 shadow-sm ${getStatusColor(officer.status)}`}>{officer.status}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openOfficerModal(officer)} className="rounded-xl p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"><Pencil size={15} /></button>
-                        <button onClick={() => setDeleteOfficerConfirm(officer)} className="rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                  return (
+                    <tr key={officer.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4">
+                        <p className="font-black text-slate-800">{getMemberName(member)}</p>
+                        {officer.duties && (
+                          <p className="mt-1.5 text-[11px] font-medium text-slate-400 max-w-xs truncate">{officer.duties}</p>
+                        )}
+                      </td>
+                      <td className="px-5 py-4 font-bold text-slate-700">{officer.position}</td>
+                      <td className="px-5 py-4 font-medium text-slate-500">{semester?.name ?? 'No semester'}</td>
+                      <td className="px-5 py-4 font-medium text-slate-500">
+                        <p>{member?.email || 'No email'}</p>
+                        <p>{member?.contactNumber || 'No phone'}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-bold ring-1 shadow-sm ${getStatusColor(officer.status)}`}>
+                          {officer.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => openOfficerModal(officer)} className="rounded-xl p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <Pencil size={15} />
+                          </button>
+                          <button onClick={() => setDeleteOfficerConfirm(officer)} className="rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : (
-            <EmptyState title="No officers found" description="There are no officers assigned. Click 'Add Officer' to assign one." />
+          <EmptyState title="No officers found" description="There are no officers assigned. Click 'Add Officer' to assign one." />
         )}
       </div>
 
@@ -153,7 +170,9 @@ export default function Officers() {
         footer={
           <>
             <button onClick={() => setOfficerModal(false)} disabled={isSaving} className="btn-secondary">Cancel</button>
-            <button onClick={handleSaveOfficer} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Save Officer'}</button>
+            <button onClick={handleSaveOfficer} disabled={isSaving} className="btn-primary shadow-blue-500/40">
+              {isSaving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Save Officer'}
+            </button>
           </>
         }
       >
@@ -163,7 +182,7 @@ export default function Officers() {
             <select className="input bg-white" value={officerForm.memberId} onChange={e => setOfficerForm(p => ({ ...p, memberId: Number(e.target.value) }))}>
               <option value="">Select a member...</option>
               {members.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
+                <option key={m.id} value={m.id}>{getMemberName(m)}</option>
               ))}
             </select>
           </div>
@@ -175,7 +194,9 @@ export default function Officers() {
             <div>
               <label className="label">Semester</label>
               <select className="input bg-white" value={officerForm.semesterId} onChange={e => setOfficerForm(p => ({ ...p, semesterId: Number(e.target.value) }))}>
-                {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
+                {semesters.map((semester) => (
+                  <option key={semester.id} value={semester.id}>{semester.name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -201,12 +222,14 @@ export default function Officers() {
         footer={
           <>
             <button onClick={() => setDeleteOfficerConfirm(null)} disabled={isSaving} className="btn-secondary">Cancel</button>
-            <button onClick={() => handleDeleteOfficer(deleteOfficerConfirm.id)} disabled={isSaving} className="btn-danger shadow-red-500/30">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Yes, Remove'}</button>
+            <button onClick={() => handleDeleteOfficer(deleteOfficerConfirm.id)} disabled={isSaving} className="btn-danger shadow-red-500/30">
+              {isSaving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Yes, Remove'}
+            </button>
           </>
         }
       >
         <p className="text-[13px] font-medium text-slate-600 leading-relaxed">
-          Are you sure you want to remove <strong>{members.find(m => m.id === deleteOfficerConfirm?.memberId)?.name}</strong> as <strong>{deleteOfficerConfirm?.position}</strong>? This action cannot be undone.
+          Are you sure you want to remove <strong>{getMemberName(members.find(m => m.id === deleteOfficerConfirm?.memberId))}</strong> as <strong>{deleteOfficerConfirm?.position}</strong>? This action cannot be undone.
         </p>
       </Modal>
     </div>
