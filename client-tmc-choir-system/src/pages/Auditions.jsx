@@ -248,7 +248,7 @@ export default function Auditions() {
       </div>
 
       {/* Toolbar */}
-      <div className="card p-5 flex flex-wrap items-center gap-4 bg-gradient-to-r from-white to-slate-50/50">
+      <div className="card p-5 flex flex-wrap items-center gap-4 bg-gradient-to-r">
         <SearchBar value={search} onChange={setSearch} placeholder="Search auditionees..." className="w-full sm:w-64" />
         <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl">
           {['All','Passed','Failed','Pending'].map((s) => (
@@ -277,7 +277,7 @@ export default function Auditions() {
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/70">
+            <tr className="border-b ">
               <th className="text-left px-6 py-4 text-[12px] font-bold text-slate-500 uppercase tracking-wider">Auditionee</th>
               <th className="text-left px-5 py-4 text-[12px] font-bold text-slate-500 uppercase tracking-wider">Target Part</th>
               <th className="text-left px-5 py-4 text-[12px] font-bold text-slate-500 uppercase tracking-wider">Date</th>

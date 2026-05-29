@@ -9,7 +9,9 @@ const getStoredTheme = () => {
     // Fall back to the current document theme when storage is unavailable.
   }
 
-  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+  return document.documentElement.classList.contains('dark') || document.documentElement.dataset.theme === 'sunset'
+    ? 'dark'
+    : 'light'
 }
 
 export default function ThemeToggle() {
@@ -18,7 +20,7 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     const root = document.documentElement
-    root.dataset.theme = theme
+    root.dataset.theme = isDark ? 'sunset' : 'light'
     root.classList.toggle('dark', isDark)
     root.style.colorScheme = theme
 

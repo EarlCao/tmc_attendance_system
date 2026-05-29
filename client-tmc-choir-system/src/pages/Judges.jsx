@@ -65,7 +65,7 @@ export default function Judges() {
 
   return (
     <div className="page-shell">
-      <div className="card p-6 bg-gradient-to-r from-white to-slate-50/50">
+      <div className="card p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">Audition panel</p>

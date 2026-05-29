@@ -44,7 +44,7 @@ export default function Dashboard() {
     <div className="page-shell">
       {/* Page header */}
       <div className="card overflow-hidden">
-        <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between bg-gradient-to-br from-white to-slate-50/50">
+        <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 mb-1">Operations overview</p>
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Welcome back, Admin</h2>
@@ -80,10 +80,10 @@ export default function Dashboard() {
             {recentSessions.length === 0 ? (
               <div className="p-6 text-center text-sm text-slate-500">No sessions yet. Create one in Attendance.</div>
             ) : recentSessions.map((s) => (
-              <div key={s.id} className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-slate-50/50 group">
+              <div key={s.id} className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-blue-600/25 group">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
-                    <ClipboardList size={18} className="text-blue-600" />
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 group-hover:bg-blue-800 transition-colors">
+                    <ClipboardList size={18} className="text-blue-500" />
                   </div>
                   <div>
                     <p className="text-[14px] font-bold text-slate-800">{formatDateShort(s.date)}</p>

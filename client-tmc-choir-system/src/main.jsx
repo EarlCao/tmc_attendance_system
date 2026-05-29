@@ -15,7 +15,7 @@ const getInitialTheme = () => {
 }
 
 const initialTheme = getInitialTheme()
-document.documentElement.dataset.theme = initialTheme
+document.documentElement.dataset.theme = initialTheme === 'dark' ? 'sunset' : 'light'
 document.documentElement.classList.toggle('dark', initialTheme === 'dark')
 document.documentElement.style.colorScheme = initialTheme
 

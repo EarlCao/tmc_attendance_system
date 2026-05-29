@@ -80,7 +80,7 @@ export default function Settings() {
 
   return (
     <div className="page-shell">
-      <div className="card p-6 bg-gradient-to-r from-white to-slate-50/50">
+      <div className="card p-6">
         <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">System setup</p>
         <h2 className="mt-1 text-2xl font-black text-slate-800 tracking-tight">Settings</h2>
         <p className="mt-1 text-sm font-medium text-slate-500">Use this area for choir profile details, lifetime choir rules, audition scoring defaults, and semester locking behavior.</p>
@@ -103,7 +103,7 @@ export default function Settings() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="text-[14px] font-black text-slate-800">{rule.title}</h4>
-                    <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-blue-100">{rule.category}</span>
+                    {/* <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 ring-1 ring-blue-100">{rule.category}</span> */}
                   </div>
                   <p className="mt-2 text-[13px] font-medium text-slate-600 leading-relaxed">{rule.description}</p>
                 </div>

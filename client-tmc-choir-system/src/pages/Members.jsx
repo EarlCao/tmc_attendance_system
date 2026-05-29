@@ -160,7 +160,7 @@ export default function Members() {
         {[
           { label: 'Total',   value: stats.total,   color: 'bg-slate-100 text-slate-700 ring-slate-200' },
           { label: 'Active',  value: stats.active,  color: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-          { label: 'Soprano', value: stats.soprano, color: 'bg-pink-50 text-pink-700 ring-pink-200' },
+          { label: 'Soprano', value: stats.soprano, color: 'bg-pink-50 text-pink-800 ring-pink-200' },
           { label: 'Alto',    value: stats.alto,    color: 'bg-purple-50 text-purple-700 ring-purple-200' },
           { label: 'Tenor',   value: stats.tenor,   color: 'bg-blue-50 text-blue-700 ring-blue-200' },
           { label: 'Bass',    value: stats.bass,    color: 'bg-teal-50 text-teal-700 ring-teal-200' },
@@ -226,7 +226,7 @@ export default function Members() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filtered.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50/50 transition-colors group">
+                <tr key={m.id} className="hover:bg-blue-600/25 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <Avatar name={m.firstName + ' ' + m.lastName} voicePart={m.voicePart} size="md" />
@@ -250,9 +250,9 @@ export default function Members() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEdit(m)} className="p-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"><Pencil size={15} /></button>
-                      <button onClick={() => setDeleteConfirm(m)} className="p-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
+                    <div className="flex items-center justify-end gap-2 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openEdit(m)} className="p-2 rounded-xl text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"><Pencil size={15} /></button>
+                      <button onClick={() => setDeleteConfirm(m)} className="p-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
                     </div>
                   </td>
                 </tr>
@@ -288,7 +288,7 @@ export default function Members() {
                 {m.contactNumber && <div className="flex items-center gap-2 text-[12px] text-slate-500 truncate"><Phone size={13} className="text-slate-400"/>{m.contactNumber}</div>}
               </div>
               
-              <div className="flex gap-2 mt-5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex gap-2 mt-5 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => openEdit(m)} className="btn-secondary flex-1 text-xs py-2 justify-center"><Pencil size={13}/>Edit</button>
                 <button onClick={() => setDeleteConfirm(m)} className="p-2 rounded-xl border border-slate-200/50 text-slate-400 hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors"><Trash2 size={15}/></button>
               </div>

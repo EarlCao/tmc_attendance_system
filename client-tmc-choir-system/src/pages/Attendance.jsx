@@ -250,7 +250,7 @@ export default function Attendance() {
   if (!selectedSession) {
     return (
       <div className="page-shell">
-        <div className="card p-6 bg-gradient-to-br from-white to-slate-50/50">
+        <div className="card p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">Attendance sessions</p>

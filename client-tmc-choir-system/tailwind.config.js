@@ -4,7 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: ['class', '[data-theme="dark"]'],
+  darkMode: ['class', '[data-theme="sunset"]'],
   theme: {
     extend: {
       colors: {
@@ -31,7 +31,7 @@ export default {
     },
   },
   daisyui: {
-    themes: ['light', 'dark'],
+    themes: ['light', 'sunset'],
   },
   plugins: [require("tailwindcss-animate"), require("daisyui")],
 }

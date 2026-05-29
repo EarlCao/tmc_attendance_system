@@ -108,7 +108,7 @@ export default function Semesters() {
 
   return (
     <div className="page-shell">
-      <div className="card p-6 bg-gradient-to-r from-white to-slate-50/50">
+      <div className="card p-6">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">Semester records</p>
           <h2 className="mt-1 text-2xl font-black text-slate-800 tracking-tight">Semester Management</h2>
@@ -181,7 +181,7 @@ export default function Semesters() {
       >
         {selectedSemester && (
           <div className="space-y-5">
-            <div className="rounded-2xl bg-slate-50/80 p-5 border border-slate-100">
+            <div className="rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-[15px] font-black text-slate-800">{selectedSemester.name}</h3>

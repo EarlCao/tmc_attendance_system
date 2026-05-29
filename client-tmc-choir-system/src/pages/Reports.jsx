@@ -49,7 +49,7 @@ export default function Reports() {
 
   return (
     <div className="page-shell">
-      <div className="card p-6 bg-gradient-to-r from-white to-slate-50/50">
+      <div className="card p-6">
         <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">Printable summaries</p>
         <h2 className="mt-1 text-2xl font-black text-slate-800 tracking-tight">Reports</h2>
         <p className="mt-1 text-sm font-medium text-slate-500">Semester-end summaries for attendance, auditions, members, officers, and absences.</p>
@@ -153,7 +153,7 @@ export default function Reports() {
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {members.map((member) => (
-                        <tr key={member.id} className="hover:bg-slate-50/50">
+                        <tr key={member.id} className="hover:bg-blue-600/25">
                           <td className="px-5 py-4 font-black text-slate-800">{getMemberName(member)}</td>
                           <td className="px-5 py-4 font-medium text-slate-600">{member.voicePart}</td>
                           <td className="px-5 py-4 font-medium text-slate-600">{member.course || '—'}</td>
