@@ -10,8 +10,11 @@
     @apply transition-colors duration-300;
     color-scheme: light;
   }
+  html.dark {
+    color-scheme: dark;
+  }
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-slate-50 text-slate-900 antialiased transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
   body::before {
@@ -27,6 +30,13 @@
       radial-gradient(circle at 50% 90%, rgba(16,185,129,0.1), transparent 50%);
     filter: blur(40px);
   }
+  html.dark body::before {
+    background:
+      linear-gradient(135deg, rgba(2,6,23,0.92), rgba(15,23,42,0.94)),
+      radial-gradient(circle at 12% 0%, rgba(37,99,235,0.2), transparent 42%),
+      radial-gradient(circle at 88% 12%, rgba(14,165,233,0.16), transparent 38%),
+      radial-gradient(circle at 50% 92%, rgba(16,185,129,0.12), transparent 48%);
+  }
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -35,7 +45,7 @@
     @apply bg-transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300/80 rounded-full hover:bg-slate-400 transition-colors;
+    @apply bg-slate-300/80 rounded-full hover:bg-slate-400 transition-colors dark:bg-slate-700 dark:hover:bg-slate-600;
   }
 }
 
@@ -44,45 +54,154 @@
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:shadow-blue-500/50 hover:-translate-y-0.5 active:translate-y-0 active:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-300 hover:bg-white hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/60 bg-white/80 backdrop-blur-md px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-300 hover:bg-white hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm dark:border-slate-700/70 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800;
   }
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-500/30 transition-all duration-300 hover:shadow-red-500/50 hover:-translate-y-0.5 active:translate-y-0 active:shadow-md;
   }
   .card {
-    @apply rounded-2xl border border-white/80 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:bg-white/90;
+    @apply rounded-2xl border border-white/80 bg-white/70 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xl transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:bg-white/90 dark:border-slate-700/70 dark:bg-slate-900/70 dark:shadow-black/20 dark:hover:bg-slate-900/90;
   }
   .input {
-    @apply w-full rounded-xl border border-slate-200/80 bg-white/50 backdrop-blur-sm px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-inner transition-all duration-300 focus:border-blue-500/50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10;
+    @apply w-full rounded-xl border border-slate-200/80 bg-white/50 backdrop-blur-sm px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-inner transition-all duration-300 focus:border-blue-500/50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700/80 dark:bg-slate-950/50 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:bg-slate-950 dark:focus:ring-blue-400/10;
   }
   .label {
-    @apply mb-1.5 block text-[13px] font-semibold text-slate-600 uppercase tracking-wider;
+    @apply mb-1.5 block text-[13px] font-semibold text-slate-600 uppercase tracking-wider dark:text-slate-300;
   }
   .sidebar-link {
-    @apply flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-500 transition-all duration-300 hover:bg-blue-50/50 hover:text-blue-700 hover:shadow-sm;
+    @apply flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-500 transition-all duration-300 hover:bg-blue-50/50 hover:text-blue-700 hover:shadow-sm dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-blue-300;
   }
   .sidebar-link.active {
-    @apply bg-gradient-to-r from-blue-50 to-indigo-50/50 text-blue-700 font-semibold shadow-sm ring-1 ring-blue-100/50;
+    @apply bg-gradient-to-r from-blue-50 to-indigo-50/50 text-blue-700 font-semibold shadow-sm ring-1 ring-blue-100/50 dark:from-blue-950/70 dark:to-indigo-950/40 dark:text-blue-200 dark:ring-blue-900/50;
   }
   .tab-btn {
     @apply px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-300;
   }
   .tab-btn.active {
-    @apply bg-white text-blue-700 shadow-sm border border-slate-200/50;
+    @apply bg-white text-blue-700 shadow-sm border border-slate-200/50 dark:border-slate-700/70 dark:bg-slate-900 dark:text-blue-200;
   }
   .tab-btn:not(.active) {
-    @apply text-slate-500 hover:bg-slate-100/50 hover:text-slate-700;
+    @apply text-slate-500 hover:bg-slate-100/50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-slate-200;
   }
   /* Animation is handled by MainLayout's keyed wrapper — page-shell is layout only */
   .page-shell {
     @apply mx-auto w-full max-w-7xl space-y-8;
   }
   .panel-header {
-    @apply flex items-center justify-between gap-3 border-b border-slate-100/50 px-6 py-5;
+    @apply flex items-center justify-between gap-3 border-b border-slate-100/50 px-6 py-5 dark:border-slate-800/70;
   }
   .muted {
-    @apply text-slate-400;
+    @apply text-slate-400 dark:text-slate-500;
   }
+}
+
+html.dark body :where(.bg-white, .bg-white\/95, .bg-white\/90, .bg-white\/80, .bg-white\/70, .bg-white\/60, .bg-white\/50) {
+  background-color: rgb(15 23 42 / 0.86);
+}
+
+html.dark body :where(.bg-slate-50, .bg-slate-50\/50, .bg-slate-50\/30, .bg-gray-50, .bg-gray-100, .bg-slate-100, .bg-slate-100\/50, .bg-slate-200) {
+  background-color: rgb(30 41 59 / 0.72);
+}
+
+html.dark body :where(.bg-blue-50, .bg-blue-50\/50, .bg-blue-50\/40, .bg-blue-50\/30, .bg-blue-100) {
+  background-color: rgb(30 58 138 / 0.28);
+}
+
+html.dark body :where(.bg-green-50, .bg-green-50\/50, .bg-green-100) {
+  background-color: rgb(20 83 45 / 0.3);
+}
+
+html.dark body :where(.bg-red-50, .bg-red-50\/50, .bg-red-100) {
+  background-color: rgb(127 29 29 / 0.3);
+}
+
+html.dark body :where(.bg-yellow-50, .bg-yellow-50\/50, .bg-yellow-100, .bg-amber-50, .bg-amber-50\/50, .bg-amber-50\/40, .bg-amber-100) {
+  background-color: rgb(113 63 18 / 0.3);
+}
+
+html.dark body :where(.bg-purple-50, .bg-purple-50\/50, .bg-purple-100, .bg-pink-100, .bg-orange-100, .bg-indigo-50, .bg-indigo-50\/50, .bg-indigo-100) {
+  background-color: rgb(76 29 149 / 0.26);
+}
+
+html.dark body :where(.border-white, .border-white\/80, .border-white\/70, .border-slate-50, .border-slate-100, .border-slate-100\/60, .border-slate-100\/50, .border-slate-200, .border-slate-200\/80, .border-slate-200\/60, .border-slate-200\/50, .border-gray-100, .border-gray-200) {
+  border-color: rgb(51 65 85 / 0.78);
+}
+
+html.dark body :where(.border-blue-100, .border-blue-100\/50, .border-blue-200, .border-blue-200\/60) {
+  border-color: rgb(37 99 235 / 0.35);
+}
+
+html.dark body :where(.border-green-100, .border-red-100, .border-yellow-100, .border-amber-100, .border-amber-100\/50, .border-purple-100, .border-indigo-100) {
+  border-color: rgb(100 116 139 / 0.45);
+}
+
+html.dark body :where(.divide-slate-50 > :not([hidden]) ~ :not([hidden]), .divide-slate-100 > :not([hidden]) ~ :not([hidden]), .divide-gray-100 > :not([hidden]) ~ :not([hidden])) {
+  border-color: rgb(51 65 85 / 0.72);
+}
+
+html.dark body :where(.text-slate-950, .text-slate-900, .text-gray-950, .text-gray-900) {
+  color: rgb(248 250 252);
+}
+
+html.dark body :where(.text-slate-800, .text-gray-800, .text-slate-700, .text-gray-700) {
+  color: rgb(226 232 240);
+}
+
+html.dark body :where(.text-slate-600, .text-gray-600) {
+  color: rgb(203 213 225);
+}
+
+html.dark body :where(.text-slate-500, .text-gray-500) {
+  color: rgb(148 163 184);
+}
+
+html.dark body :where(.text-slate-400, .text-gray-400) {
+  color: rgb(100 116 139);
+}
+
+html.dark body :where(.text-blue-700, .text-blue-600, .text-blue-500, .text-blue-400) {
+  color: rgb(147 197 253);
+}
+
+html.dark body :where(.text-green-700, .text-green-600, .text-green-500) {
+  color: rgb(134 239 172);
+}
+
+html.dark body :where(.text-red-700, .text-red-600, .text-red-500) {
+  color: rgb(252 165 165);
+}
+
+html.dark body :where(.text-yellow-700, .text-yellow-600, .text-yellow-500, .text-amber-700, .text-amber-600, .text-amber-500) {
+  color: rgb(253 224 71);
+}
+
+html.dark body :where(.text-purple-700, .text-purple-600, .text-pink-700, .text-orange-700, .text-orange-600, .text-indigo-700, .text-indigo-600) {
+  color: rgb(216 180 254);
+}
+
+html.dark body :where(.ring-slate-200, .ring-gray-200, .ring-blue-100, .ring-blue-200, .ring-green-200, .ring-red-200, .ring-yellow-200, .ring-purple-200, .ring-amber-100) {
+  --tw-ring-color: rgb(71 85 105 / 0.65);
+}
+
+html.dark body :where(.shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-modal) {
+  --tw-shadow-color: rgb(0 0 0 / 0.35);
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
+html.dark body :where(.hover\:bg-slate-50:hover, .hover\:bg-slate-50\/50:hover, .hover\:bg-gray-100:hover, .hover\:bg-white:hover) {
+  background-color: rgb(51 65 85 / 0.72);
+}
+
+html.dark body :where(.hover\:bg-blue-50:hover, .hover\:bg-blue-50\/30:hover, .hover\:bg-blue-100:hover) {
+  background-color: rgb(30 58 138 / 0.34);
+}
+
+html.dark body :where(.hover\:bg-red-50:hover, .hover\:bg-red-100:hover) {
+  background-color: rgb(127 29 29 / 0.34);
+}
+
+html.dark body :where(input, select, textarea) {
+  color-scheme: dark;
 }
 
 @media print {

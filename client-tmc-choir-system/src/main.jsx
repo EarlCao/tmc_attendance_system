@@ -3,9 +3,21 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
-document.documentElement.classList.remove('dark')
-document.documentElement.style.colorScheme = 'light'
-try { localStorage.removeItem('tmcTheme') } catch {}
+const getInitialTheme = () => {
+  try {
+    const savedTheme = localStorage.getItem('tmcTheme')
+    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme
+  } catch {
+    // Ignore storage access failures and use the system preference below.
+  }
+
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+const initialTheme = getInitialTheme()
+document.documentElement.dataset.theme = initialTheme
+document.documentElement.classList.toggle('dark', initialTheme === 'dark')
+document.documentElement.style.colorScheme = initialTheme
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

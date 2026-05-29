@@ -4,7 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
+  darkMode: ['class', '[data-theme="dark"]'],
   theme: {
     extend: {
       colors: {
@@ -30,5 +30,8 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  daisyui: {
+    themes: ['light', 'dark'],
+  },
+  plugins: [require("tailwindcss-animate"), require("daisyui")],
 }

@@ -7,7 +7,7 @@ export default function MainLayout({ children, currentSemester }) {
   const location = useLocation()
 
   return (
-    <div className="flex h-screen overflow-hidden bg-transparent">
+    <div className="flex h-screen overflow-hidden bg-transparent text-slate-900 transition-colors duration-300 dark:text-slate-100">
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header currentSemester={currentSemester} />
