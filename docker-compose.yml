@@ -4,8 +4,8 @@ services:
     container_name: tmc-choir-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: passcode
-      MYSQL_DATABASE: tmc_choir_system_db
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASS}
+      MYSQL_DATABASE: ${DATABASE_NAME}
     ports:
       - "3307:3306"
     volumes:
@@ -23,21 +23,22 @@ services:
     build:
       context: ./server-tmc-choir-system
       dockerfile: Dockerfile
+      network: host
     container_name: tmc-choir-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql://root:passcode@mysql:3306/tmc_choir_system_db
+      DATABASE_URL: mysql://${DATABASE_ROOT_USER}:${DATABASE_ROOT_PASS}@mysql:3306/${DATABASE_NAME}
       DATABASE_HOST: mysql
       DATABASE_PORT: 3306
-      DATABASE_USER: root
-      DATABASE_PASSWORD: passcode
-      DATABASE_NAME: tmc_choir_system_db
-      BACKEND_PORT: 3002
-      JWT_SECRET: supersecretkey
-      JWT_EXPIRES_IN: 7d
-      FRONTEND_URL: http://localhost:5173
+      DATABASE_USER: ${DATABASE_ROOT_USER}
+      DATABASE_PASSWORD: ${DATABASE_ROOT_PASS}
+      DATABASE_NAME: ${DATABASE_NAME}
+      BACKEND_PORT: ${BACKEND_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      FRONTEND_URL: http://localhost:${FRONTEND_PORT}
     ports:
-      - "3002:3002"
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     volumes:
       - ./server-tmc-choir-system:/app
       - /app/node_modules
@@ -52,12 +53,13 @@ services:
     build:
       context: ./client-tmc-choir-system
       dockerfile: Dockerfile
+      network: host
     container_name: tmc-choir-frontend
     restart: unless-stopped
     environment:
-      VITE_API_TARGET: http://backend:3002
+      VITE_API_TARGET: http://backend:${BACKEND_PORT}
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     volumes:
       - ./client-tmc-choir-system:/app
       - /app/node_modules

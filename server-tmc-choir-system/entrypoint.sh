@@ -1,12 +1,6 @@
 #!/bin/sh
-set -e
 
-echo "⏳ Running Prisma migrations..."
+npx prisma generate
 npx prisma migrate deploy
 
-echo "🚀 Starting server..."
-if [ "$NODE_ENV" = "production" ]; then
-  exec node src/server.js
-else
-  exec npm run dev
-fi
+npm run dev
