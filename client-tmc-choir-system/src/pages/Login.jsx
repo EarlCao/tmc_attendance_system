@@ -81,7 +81,7 @@ export default function Login() {
               <label className="label">Username</label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100/95 ring-1 ring-slate-200/80 dark:bg-slate-800/80 dark:ring-slate-700/80">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg  ring-1 ring-slate-200/80 dark:bg-slate-800/80 dark:ring-slate-700/80">
                     <User size={16} className="text-slate-600 dark:text-slate-300" />
                   </span>
                 </div>
