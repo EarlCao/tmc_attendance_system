@@ -53,7 +53,7 @@ export default function Login() {
 
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
         {/* Card */}
-        <div className="rounded-3xl border border-white/80 bg-white/80 px-8 pb-8 pt-4 shadow-[0_20px_60px_rgba(0,0,0,0.08)] dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-black/30">
+        <div className="rounded-3xl border border-black/20 bg-white/80 px-8 pb-8 pt-4 shadow-[0_20px_60px_rgba(0,0,0,0.08)] dark:border-slate-700/70 dark:bg-slate-900/80 dark:shadow-black/30">
           {/* Logo & Title */}
           <div className="mb-8 text-center justify-center flex flex-col items-center">
             <img

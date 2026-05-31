@@ -1,21 +1,38 @@
 import { AlertTriangle, LogOut } from 'lucide-react'
 import Modal from './Modal'
 
-export default function LogoutModal({ open, onClose, onConfirm }) {
+export default function LogoutModal({ open, onClose, onConfirm, loggingOut = false }) {
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={!loggingOut ? onClose : undefined}
       size="sm"
       title="Confirm Logout"
       footer={
         <>
-          <button onClick={onClose} className="btn-secondary">
+          <button
+            onClick={onClose}
+            disabled={loggingOut}
+            className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
             Cancel
           </button>
-          <button onClick={onConfirm} className="btn-danger">
-            <LogOut size={16} />
-            Log out
+          <button
+            onClick={onConfirm}
+            disabled={loggingOut}
+            className="btn-danger disabled:opacity-80 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {loggingOut ? (
+              <>
+                <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                Logging out...
+              </>
+            ) : (
+              <>
+                <LogOut size={16} />
+                Log out
+              </>
+            )}
           </button>
         </>
       }

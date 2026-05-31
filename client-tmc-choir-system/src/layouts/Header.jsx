@@ -24,6 +24,7 @@ export default function Header() {
   const { user, logout } = useAuth()
   const { activeSemester } = useSemesters()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const getInitials = (name) => {
     if (!name) return 'AD'
@@ -31,8 +32,17 @@ export default function Header() {
   }
 
   const handleLogoutConfirm = () => {
+    setLoggingOut(true)
+    setTimeout(() => {
+      setLoggingOut(false)
+      setShowLogoutModal(false)
+      logout()
+    }, 1000)
+  }
+
+  const handleLogoutClose = () => {
+    if (loggingOut) return
     setShowLogoutModal(false)
-    logout()
   }
 
   return (
@@ -89,8 +99,9 @@ export default function Header() {
 
       <LogoutModal
         open={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
+        onClose={handleLogoutClose}
         onConfirm={handleLogoutConfirm}
+        loggingOut={loggingOut}
       />
     </>
   )
