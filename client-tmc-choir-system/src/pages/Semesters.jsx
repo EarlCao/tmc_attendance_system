@@ -12,6 +12,8 @@ import Modal from '../components/common/Modal'
 
 const semesterTabs = ['Overview', 'Attendance', 'Sessions', 'People', 'Auditions']
 
+const today = new Date().toISOString().split('T')[0]
+
 function formatSemesterRange(semester) {
   if (!semester.startDate && !semester.endDate) return 'Dates not set'
   if (!semester.startDate) return `Until ${formatDateShort(semester.endDate)}`
@@ -20,7 +22,7 @@ function formatSemesterRange(semester) {
 }
 
 export default function Semesters() {
-  const { semesters: semesterList, activeSemester: currentSemester, loading: sLoading, createSemester, updateSemester } = useSemesters()
+  const { semesters: semesterList, activeSemester: currentSemester, loading: sLoading, createSemester, updateSemester, endSemester } = useSemesters()
   const { sessions, loading: sessLoading } = useSessions()
   const { members, loading: mLoading } = useMembers()
   const { auditionees, loading: aLoading } = useAuditions()
@@ -30,18 +32,32 @@ export default function Semesters() {
   const [selectedSemester, setSelectedSemester] = useState(null)
   const [selectedTab, setSelectedTab] = useState('Overview')
   const [semesterModal, setSemesterModal] = useState(false)
-  const [semesterForm, setSemesterForm] = useState({ name: '', startDate: '', endDate: '' })
+  const [semesterForm, setSemesterForm] = useState({ name: '', startDate: today, endDate: '' })
+  const [formErrors, setFormErrors] = useState({ name: '', startDate: '' })
   const [endConfirmModal, setEndConfirmModal] = useState(false)
   const [endConfirmText, setEndConfirmText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   const loading = sLoading || sessLoading || mLoading || aLoading || jLoading || eLoading
 
+  function handleOpenSemesterModal() {
+    setSemesterForm({ name: '', startDate: today, endDate: '' })
+    setFormErrors({ name: '', startDate: '' })
+    setSemesterModal(true)
+  }
+
+  function handleCloseSemesterModal() {
+    if (isSaving) return
+    setSemesterForm({ name: '', startDate: today, endDate: '' })
+    setFormErrors({ name: '', startDate: '' })
+    setSemesterModal(false)
+  }
+
   async function handleEndSemester() {
     if (!currentSemester) return
     setIsSaving(true)
     try {
-      await updateSemester(currentSemester.id, { status: 'archived' })
+      await endSemester(currentSemester.id)
       setSelectedSemester((prev) =>
         prev?.id === currentSemester.id ? { ...prev, status: 'archived' } : prev
       )
@@ -53,17 +69,23 @@ export default function Semesters() {
   }
 
   async function handleCreateSemester() {
-    if (!semesterForm.name.trim()) return
+    const errors = {}
+    if (!semesterForm.name.trim()) errors.name = 'Semester name is required.'
+    if (!semesterForm.startDate) errors.startDate = 'Start date is required.'
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+    setFormErrors({ name: '', startDate: '' })
     setIsSaving(true)
     try {
       await createSemester({
         name: semesterForm.name.trim(),
         startDate: semesterForm.startDate,
-        endDate: semesterForm.endDate,
+        endDate: semesterForm.endDate || null,
         status: 'active'
       })
-      setSemesterForm({ name: '', startDate: '', endDate: '' })
-      setSemesterModal(false)
+      handleCloseSemesterModal()
     } finally {
       setIsSaving(false)
     }
@@ -99,8 +121,6 @@ export default function Semesters() {
     }),
     [selectedAuditionees]
   )
-  // Need attendance fetching to do full reports, for now simple counts.
-  const selectedAttendance = [] // Not fetching all attendance dynamically for memory, using summary instead if available.
 
   if (loading) {
     return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
@@ -115,7 +135,7 @@ export default function Semesters() {
           <p className="mt-1 text-sm font-medium text-slate-500">Ended semesters remain available for viewing, but archived records cannot be edited.</p>
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
-          <button onClick={() => setSemesterModal(true)} className="btn-primary shadow-blue-500/30">
+          <button onClick={handleOpenSemesterModal} className="btn-primary shadow-blue-500/30">
             <Plus size={16} /> New Semester
           </button>
           <button
@@ -169,6 +189,7 @@ export default function Semesters() {
         })}
       </div>
 
+      {/* Semester Details Modal */}
       <Modal
         open={!!selectedSemester}
         onClose={() => {
@@ -238,8 +259,7 @@ export default function Semesters() {
                 )}
               </div>
             )}
-            
-            {/* Keeping it simple for the rest for now since detailed summary requires all sessions attendance */}
+
             {selectedTab !== 'Overview' && (
               <div className="rounded-2xl bg-slate-50/50 p-8 text-center border border-slate-100/50 border-dashed">
                 <p className="text-[14px] font-bold text-slate-500">Detailed {selectedTab.toLowerCase()} view is available in specific modules.</p>
@@ -249,15 +269,18 @@ export default function Semesters() {
         )}
       </Modal>
 
+      {/* Create Semester Modal */}
       <Modal
         open={semesterModal}
-        onClose={() => setSemesterModal(false)}
+        onClose={handleCloseSemesterModal}
         title="Create New Semester"
         size="md"
         footer={
           <>
-            <button onClick={() => setSemesterModal(false)} disabled={isSaving} className="btn-secondary">Cancel</button>
-            <button onClick={handleCreateSemester} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Create Semester'}</button>
+            <button onClick={handleCloseSemesterModal} disabled={isSaving} className="btn-secondary">Cancel</button>
+            <button onClick={handleCreateSemester} disabled={isSaving} className="btn-primary shadow-blue-500/40">
+              {isSaving ? <><Loader2 className="animate-spin w-4 h-4" /> Creating...</> : 'Create Semester'}
+            </button>
           </>
         }
       >
@@ -265,23 +288,56 @@ export default function Semesters() {
           <div className="rounded-xl bg-blue-50/50 border border-blue-100/50 p-4 text-[13px] font-medium text-blue-700">
             Creating a new semester will archive the current active semester and lock it as view-only.
           </div>
+
+          {/* Semester Name */}
           <div>
-            <label className="label">Semester Name *</label>
-            <input className="input bg-white" value={semesterForm.name} onChange={e => setSemesterForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. 2nd Semester SY 2025-2026" />
+            <label className="label">Semester Name <span className="text-red-500">*</span></label>
+            <input
+              className={cn('input bg-white', formErrors.name && 'border-red-400 focus:border-red-500 focus:ring-red-500/10')}
+              value={semesterForm.name}
+              onChange={e => {
+                setSemesterForm(p => ({ ...p, name: e.target.value }))
+                if (formErrors.name) setFormErrors(p => ({ ...p, name: '' }))
+              }}
+              placeholder="e.g. 2nd Semester SY 2025-2026"
+            />
+            {formErrors.name && (
+              <p className="mt-1.5 text-[12px] font-medium text-red-500">{formErrors.name}</p>
+            )}
           </div>
+
+          {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Start Date</label>
-              <input className="input bg-white" type="date" value={semesterForm.startDate} onChange={e => setSemesterForm(p => ({ ...p, startDate: e.target.value }))} />
+              <label className="label">Start Date <span className="text-red-500">*</span></label>
+              <input
+                className={cn('input bg-white', formErrors.startDate && 'border-red-400 focus:border-red-500 focus:ring-red-500/10')}
+                type="date"
+                value={semesterForm.startDate}
+                onChange={e => {
+                  setSemesterForm(p => ({ ...p, startDate: e.target.value }))
+                  if (formErrors.startDate) setFormErrors(p => ({ ...p, startDate: '' }))
+                }}
+              />
+              {formErrors.startDate && (
+                <p className="mt-1.5 text-[12px] font-medium text-red-500">{formErrors.startDate}</p>
+              )}
             </div>
             <div>
               <label className="label">End Date</label>
-              <input className="input bg-white" type="date" value={semesterForm.endDate} onChange={e => setSemesterForm(p => ({ ...p, endDate: e.target.value }))} />
+              <input
+                className="input bg-white"
+                type="date"
+                value={semesterForm.endDate}
+                onChange={e => setSemesterForm(p => ({ ...p, endDate: e.target.value }))}
+              />
+              <p className="mt-1.5 text-[11px] text-slate-400">Optional — can be set anytime.</p>
             </div>
           </div>
         </div>
       </Modal>
 
+      {/* End Semester Confirm Modal */}
       <Modal
         open={endConfirmModal}
         onClose={() => {

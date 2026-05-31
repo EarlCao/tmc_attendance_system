@@ -47,7 +47,7 @@ export const createSemester = async (req, res) => {
       data: {
         name,
         startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        endDate: endDate ? new Date(endDate) : null,
       },
     });
 
@@ -67,32 +67,33 @@ export const createSemester = async (req, res) => {
 }
 
 export const updateSemester = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { name, startDate, endDate } = req.body;
-  
-      const updatedSemester = await prisma.semester.update({
-        where: { id: parseInt(id) },
-        data: {
-          name,
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
-        },
-      });
-  
-      res.status(200).json({
-        status: 'success',
-        data: {
-          semester: updatedSemester,
-        },
-      });
-    } catch (err) {
-      console.error('Update Semester Error:', err);
-      res.status(500).json({
-        status: 'error',
-        message: 'Internal server error',
-      });
-    }
+  try {
+    const { id } = req.params;
+    const { name, startDate, endDate } = req.body;
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+
+    const updatedSemester = await prisma.semester.update({
+      where: { id: parseInt(id) },
+      data: updateData,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        semester: updatedSemester,
+      },
+    });
+  } catch (err) {
+    console.error('Update Semester Error:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal server error',
+    });
+  }
 }
 
 export const endSemester = async (req, res) => {
