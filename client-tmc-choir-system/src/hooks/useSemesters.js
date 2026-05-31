@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { semestersAPI } from '../lib/api';
+import socket from '../lib/socket';
 
 export function useSemesters() {
   const [semesters, setSemesters] = useState([]);
@@ -24,27 +25,59 @@ export function useSemesters() {
     fetchSemesters();
   }, [fetchSemesters]);
 
+  // Real-time sync — semester changes affect active-semester detection app-wide
+  useEffect(() => {
+    const onCreated = (semester) => {
+      setSemesters((prev) => {
+        if (prev.find((s) => s.id === semester.id)) return prev;
+        return [semester, ...prev];
+      });
+    };
+
+    const onUpdated = (semester) => {
+      setSemesters((prev) => prev.map((s) => (s.id === semester.id ? { ...s, ...semester } : s)));
+    };
+
+    const onEnded = (semester) => {
+      setSemesters((prev) =>
+        prev.map((s) => (s.id === semester.id ? { ...s, ...semester, status: 'archived' } : s))
+      );
+    };
+
+    const onDeleted = ({ id }) => {
+      setSemesters((prev) => prev.filter((s) => s.id !== id));
+    };
+
+    socket.on('semester:created', onCreated);
+    socket.on('semester:updated', onUpdated);
+    socket.on('semester:ended', onEnded);
+    socket.on('semester:deleted', onDeleted);
+
+    return () => {
+      socket.off('semester:created', onCreated);
+      socket.off('semester:updated', onUpdated);
+      socket.off('semester:ended', onEnded);
+      socket.off('semester:deleted', onDeleted);
+    };
+  }, []);
+
   const createSemester = async (data) => {
     const res = await semestersAPI.createSemester(data);
-    await fetchSemesters();
     return res;
   };
 
   const updateSemester = async (id, data) => {
     const res = await semestersAPI.updateSemester(id, data);
-    await fetchSemesters();
     return res;
   };
 
   const endSemester = async (id) => {
     const res = await semestersAPI.endSemester(id);
-    await fetchSemesters();
     return res;
   };
 
   const deleteSemester = async (id) => {
     const res = await semestersAPI.deleteSemester(id);
-    await fetchSemesters();
     return res;
   };
 

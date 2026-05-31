@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { membersAPI } from '../lib/api';
+import socket from '../lib/socket';
 
 export function useMembers() {
   const [members, setMembers] = useState([]);
@@ -24,21 +25,46 @@ export function useMembers() {
     fetchMembers();
   }, [fetchMembers]);
 
+  // Real-time: sync state directly without a full refetch
+  useEffect(() => {
+    const onCreated = (member) => {
+      setMembers((prev) => {
+        if (prev.find((m) => m.id === member.id)) return prev;
+        return [...prev, member].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      });
+    };
+
+    const onUpdated = (member) => {
+      setMembers((prev) => prev.map((m) => (m.id === member.id ? member : m)));
+    };
+
+    const onDeleted = ({ id }) => {
+      setMembers((prev) => prev.filter((m) => m.id !== id));
+    };
+
+    socket.on('member:created', onCreated);
+    socket.on('member:updated', onUpdated);
+    socket.on('member:deleted', onDeleted);
+
+    return () => {
+      socket.off('member:created', onCreated);
+      socket.off('member:updated', onUpdated);
+      socket.off('member:deleted', onDeleted);
+    };
+  }, []);
+
   const createMember = async (data) => {
     const res = await membersAPI.createMember(data);
-    await fetchMembers();
     return res;
   };
 
   const updateMember = async (id, data) => {
     const res = await membersAPI.updateMember(id, data);
-    await fetchMembers();
     return res;
   };
 
   const deleteMember = async (id) => {
     const res = await membersAPI.deleteMember(id);
-    await fetchMembers();
     return res;
   };
 

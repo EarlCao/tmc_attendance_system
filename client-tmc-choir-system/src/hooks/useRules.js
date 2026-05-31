@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { rulesAPI } from '../lib/api';
+import socket from '../lib/socket';
 
 export function useRules() {
   const [rules, setRules] = useState([]);
@@ -24,21 +25,46 @@ export function useRules() {
     fetchRules();
   }, [fetchRules]);
 
+  // Real-time sync
+  useEffect(() => {
+    const onCreated = (rule) => {
+      setRules((prev) => {
+        if (prev.find((r) => r.id === rule.id)) return prev;
+        return [...prev, rule];
+      });
+    };
+
+    const onUpdated = (rule) => {
+      setRules((prev) => prev.map((r) => (r.id === rule.id ? { ...r, ...rule } : r)));
+    };
+
+    const onDeleted = ({ id }) => {
+      setRules((prev) => prev.filter((r) => r.id !== id));
+    };
+
+    socket.on('rule:created', onCreated);
+    socket.on('rule:updated', onUpdated);
+    socket.on('rule:deleted', onDeleted);
+
+    return () => {
+      socket.off('rule:created', onCreated);
+      socket.off('rule:updated', onUpdated);
+      socket.off('rule:deleted', onDeleted);
+    };
+  }, []);
+
   const createRule = async (data) => {
     const res = await rulesAPI.createRule(data);
-    await fetchRules();
     return res;
   };
 
   const updateRule = async (id, data) => {
     const res = await rulesAPI.updateRule(id, data);
-    await fetchRules();
     return res;
   };
 
   const deleteRule = async (id) => {
     const res = await rulesAPI.deleteRule(id);
-    await fetchRules();
     return res;
   };
 

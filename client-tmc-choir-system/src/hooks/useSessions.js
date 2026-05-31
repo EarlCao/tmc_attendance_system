@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sessionsAPI, attendanceAPI } from '../lib/api';
+import socket from '../lib/socket';
 
 export function useSessions() {
   const [sessions, setSessions] = useState([]);
@@ -24,25 +25,56 @@ export function useSessions() {
     fetchSessions();
   }, [fetchSessions]);
 
+  // Real-time sync
+  useEffect(() => {
+    const onCreated = (session) => {
+      setSessions((prev) => {
+        if (prev.find((s) => s.id === session.id)) return prev;
+        return [session, ...prev];
+      });
+    };
+
+    const onUpdated = (session) => {
+      setSessions((prev) => prev.map((s) => (s.id === session.id ? session : s)));
+    };
+
+    const onDeleted = ({ id }) => {
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+    };
+
+    // When attendance is saved for a session, refetch to get updated counts
+    const onAttendanceSaved = ({ sessionId }) => {
+      fetchSessions();
+    };
+
+    socket.on('session:created', onCreated);
+    socket.on('session:updated', onUpdated);
+    socket.on('session:deleted', onDeleted);
+    socket.on('attendance:saved', onAttendanceSaved);
+
+    return () => {
+      socket.off('session:created', onCreated);
+      socket.off('session:updated', onUpdated);
+      socket.off('session:deleted', onDeleted);
+      socket.off('attendance:saved', onAttendanceSaved);
+    };
+  }, [fetchSessions]);
+
   const createSession = async (data) => {
     const res = await sessionsAPI.createSession(data);
-    await fetchSessions();
     return res;
   };
 
   const updateSession = async (id, data) => {
     const res = await sessionsAPI.updateSession(id, data);
-    await fetchSessions();
     return res;
   };
 
   const deleteSession = async (id) => {
     const res = await sessionsAPI.deleteSession(id);
-    await fetchSessions();
     return res;
   };
 
-  // Returns flat array of attendance records: [{ memberId, status, notes, ... }]
   const getSessionAttendance = async (sessionId) => {
     const res = await attendanceAPI.getSessionAttendance(sessionId);
     return res.data?.records || [];

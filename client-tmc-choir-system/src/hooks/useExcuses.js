@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { attendanceAPI } from '../lib/api';
+import socket from '../lib/socket';
 
 export function useExcuses() {
   const [excuses, setExcuses] = useState([]);
@@ -24,11 +25,26 @@ export function useExcuses() {
     fetchExcuses();
   }, [fetchExcuses]);
 
+  // Real-time: when an excuse status changes, update it in-place
+  useEffect(() => {
+    const onExcuseUpdated = ({ id, excuseStatus, notes }) => {
+      setExcuses((prev) =>
+        prev.map((e) =>
+          e.id === id ? { ...e, status: excuseStatus, notes: notes || e.notes } : e
+        )
+      );
+    };
+
+    socket.on('excuse:updated', onExcuseUpdated);
+    return () => {
+      socket.off('excuse:updated', onExcuseUpdated);
+    };
+  }, []);
+
   const updateExcuseStatus = async (id, status, notes) => {
     try {
       setLoading(true);
       const res = await attendanceAPI.updateExcuseStatus(id, { status, notes });
-      await fetchExcuses();
       return res;
     } catch (err) {
       console.error(err);

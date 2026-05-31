@@ -5,6 +5,7 @@ import { CalendarDays, Lock, UserCheck } from 'lucide-react'
 import MainLayout from './layouts/MainLayout'
 import Login from './pages/Login'
 import { AuthProvider } from './context/AuthContext'
+import { SocketProvider } from './context/SocketContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
 // Pages
@@ -106,17 +107,19 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <AppRoutes />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <SocketProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppRoutes />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   )

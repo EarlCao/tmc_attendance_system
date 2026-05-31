@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { officersAPI } from '../lib/api';
+import socket from '../lib/socket';
 
 export function useOfficers() {
   const [officers, setOfficers] = useState([]);
@@ -24,21 +25,46 @@ export function useOfficers() {
     fetchOfficers();
   }, [fetchOfficers]);
 
+  // Real-time sync
+  useEffect(() => {
+    const onCreated = (officer) => {
+      setOfficers((prev) => {
+        if (prev.find((o) => o.id === officer.id)) return prev;
+        return [...prev, officer];
+      });
+    };
+
+    const onUpdated = (officer) => {
+      setOfficers((prev) => prev.map((o) => (o.id === officer.id ? { ...o, ...officer } : o)));
+    };
+
+    const onDeleted = ({ id }) => {
+      setOfficers((prev) => prev.filter((o) => o.id !== id));
+    };
+
+    socket.on('officer:created', onCreated);
+    socket.on('officer:updated', onUpdated);
+    socket.on('officer:deleted', onDeleted);
+
+    return () => {
+      socket.off('officer:created', onCreated);
+      socket.off('officer:updated', onUpdated);
+      socket.off('officer:deleted', onDeleted);
+    };
+  }, []);
+
   const createOfficer = async (data) => {
     const res = await officersAPI.createOfficer(data);
-    await fetchOfficers();
     return res;
   };
 
   const updateOfficer = async (id, data) => {
     const res = await officersAPI.updateOfficer(id, data);
-    await fetchOfficers();
     return res;
   };
 
   const deleteOfficer = async (id) => {
     const res = await officersAPI.deleteOfficer(id);
-    await fetchOfficers();
     return res;
   };
 

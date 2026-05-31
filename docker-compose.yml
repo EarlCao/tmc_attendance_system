@@ -36,6 +36,7 @@ services:
       BACKEND_PORT: ${BACKEND_PORT}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      # Socket.IO CORS — allow the browser-facing frontend origin
       FRONTEND_URL: http://localhost:${FRONTEND_PORT}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
@@ -57,6 +58,7 @@ services:
     container_name: tmc-choir-frontend
     restart: unless-stopped
     environment:
+      # Used by Vite dev-server proxy for both /api and /socket.io
       VITE_API_TARGET: http://backend:${BACKEND_PORT}
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT}"
