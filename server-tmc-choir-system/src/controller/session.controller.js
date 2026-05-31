@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { emit, emitToRoom } from '../socket/index.js';
 
 // Normalize a session for frontend consumption
 const formatSession = (session, counts = {}) => ({
@@ -87,7 +88,6 @@ export const createSession = async (req, res) => {
 
     const sessionType = type || 'Practice';
     const sessionDate = new Date(date);
-    // Auto-generate title if not provided
     const sessionTitle = title || `${sessionType} - ${sessionDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
     const newSession = await prisma.session.create({
@@ -114,9 +114,11 @@ export const createSession = async (req, res) => {
       });
     }
 
+    const formatted = formatSession(newSession);
+    emit('session:created', formatted);
     res.status(201).json({
       status: 'success',
-      data: { session: formatSession(newSession) },
+      data: { session: formatted },
     });
   } catch (err) {
     console.error('Create Session Error:', err);
@@ -142,9 +144,11 @@ export const updateSession = async (req, res) => {
       data,
     });
 
+    const formatted = formatSession(updated);
+    emit('session:updated', formatted);
     res.status(200).json({
       status: 'success',
-      data: { session: formatSession(updated) },
+      data: { session: formatted },
     });
   } catch (err) {
     console.error('Update Session Error:', err);
@@ -157,6 +161,7 @@ export const deleteSession = async (req, res) => {
     const { id } = req.params;
     await prisma.attendanceRecord.deleteMany({ where: { sessionId: parseInt(id) } });
     await prisma.session.delete({ where: { id: parseInt(id) } });
+    emit('session:deleted', { id: parseInt(id) });
     res.status(200).json({ status: 'success', message: 'Session deleted', data: null });
   } catch (err) {
     console.error('Delete Session Error:', err);

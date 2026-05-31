@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { emit } from '../socket/index.js';
 
 // Normalize DB member record → frontend-friendly shape
 const formatMember = (m) => {
@@ -107,9 +108,11 @@ export const createMember = async (req, res) => {
     });
 
     const newMember = await prisma.member.create({ data: mappedData });
+    const formatted = formatMember(newMember);
+    emit('member:created', formatted);
     res.status(201).json({
       status: 'success',
-      data: { member: formatMember(newMember) },
+      data: { member: formatted },
     });
   } catch (err) {
     console.error('Create Member Error:', err);
@@ -131,9 +134,11 @@ export const updateMember = async (req, res) => {
       where: { id: parseInt(id) },
       data: mappedData,
     });
+    const formatted = formatMember(updatedMember);
+    emit('member:updated', formatted);
     res.status(200).json({
       status: 'success',
-      data: { member: formatMember(updatedMember) },
+      data: { member: formatted },
     });
   } catch (err) {
     console.error('Update Member Error:', err);
@@ -145,6 +150,7 @@ export const deleteMember = async (req, res) => {
   try {
     const { id } = req.params;
     await prisma.member.delete({ where: { id: parseInt(id) } });
+    emit('member:deleted', { id: parseInt(id) });
     res.status(200).json({ status: 'success', data: null });
   } catch (err) {
     console.error('Delete Member Error:', err);

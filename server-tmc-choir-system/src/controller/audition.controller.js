@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { emit } from '../socket/index.js';
 
 // Mapping between database category names and frontend camelCase keys
 const categoryNameToKey = (name) => {
@@ -203,6 +204,7 @@ export const createAuditionee = async (req, res) => {
       },
     });
 
+    emit('auditionee:created', newAuditionee);
     res.status(201).json({
       status: 'success',
       data: {
@@ -263,6 +265,7 @@ export const updateAuditionee = async (req, res) => {
       data,
     });
 
+    emit('auditionee:updated', updatedAuditionee);
     res.status(200).json({
       status: 'success',
       data: {
@@ -298,10 +301,9 @@ export const deleteAuditionee = async (req, res) => {
       });
     }
 
-    await prisma.auditionee.delete({
-      where: { id: auditioneeId },
-    });
+    await prisma.auditionee.delete({ where: { id: auditioneeId } });
 
+    emit('auditionee:deleted', { id: auditioneeId });
     res.status(200).json({
       status: 'success',
       message: 'Auditionee deleted successfully',
@@ -333,6 +335,7 @@ export const updateAuditioneeStatus = async (req, res) => {
       data: { status },
     });
 
+    emit('auditionee:statusChanged', updated);
     res.status(200).json({
       status: 'success',
       data: {
@@ -419,12 +422,11 @@ export const saveEvaluation = async (req, res) => {
     // Recalculate average rating for auditionee
     const avg = await recalculateAverageRating(parseInt(auditioneeId));
 
+    emit('auditionee:evaluated', { auditioneeId: parseInt(auditioneeId), averageRating: avg });
     res.status(200).json({
       status: 'success',
       message: 'Evaluation saved successfully',
-      data: {
-        averageRating: avg,
-      },
+      data: { averageRating: avg },
     });
   } catch (err) {
     console.error('Save Evaluation Error:', err);

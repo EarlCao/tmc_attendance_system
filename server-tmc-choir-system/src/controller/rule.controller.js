@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { emit } from '../socket/index.js';
 
 export const getRules = async (req, res) => {
   try {
@@ -11,9 +12,7 @@ export const getRules = async (req, res) => {
 
     const rules = await prisma.ruleRegulation.findMany({
       where: whereClause,
-      include: {
-        semester: true,
-      },
+      include: { semester: true },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -30,16 +29,11 @@ export const getRules = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: {
-        rules: formattedRules,
-      },
+      data: { rules: formattedRules },
     });
   } catch (err) {
     console.error('Get Rules Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -64,18 +58,14 @@ export const createRule = async (req, res) => {
       },
     });
 
+    emit('rule:created', newRule);
     res.status(201).json({
       status: 'success',
-      data: {
-        rule: newRule,
-      },
+      data: { rule: newRule },
     });
   } catch (err) {
     console.error('Create Rule Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -96,18 +86,14 @@ export const updateRule = async (req, res) => {
       data,
     });
 
+    emit('rule:updated', updatedRule);
     res.status(200).json({
       status: 'success',
-      data: {
-        rule: updatedRule,
-      },
+      data: { rule: updatedRule },
     });
   } catch (err) {
     console.error('Update Rule Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -115,10 +101,9 @@ export const deleteRule = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await prisma.ruleRegulation.delete({
-      where: { id: parseInt(id) },
-    });
+    await prisma.ruleRegulation.delete({ where: { id: parseInt(id) } });
 
+    emit('rule:deleted', { id: parseInt(id) });
     res.status(200).json({
       status: 'success',
       message: 'Rule deleted successfully',
@@ -126,9 +111,6 @@ export const deleteRule = async (req, res) => {
     });
   } catch (err) {
     console.error('Delete Rule Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };

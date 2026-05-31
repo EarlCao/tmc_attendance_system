@@ -4,6 +4,7 @@ import express from "express";
 import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
+import { initSocket } from "./socket/index.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import semesterRoutes from "./routes/semester.route.js";
@@ -17,10 +18,14 @@ import ruleRoutes from "./routes/rule.route.js";
 import { globalLimiter } from "./middleware/rateLimit.middleware.js";
 
 const BACKEND_PORT = process.env.BACKEND_PORT || 3002;
+const FRONTEND_URL = process.env.FRONTEND_URL;
 const app = express();
 const httpServer = createServer(app);
 
-app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
+// Initialize Socket.IO on the same HTTP server
+initSocket(httpServer, FRONTEND_URL);
+
+app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(helmet());
 app.use(express.json());
 // app.use("/api", globalLimiter);

@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { emit } from '../socket/index.js';
 
 export const getSemesters = async (req, res) => {
   try {
@@ -11,26 +12,18 @@ export const getSemesters = async (req, res) => {
       if (semester.startDate && (!semester.endDate || semester.endDate > now)) {
         status = 'active';
       }
-      return {
-        ...semester,
-        status
-      };
+      return { ...semester, status };
     });
 
     res.status(200).json({
       status: 'success',
-      data: {
-        semesters: formattedSemesters,
-      },
+      data: { semesters: formattedSemesters },
     });
   } catch (err) {
     console.error('Get Semesters Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
-}
+};
 
 export const createSemester = async (req, res) => {
   try {
@@ -51,20 +44,16 @@ export const createSemester = async (req, res) => {
       },
     });
 
+    emit('semester:created', newSemester);
     res.status(201).json({
       status: 'success',
-      data: {
-        semester: newSemester,
-      },
+      data: { semester: newSemester },
     });
   } catch (err) {
     console.error('Create Semester Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
-}
+};
 
 export const updateSemester = async (req, res) => {
   try {
@@ -81,20 +70,16 @@ export const updateSemester = async (req, res) => {
       data: updateData,
     });
 
+    emit('semester:updated', updatedSemester);
     res.status(200).json({
       status: 'success',
-      data: {
-        semester: updatedSemester,
-      },
+      data: { semester: updatedSemester },
     });
   } catch (err) {
     console.error('Update Semester Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
-}
+};
 
 export const endSemester = async (req, res) => {
   try {
@@ -105,29 +90,24 @@ export const endSemester = async (req, res) => {
       data: { endDate: new Date() },
     });
 
+    emit('semester:ended', updatedSemester);
     res.status(200).json({
       status: 'success',
-      data: {
-        semester: updatedSemester,
-      },
+      data: { semester: updatedSemester },
     });
   } catch (err) {
     console.error('End Semester Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
-}
+};
 
 export const deleteSemester = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await prisma.semester.delete({
-      where: { id: parseInt(id) },
-    });
+    await prisma.semester.delete({ where: { id: parseInt(id) } });
 
+    emit('semester:deleted', { id: parseInt(id) });
     res.status(200).json({
       status: 'success',
       message: 'Semester deleted successfully',
@@ -135,9 +115,6 @@ export const deleteSemester = async (req, res) => {
     });
   } catch (err) {
     console.error('Delete Semester Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
-}
+};

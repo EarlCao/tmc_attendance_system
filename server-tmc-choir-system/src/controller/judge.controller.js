@@ -1,12 +1,11 @@
 import { prisma } from '../lib/prisma.js';
+import { emit } from '../socket/index.js';
 
 export const getJudges = async (req, res) => {
   try {
     const judges = await prisma.judge.findMany({
       include: {
-        _count: {
-          select: { evaluations: true },
-        },
+        _count: { select: { evaluations: true } },
       },
       orderBy: { fullName: 'asc' },
     });
@@ -26,16 +25,11 @@ export const getJudges = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: {
-        judges: formattedJudges,
-      },
+      data: { judges: formattedJudges },
     });
   } catch (err) {
     console.error('Get Judges Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -63,18 +57,14 @@ export const createJudge = async (req, res) => {
       },
     });
 
+    emit('judge:created', newJudge);
     res.status(201).json({
       status: 'success',
-      data: {
-        judge: newJudge,
-      },
+      data: { judge: newJudge },
     });
   } catch (err) {
     console.error('Create Judge Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -97,47 +87,31 @@ export const updateJudge = async (req, res) => {
       data,
     });
 
+    emit('judge:updated', updatedJudge);
     res.status(200).json({
       status: 'success',
-      data: {
-        judge: updatedJudge,
-      },
+      data: { judge: updatedJudge },
     });
   } catch (err) {
     console.error('Update Judge Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
 export const deleteJudge = async (req, res) => {
   try {
-    const { id } = req.params;
+    const judgeId = parseInt(req.params.id);
 
-    // First delete any associated judge evaluations (due to foreign key constraint)
-    const judgeId = parseInt(id);
-    
-    // We should delete evaluations and their scores
-    const evaluations = await prisma.judgeEvaluation.findMany({
-      where: { judgeId },
-    });
-
+    const evaluations = await prisma.judgeEvaluation.findMany({ where: { judgeId } });
     const evalIds = evaluations.map(e => e.id);
     if (evalIds.length > 0) {
-      await prisma.evaluationScore.deleteMany({
-        where: { evaluationId: { in: evalIds } },
-      });
-      await prisma.judgeEvaluation.deleteMany({
-        where: { judgeId },
-      });
+      await prisma.evaluationScore.deleteMany({ where: { evaluationId: { in: evalIds } } });
+      await prisma.judgeEvaluation.deleteMany({ where: { judgeId } });
     }
 
-    await prisma.judge.delete({
-      where: { id: judgeId },
-    });
+    await prisma.judge.delete({ where: { id: judgeId } });
 
+    emit('judge:deleted', { id: judgeId });
     res.status(200).json({
       status: 'success',
       message: 'Judge deleted successfully',
@@ -145,9 +119,6 @@ export const deleteJudge = async (req, res) => {
     });
   } catch (err) {
     console.error('Delete Judge Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };

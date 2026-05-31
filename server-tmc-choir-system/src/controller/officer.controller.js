@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { emit } from '../socket/index.js';
 
 export const getOfficers = async (req, res) => {
   try {
@@ -11,24 +12,17 @@ export const getOfficers = async (req, res) => {
 
     const officers = await prisma.officer.findMany({
       where: whereClause,
-      include: {
-        semester: true,
-      },
+      include: { semester: true },
       orderBy: { position: 'asc' },
     });
 
     res.status(200).json({
       status: 'success',
-      data: {
-        officers,
-      },
+      data: { officers },
     });
   } catch (err) {
     console.error('Get Officers Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -56,18 +50,14 @@ export const createOfficer = async (req, res) => {
       },
     });
 
+    emit('officer:created', newOfficer);
     res.status(201).json({
       status: 'success',
-      data: {
-        officer: newOfficer,
-      },
+      data: { officer: newOfficer },
     });
   } catch (err) {
     console.error('Create Officer Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -90,18 +80,14 @@ export const updateOfficer = async (req, res) => {
       data,
     });
 
+    emit('officer:updated', updatedOfficer);
     res.status(200).json({
       status: 'success',
-      data: {
-        officer: updatedOfficer,
-      },
+      data: { officer: updatedOfficer },
     });
   } catch (err) {
     console.error('Update Officer Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
@@ -109,10 +95,9 @@ export const deleteOfficer = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await prisma.officer.delete({
-      where: { id: parseInt(id) },
-    });
+    await prisma.officer.delete({ where: { id: parseInt(id) } });
 
+    emit('officer:deleted', { id: parseInt(id) });
     res.status(200).json({
       status: 'success',
       message: 'Officer deleted successfully',
@@ -120,9 +105,6 @@ export const deleteOfficer = async (req, res) => {
     });
   } catch (err) {
     console.error('Delete Officer Error:', err);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error',
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
