@@ -3,7 +3,11 @@ import { prisma } from '../lib/prisma.js';
 export const getSemesters = async (req, res) => {
   try {
     const semesters = await prisma.semester.findMany({
-      orderBy: { startDate: 'desc' },
+      orderBy: [
+        { startDate: 'desc' },
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ],
     });
     const now = new Date();
     const formattedSemesters = semesters.map(semester => {

@@ -60,7 +60,7 @@ export default function Attendance() {
   // Set default semester once loaded
   useEffect(() => {
     if (semesters.length > 0 && !selectedSemId) {
-      setSelectedSemId(activeSemester?.id || semesters[semesters.length - 1].id)
+      setSelectedSemId(activeSemester?.id || semesters[0].id)
     }
   }, [semesters, activeSemester, selectedSemId])
 

@@ -2,6 +2,20 @@ import { useState, useEffect, useCallback } from 'react';
 import { semestersAPI } from '../lib/api';
 import socket from '../lib/socket';
 
+function getSemesterSortTime(semester) {
+  const dateValue = semester.startDate || semester.createdAt;
+  const time = dateValue ? new Date(dateValue).getTime() : 0;
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function sortSemestersNewestFirst(semesters) {
+  return [...semesters].sort((a, b) => {
+    const byDate = getSemesterSortTime(b) - getSemesterSortTime(a);
+    if (byDate !== 0) return byDate;
+    return (b.id ?? 0) - (a.id ?? 0);
+  });
+}
+
 export function useSemesters() {
   const [semesters, setSemesters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,7 +25,7 @@ export function useSemesters() {
     try {
       setLoading(true);
       const res = await semestersAPI.getSemesters();
-      setSemesters(res.data?.semesters || []);
+      setSemesters(sortSemestersNewestFirst(res.data?.semesters || []));
       setError(null);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch semesters');
@@ -37,21 +51,25 @@ export function useSemesters() {
     const onCreated = (semester) => {
       setSemesters((prev) => {
         if (prev.find((s) => s.id === semester.id)) return prev;
-        return [{ ...semester, status: computeStatus(semester) }, ...prev];
+        return sortSemestersNewestFirst([{ ...semester, status: computeStatus(semester) }, ...prev]);
       });
     };
 
     const onUpdated = (semester) => {
       setSemesters((prev) =>
-        prev.map((s) =>
-          s.id === semester.id ? { ...s, ...semester, status: computeStatus(semester) } : s
+        sortSemestersNewestFirst(
+          prev.map((s) =>
+            s.id === semester.id ? { ...s, ...semester, status: computeStatus(semester) } : s
+          )
         )
       );
     };
 
     const onEnded = (semester) => {
       setSemesters((prev) =>
-        prev.map((s) => (s.id === semester.id ? { ...s, ...semester, status: 'archived' } : s))
+        sortSemestersNewestFirst(
+          prev.map((s) => (s.id === semester.id ? { ...s, ...semester, status: 'archived' } : s))
+        )
       );
     };
 
