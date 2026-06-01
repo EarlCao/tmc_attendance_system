@@ -40,6 +40,9 @@ export default function Semesters() {
 
   const loading = sLoading || sessLoading || mLoading || aLoading || jLoading || eLoading
 
+  // Disable "New Semester" button when there is an active semester
+  const hasActiveSemester = !!currentSemester
+
   function handleOpenSemesterModal() {
     setSemesterForm({ name: '', startDate: today, endDate: '' })
     setFormErrors({ name: '', startDate: '' })
@@ -135,7 +138,12 @@ export default function Semesters() {
           <p className="mt-1 text-sm font-medium text-slate-500">Ended semesters remain available for viewing, but archived records cannot be edited.</p>
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
-          <button onClick={handleOpenSemesterModal} className="btn-primary shadow-blue-500/30">
+          <button
+            onClick={handleOpenSemesterModal}
+            disabled={hasActiveSemester}
+            className="btn-primary shadow-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+            title={hasActiveSemester ? 'End the current active semester before creating a new one' : 'Create a new semester'}
+          >
             <Plus size={16} /> New Semester
           </button>
           <button
@@ -150,6 +158,11 @@ export default function Semesters() {
             <Lock size={14} /> End Current Semester
           </button>
         </div>
+        {hasActiveSemester && (
+          <p className="mt-3 text-[12px] font-medium text-amber-600">
+            A semester is currently active. End it first before creating a new one.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-5">
