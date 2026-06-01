@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { sessionsAPI, attendanceAPI } from '../lib/api';
 import socket from '../lib/socket';
 
+// Mirrors server's formatSession — socket emits raw DB rows (sessionDate, description)
+const formatSession = (session) => ({
+  ...session,
+  date:  session.date  ?? session.sessionDate  ?? null,
+  notes: session.notes ?? session.description  ?? '',
+  counts: session.counts ?? { Present: 0, Late: 0, Absent: 0, Excused: 0 },
+});
+
 export function useSessions() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,14 +36,16 @@ export function useSessions() {
   // Real-time sync
   useEffect(() => {
     const onCreated = (session) => {
+      const formatted = formatSession(session);
       setSessions((prev) => {
-        if (prev.find((s) => s.id === session.id)) return prev;
-        return [session, ...prev];
+        if (prev.find((s) => s.id === formatted.id)) return prev;
+        return [formatted, ...prev];
       });
     };
 
     const onUpdated = (session) => {
-      setSessions((prev) => prev.map((s) => (s.id === session.id ? session : s)));
+      const formatted = formatSession(session);
+      setSessions((prev) => prev.map((s) => (s.id === formatted.id ? formatted : s)));
     };
 
     const onDeleted = ({ id }) => {
