@@ -31,14 +31,30 @@ export default function Dashboard() {
   const activeMembers = members.filter(m => m.status?.toLowerCase() === 'active').length
   const totalMembers = members.length
 
+  // Scope all counts and lists to the active semester
+  const currentSessions = activeSemester
+    ? sessions.filter(s => s.semesterId === activeSemester.id)
+    : []
+
+  const currentAuditionees = activeSemester
+    ? auditionees.filter(a => {
+        if (!a.auditionDate) return false
+        const d = a.auditionDate.slice(0, 10)
+        const start = activeSemester.startDate
+        const end = activeSemester.endDate
+        return (!start || d >= start) && (!end || d <= end)
+      })
+    : []
+
+  const recentSessions    = currentSessions.slice().reverse().slice(0, 5)
+  const recentAuditionees = currentAuditionees.slice().reverse().slice(0, 5)
+
   const voicePartStats = [
     { part: 'Soprano', count: members.filter(m => m.voicePart === 'Soprano').length, color: 'bg-pink-400' },
     { part: 'Alto',    count: members.filter(m => m.voicePart === 'Alto').length,    color: 'bg-purple-400' },
     { part: 'Tenor',   count: members.filter(m => m.voicePart === 'Tenor').length,   color: 'bg-blue-400' },
     { part: 'Bass',    count: members.filter(m => m.voicePart === 'Bass').length,     color: 'bg-emerald-400' },
   ]
-
-  const recentSessions = sessions.slice().reverse().slice(0, 5)
 
   return (
     <div className="page-shell">
@@ -60,9 +76,9 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard label="Total Members"   value={totalMembers}   icon={Users}        color="blue"   sub={`${activeMembers} active`} />
-        <StatCard label="Sessions"        value={sessions.length} icon={ClipboardList} color="green" sub={activeSemester ? activeSemester.name : 'No active semester'} />
-        <StatCard label="Auditionees"     value={auditionees.length} icon={Mic2}      color="purple" sub={`${auditionees.filter(a => a.status === 'Passed').length} passed`} />
+        <StatCard label="Total Members"   value={totalMembers}              icon={Users}        color="blue"   sub={`${activeMembers} active`} />
+        <StatCard label="Sessions"        value={currentSessions.length}    icon={ClipboardList} color="green" sub={activeSemester ? activeSemester.name : 'No active semester'} />
+        <StatCard label="Auditionees"     value={currentAuditionees.length} icon={Mic2}         color="purple" sub={`${currentAuditionees.filter(a => a.status === 'Passed').length} passed`} />
         <StatCard label="Active Semester" value={activeSemester ? 'Open' : 'Closed'} icon={CalendarDays} color="yellow" sub={activeSemester?.name ?? 'No active semester'} />
       </div>
 
@@ -71,14 +87,19 @@ export default function Dashboard() {
         {/* Recent Sessions */}
         <div className="lg:col-span-2 card">
           <div className="panel-header">
-            <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-wide">Recent Attendance Sessions</h3>
+            <div>
+              <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-wide">Recent Attendance Sessions</h3>
+              {activeSemester && <p className="text-[12px] text-slate-400 font-medium mt-0.5">{activeSemester.name}</p>}
+            </div>
             <button onClick={() => navigate('/attendance')} className="text-[13px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors">
               View all <ArrowRight size={14} />
             </button>
           </div>
           <div className="divide-y divide-slate-100/50">
-            {recentSessions.length === 0 ? (
-              <div className="p-6 text-center text-sm text-slate-500">No sessions yet. Create one in Attendance.</div>
+            {!activeSemester ? (
+              <div className="p-6 text-center text-sm text-slate-500">No active semester. Create one in Semesters.</div>
+            ) : recentSessions.length === 0 ? (
+              <div className="p-6 text-center text-sm text-slate-500">No sessions yet this semester.</div>
             ) : recentSessions.map((s) => (
               <div key={s.id} className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-blue-600/25 group">
                 <div className="flex items-center gap-4">
@@ -143,15 +164,20 @@ export default function Dashboard() {
         {/* Recent Auditions */}
         <div className="lg:col-span-2 card">
           <div className="panel-header">
-            <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-wide">Recent Auditions</h3>
+            <div>
+              <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-wide">Recent Auditions</h3>
+              {activeSemester && <p className="text-[12px] text-slate-400 font-medium mt-0.5">{activeSemester.name}</p>}
+            </div>
             <button onClick={() => navigate('/auditions')} className="text-[13px] font-semibold text-blue-600 hover:text-blue-700 transition-colors">
               View all
             </button>
           </div>
           <div className="divide-y divide-slate-100/50">
-            {auditionees.length === 0 ? (
-              <div className="p-6 text-center text-sm text-slate-500">No auditionees registered yet.</div>
-            ) : auditionees.slice(0, 5).map((a) => (
+            {!activeSemester ? (
+              <div className="p-6 text-center text-sm text-slate-500">No active semester. Create one in Semesters.</div>
+            ) : recentAuditionees.length === 0 ? (
+              <div className="p-6 text-center text-sm text-slate-500">No auditionees registered this semester.</div>
+            ) : recentAuditionees.map((a) => (
               <div key={a.id} className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-slate-50/50">
                 <div className="flex items-center gap-4">
                   <Avatar name={`${a.firstName} ${a.lastName}`} voicePart={a.voicePart} size="md" />
