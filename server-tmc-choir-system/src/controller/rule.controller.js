@@ -1,5 +1,4 @@
 import { prisma } from '../lib/prisma.js';
-import { emit } from '../socket/index.js';
 
 export const getRules = async (req, res) => {
   try {
@@ -58,7 +57,6 @@ export const createRule = async (req, res) => {
       },
     });
 
-    emit('rule:created', newRule);
     res.status(201).json({
       status: 'success',
       data: { rule: newRule },
@@ -86,7 +84,6 @@ export const updateRule = async (req, res) => {
       data,
     });
 
-    emit('rule:updated', updatedRule);
     res.status(200).json({
       status: 'success',
       data: { rule: updatedRule },
@@ -103,7 +100,6 @@ export const deleteRule = async (req, res) => {
 
     await prisma.ruleRegulation.delete({ where: { id: parseInt(id) } });
 
-    emit('rule:deleted', { id: parseInt(id) });
     res.status(200).json({
       status: 'success',
       message: 'Rule deleted successfully',

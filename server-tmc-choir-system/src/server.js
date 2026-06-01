@@ -1,10 +1,10 @@
 import "dotenv/config";
-import { prisma } from "./lib/prisma.js";
 import express from "express";
 import { createServer } from "http";
 import cors from "cors";
 import helmet from "helmet";
-import { initSocket } from "./socket/index.js";
+import { initSocket, createSocketAwarePrisma } from "./socket/index.js";
+import { prisma, setPrisma } from "./lib/prisma.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import semesterRoutes from "./routes/semester.route.js";
@@ -23,7 +23,9 @@ const app = express();
 const httpServer = createServer(app);
 
 // Initialize Socket.IO on the same HTTP server
-initSocket(httpServer, FRONTEND_URL);
+const io = initSocket(httpServer, FRONTEND_URL);
+// Wrap prisma with socket-aware extension so all mutations auto-broadcast
+setPrisma(createSocketAwarePrisma(prisma));
 
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
 app.use(helmet());

@@ -1,5 +1,4 @@
 import { prisma } from '../lib/prisma.js';
-import { emit, emitToRoom } from '../socket/index.js';
 
 // Helper to map DB attendance status to frontend status
 const mapStatusToFrontend = (status) => {
@@ -111,11 +110,6 @@ export const saveAttendanceForSession = async (req, res) => {
       }
     }
 
-    // Broadcast updated attendance to everyone watching this session's room
-    emitToRoom(`session:${sessionId}`, 'attendance:updated', { sessionId: parseInt(sessionId), records });
-    // Also broadcast a global signal so dashboards can refresh
-    emit('attendance:saved', { sessionId: parseInt(sessionId) });
-
     res.status(200).json({
       status: 'success',
       message: 'Attendance saved successfully',
@@ -193,8 +187,6 @@ export const updateExcuseStatus = async (req, res) => {
       where: { id: parseInt(id) },
       data: updateData,
     });
-
-    emit('excuse:updated', { id: parseInt(id), excuseStatus: status, notes: notes || '' });
 
     res.status(200).json({
       status: 'success',

@@ -2,6 +2,26 @@ import { useState, useEffect, useCallback } from 'react';
 import { membersAPI } from '../lib/api';
 import socket from '../lib/socket';
 
+// Mirrors the server's formatMember — needed because socket emits raw DB rows
+const formatMember = (m) => {
+  const nameParts = (m.fullName || '').trim().split(/\s+/);
+  const lastName  = nameParts.length > 1 ? nameParts.pop() : '';
+  const firstName = nameParts.join(' ') || m.fullName || '';
+  const voicePart = m.voiceType
+    ? m.voiceType.charAt(0).toUpperCase() + m.voiceType.slice(1).toLowerCase()
+    : (m.voicePart || '');
+  return {
+    ...m,
+    firstName: m.firstName || firstName,
+    lastName:  m.lastName  || lastName,
+    name:      m.name      || m.fullName || `${m.firstName || firstName} ${m.lastName || lastName}`.trim(),
+    voicePart,
+    email:         m.email         || m.emailOrFacebook || '',
+    contactNumber: m.contactNumber || m.contactNo       || '',
+    status: (m.status || 'ACTIVE').toLowerCase(),
+  };
+};
+
 export function useMembers() {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,14 +48,16 @@ export function useMembers() {
   // Real-time: sync state directly without a full refetch
   useEffect(() => {
     const onCreated = (member) => {
+      const formatted = formatMember(member);
       setMembers((prev) => {
-        if (prev.find((m) => m.id === member.id)) return prev;
-        return [...prev, member].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        if (prev.find((m) => m.id === formatted.id)) return prev;
+        return [...prev, formatted].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       });
     };
 
     const onUpdated = (member) => {
-      setMembers((prev) => prev.map((m) => (m.id === member.id ? member : m)));
+      const formatted = formatMember(member);
+      setMembers((prev) => prev.map((m) => (m.id === formatted.id ? formatted : m)));
     };
 
     const onDeleted = ({ id }) => {

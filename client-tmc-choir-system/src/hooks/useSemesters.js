@@ -27,15 +27,26 @@ export function useSemesters() {
 
   // Real-time sync — semester changes affect active-semester detection app-wide
   useEffect(() => {
+    const computeStatus = (semester) => {
+      const now = new Date();
+      const hasStarted = !!semester.startDate;
+      const notEnded = !semester.endDate || new Date(semester.endDate) > now;
+      return hasStarted && notEnded ? 'active' : 'archived';
+    };
+
     const onCreated = (semester) => {
       setSemesters((prev) => {
         if (prev.find((s) => s.id === semester.id)) return prev;
-        return [semester, ...prev];
+        return [{ ...semester, status: computeStatus(semester) }, ...prev];
       });
     };
 
     const onUpdated = (semester) => {
-      setSemesters((prev) => prev.map((s) => (s.id === semester.id ? { ...s, ...semester } : s)));
+      setSemesters((prev) =>
+        prev.map((s) =>
+          s.id === semester.id ? { ...s, ...semester, status: computeStatus(semester) } : s
+        )
+      );
     };
 
     const onEnded = (semester) => {

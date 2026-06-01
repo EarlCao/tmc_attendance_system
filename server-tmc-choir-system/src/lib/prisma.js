@@ -9,6 +9,7 @@ const adapter = new PrismaMariaDb({
   database: process.env.DATABASE_NAME,
 });
 
-const prisma = new PrismaClient({ adapter });
+let prisma = new PrismaClient({ adapter });
 
 export { prisma };
+export const setPrisma = (enhanced) => { prisma = enhanced; };

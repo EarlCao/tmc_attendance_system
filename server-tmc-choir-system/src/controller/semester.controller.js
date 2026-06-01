@@ -1,5 +1,4 @@
 import { prisma } from '../lib/prisma.js';
-import { emit } from '../socket/index.js';
 
 export const getSemesters = async (req, res) => {
   try {
@@ -44,7 +43,6 @@ export const createSemester = async (req, res) => {
       },
     });
 
-    emit('semester:created', newSemester);
     res.status(201).json({
       status: 'success',
       data: { semester: newSemester },
@@ -70,7 +68,6 @@ export const updateSemester = async (req, res) => {
       data: updateData,
     });
 
-    emit('semester:updated', updatedSemester);
     res.status(200).json({
       status: 'success',
       data: { semester: updatedSemester },
@@ -90,7 +87,6 @@ export const endSemester = async (req, res) => {
       data: { endDate: new Date() },
     });
 
-    emit('semester:ended', updatedSemester);
     res.status(200).json({
       status: 'success',
       data: { semester: updatedSemester },
@@ -107,7 +103,6 @@ export const deleteSemester = async (req, res) => {
 
     await prisma.semester.delete({ where: { id: parseInt(id) } });
 
-    emit('semester:deleted', { id: parseInt(id) });
     res.status(200).json({
       status: 'success',
       message: 'Semester deleted successfully',

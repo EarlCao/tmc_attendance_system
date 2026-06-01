@@ -1,5 +1,4 @@
 import { prisma } from '../lib/prisma.js';
-import { emit, emitToRoom } from '../socket/index.js';
 
 // Normalize a session for frontend consumption
 const formatSession = (session, counts = {}) => ({
@@ -115,7 +114,6 @@ export const createSession = async (req, res) => {
     }
 
     const formatted = formatSession(newSession);
-    emit('session:created', formatted);
     res.status(201).json({
       status: 'success',
       data: { session: formatted },
@@ -145,7 +143,6 @@ export const updateSession = async (req, res) => {
     });
 
     const formatted = formatSession(updated);
-    emit('session:updated', formatted);
     res.status(200).json({
       status: 'success',
       data: { session: formatted },
@@ -161,7 +158,6 @@ export const deleteSession = async (req, res) => {
     const { id } = req.params;
     await prisma.attendanceRecord.deleteMany({ where: { sessionId: parseInt(id) } });
     await prisma.session.delete({ where: { id: parseInt(id) } });
-    emit('session:deleted', { id: parseInt(id) });
     res.status(200).json({ status: 'success', message: 'Session deleted', data: null });
   } catch (err) {
     console.error('Delete Session Error:', err);

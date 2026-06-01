@@ -1,5 +1,4 @@
 import { prisma } from '../lib/prisma.js';
-import { emit } from '../socket/index.js';
 
 export const getJudges = async (req, res) => {
   try {
@@ -57,7 +56,6 @@ export const createJudge = async (req, res) => {
       },
     });
 
-    emit('judge:created', newJudge);
     res.status(201).json({
       status: 'success',
       data: { judge: newJudge },
@@ -87,7 +85,6 @@ export const updateJudge = async (req, res) => {
       data,
     });
 
-    emit('judge:updated', updatedJudge);
     res.status(200).json({
       status: 'success',
       data: { judge: updatedJudge },
@@ -111,7 +108,6 @@ export const deleteJudge = async (req, res) => {
 
     await prisma.judge.delete({ where: { id: judgeId } });
 
-    emit('judge:deleted', { id: judgeId });
     res.status(200).json({
       status: 'success',
       message: 'Judge deleted successfully',
