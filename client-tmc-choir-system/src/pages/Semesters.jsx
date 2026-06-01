@@ -38,6 +38,12 @@ export default function Semesters() {
   const [endConfirmText, setEndConfirmText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  // Edit modal state
+  const [editModal, setEditModal] = useState(false)
+  const [editTarget, setEditTarget] = useState(null)
+  const [editForm, setEditForm] = useState({ name: '', endDate: '' })
+  const [editErrors, setEditErrors] = useState({ name: '' })
+
   const loading = sLoading || sessLoading || mLoading || aLoading || jLoading || eLoading
 
   // Disable "New Semester" button when there is an active semester
@@ -54,6 +60,44 @@ export default function Semesters() {
     setSemesterForm({ name: '', startDate: today, endDate: '' })
     setFormErrors({ name: '', startDate: '' })
     setSemesterModal(false)
+  }
+
+  function handleOpenEditModal(semester) {
+    setEditTarget(semester)
+    setEditForm({
+      name: semester.name,
+      endDate: semester.endDate ? semester.endDate.slice(0, 10) : '',
+    })
+    setEditErrors({ name: '' })
+    setEditModal(true)
+  }
+
+  function handleCloseEditModal() {
+    if (isSaving) return
+    setEditModal(false)
+    setEditTarget(null)
+    setEditForm({ name: '', endDate: '' })
+    setEditErrors({ name: '' })
+  }
+
+  async function handleUpdateSemester() {
+    const errors = {}
+    if (!editForm.name.trim()) errors.name = 'Semester name is required.'
+    if (Object.keys(errors).length > 0) {
+      setEditErrors(errors)
+      return
+    }
+    setEditErrors({ name: '' })
+    setIsSaving(true)
+    try {
+      await updateSemester(editTarget.id, {
+        name: editForm.name.trim(),
+        endDate: editForm.endDate || null,
+      })
+      handleCloseEditModal()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   async function handleEndSemester() {
@@ -192,6 +236,15 @@ export default function Semesters() {
                   <span className={`rounded-full px-3 py-1 text-[11px] font-bold ring-1 shadow-sm ${getStatusColor(semester.status)}`}>
                     {semester.status === 'active' ? 'Active' : 'Archived'}
                   </span>
+                  {!isEnded && (
+                    <button
+                      onClick={() => handleOpenEditModal(semester)}
+                      className="btn-secondary text-[12px] py-2 px-4 shadow-sm"
+                      title="Edit semester name or end date"
+                    >
+                      <Pencil size={14} /> Edit
+                    </button>
+                  )}
                   <button onClick={() => { setSelectedSemester(semester); setSelectedTab('Overview') }} className="btn-primary text-[12px] py-2 px-4 shadow-blue-500/30">
                     <Eye size={14} /> View
                   </button>
@@ -346,6 +399,57 @@ export default function Semesters() {
               />
               <p className="mt-1.5 text-[11px] text-slate-400">Optional — can be set anytime.</p>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Semester Modal */}
+      <Modal
+        open={editModal}
+        onClose={handleCloseEditModal}
+        title="Edit Semester"
+        size="md"
+        footer={
+          <>
+            <button onClick={handleCloseEditModal} disabled={isSaving} className="btn-secondary">Cancel</button>
+            <button onClick={handleUpdateSemester} disabled={isSaving} className="btn-primary shadow-blue-500/40">
+              {isSaving ? <><Loader2 className="animate-spin w-4 h-4" /> Saving...</> : 'Save Changes'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl bg-blue-50/50 border border-blue-100/50 p-4 text-[13px] font-medium text-blue-700">
+            Only the semester name and end date can be edited. The start date is locked after creation.
+          </div>
+
+          {/* Semester Name */}
+          <div>
+            <label className="label">Semester Name <span className="text-red-500">*</span></label>
+            <input
+              className={cn('input bg-white', editErrors.name && 'border-red-400 focus:border-red-500 focus:ring-red-500/10')}
+              value={editForm.name}
+              onChange={e => {
+                setEditForm(p => ({ ...p, name: e.target.value }))
+                if (editErrors.name) setEditErrors(p => ({ ...p, name: '' }))
+              }}
+              placeholder="e.g. 2nd Semester SY 2025-2026"
+            />
+            {editErrors.name && (
+              <p className="mt-1.5 text-[12px] font-medium text-red-500">{editErrors.name}</p>
+            )}
+          </div>
+
+          {/* End Date only */}
+          <div>
+            <label className="label">End Date</label>
+            <input
+              className="input bg-white"
+              type="date"
+              value={editForm.endDate}
+              onChange={e => setEditForm(p => ({ ...p, endDate: e.target.value }))}
+            />
+            <p className="mt-1.5 text-[11px] text-slate-400">Optional — leave blank if the semester is still ongoing.</p>
           </div>
         </div>
       </Modal>
