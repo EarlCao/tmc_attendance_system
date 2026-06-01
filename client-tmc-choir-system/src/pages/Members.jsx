@@ -173,40 +173,42 @@ export default function Members() {
       </div>
 
       {/* Toolbar */}
-      <div className="card p-4 flex flex-wrap items-center gap-4">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search members..." className="w-full sm:w-72" />
-        <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl">
-          {['All', ...VOICE_PARTS].map((v) => (
-            <button
-              key={v}
-              onClick={() => setVoiceFilter(v)}
-              className={cn('px-4 py-2 text-[13px] font-semibold rounded-lg transition-all duration-200',
-                voiceFilter === v ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              )}
-            >{v}</button>
-          ))}
-        </div>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="input py-2 w-auto text-[13px] font-medium"
-        >
-          <option value="All">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-        <div className="ml-auto flex items-center gap-3">
-          <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl">
-            <button onClick={() => setView('table')} className={cn('p-2 rounded-lg transition-all duration-200', view === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600')}>
-              <List size={16} />
-            </button>
-            <button onClick={() => setView('cards')} className={cn('p-2 rounded-lg transition-all duration-200', view === 'cards' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600')}>
-              <LayoutGrid size={16} />
+      <div className="card p-4">
+        <div className="flex flex-row items-center px-1 gap-4 overflow-x-auto">
+          <SearchBar value={search} onChange={setSearch} placeholder="Search members..." className="w-60 flex-none" />
+          <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl flex-none">
+            {['All', ...VOICE_PARTS].map((v) => (
+              <button
+                key={v}
+                onClick={() => setVoiceFilter(v)}
+                className={cn('px-4 py-2 text-[13px] font-semibold rounded-lg transition-all duration-200',
+                  voiceFilter === v ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                )}
+              >{v}</button>
+            ))}
+          </div>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="flex-none rounded-xl border border-slate-200/80 bg-white/50 px-4 py-2 text-[13px] font-medium text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="All">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <div className="ml-auto flex items-center gap-3 flex-none">
+            <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl">
+              <button onClick={() => setView('table')} className={cn('p-2 rounded-lg transition-all duration-200', view === 'table' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600')}>
+                <List size={16} />
+              </button>
+              <button onClick={() => setView('cards')} className={cn('p-2 rounded-lg transition-all duration-200', view === 'cards' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600')}>
+                <LayoutGrid size={16} />
+              </button>
+            </div>
+            <button onClick={openAdd} className="btn-primary">
+              <UserPlus size={16} /> Add Member
             </button>
           </div>
-          <button onClick={openAdd} className="btn-primary">
-            <UserPlus size={16} /> Add Member
-          </button>
         </div>
       </div>
 

@@ -248,27 +248,29 @@ export default function Auditions() {
       </div>
 
       {/* Toolbar */}
-      <div className="card p-5 flex flex-wrap items-center gap-4 bg-gradient-to-r">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search auditionees..." className="w-full sm:w-64" />
-        <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl">
-          {['All','Passed','Failed','Pending'].map((s) => (
-            <button key={s} onClick={() => setStatusFilter(s)}
-              className={cn('px-4 py-2 text-[13px] font-bold rounded-lg transition-all duration-200',
-                statusFilter === s ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              )}>{s}</button>
-          ))}
-        </div>
-        <select value={partFilter} onChange={e => setPartFilter(e.target.value)} className="input py-2.5 w-auto text-[13px] font-medium bg-white">
-          <option value="All">All Parts</option>
-          {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
-        </select>
-        <div className="ml-auto flex flex-wrap items-center gap-3">
-          <button onClick={() => openEvaluationModal()} disabled={auditionees.length === 0} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
-            <Star size={16}/> Add Evaluation
-          </button>
-          <button onClick={() => setAddModal(true)} className="btn-primary shadow-blue-500/40">
-            <UserPlus size={16}/> Register Auditionee
-          </button>
+      <div className="card p-5">
+        <div className="flex flex-row items-center gap-4 px-1 overflow-x-auto">
+          <SearchBar value={search} onChange={setSearch} placeholder="Search auditionees..." className="w-60 flex-none" />
+          <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl flex-none">
+            {['All','Passed','Failed','Pending'].map((s) => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={cn('px-4 py-2 text-[13px] font-bold rounded-lg transition-all duration-200',
+                  statusFilter === s ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                )}>{s}</button>
+            ))}
+          </div>
+          <select value={partFilter} onChange={e => setPartFilter(e.target.value)} className="flex-none rounded-xl border border-slate-200/80 bg-white/50 px-4 py-2 text-[13px] font-medium text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+            <option value="All">All Parts</option>
+            {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
+          </select>
+          <div className="ml-auto flex items-center gap-3 flex-none">
+            <button onClick={() => openEvaluationModal()} disabled={auditionees.length === 0} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
+              <Star size={16}/> Add Evaluation
+            </button>
+            <button onClick={() => setAddModal(true)} className="btn-primary shadow-blue-500/40">
+              <UserPlus size={16}/> Register Auditionee
+            </button>
+          </div>
         </div>
       </div>
 
