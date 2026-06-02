@@ -652,15 +652,15 @@ export default function Attendance() {
       </div>
 
       <div className="card">
-        <div className="flex flex-wrap items-center gap-4 border-b border-slate-100/50 px-6 py-5 bg-slate-50/50">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search member..." className="w-full sm:w-64" />
-          <div className="flex gap-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200/60">
+        <div className="flex flex-nowrap items-center gap-3 overflow-x-auto border-b border-slate-100/50 px-6 py-5 bg-slate-50/50">
+          <SearchBar value={search} onChange={setSearch} placeholder="Search member..." className="w-64 shrink-0" />
+          <div className="flex shrink-0 gap-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200/60">
             {['All', 'Soprano', 'Alto', 'Tenor', 'Bass'].map((voicePart) => (
               <button
                 key={voicePart}
                 onClick={() => setVoiceFilter(voicePart)}
                 className={cn(
-                  'rounded-lg px-4 py-1.5 text-xs font-bold transition-all duration-200',
+                  'rounded-lg px-3 py-1.5 text-xs font-bold transition-all duration-200',
                   voiceFilter === voicePart ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                 )}
               >
@@ -669,7 +669,7 @@ export default function Attendance() {
             ))}
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <SlidersHorizontal size={16} className="text-slate-400" />
             <select
               value={memberSort}
@@ -679,14 +679,14 @@ export default function Attendance() {
               {MEMBER_SORTS.map((sort) => <option key={sort.value} value={sort.value}>{sort.label}</option>)}
             </select>
           </div>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Bulk mark:</span>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <span className="whitespace-nowrap text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Bulk mark:</span>
             {STATUS_OPTIONS.map((status) => (
               <button
                 key={status}
                 onClick={() => markAll(status)}
                 disabled={readOnly}
-                className="rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                className="whitespace-nowrap rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
               >
                 All {status}
               </button>

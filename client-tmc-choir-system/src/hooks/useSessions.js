@@ -70,30 +70,40 @@ export function useSessions() {
     };
   }, [fetchSessions]);
 
-  const createSession = async (data) => {
+  const createSession = useCallback(async (data) => {
     const res = await sessionsAPI.createSession(data);
     return res;
-  };
+  }, []);
 
-  const updateSession = async (id, data) => {
+  const updateSession = useCallback(async (id, data) => {
     const res = await sessionsAPI.updateSession(id, data);
     return res;
-  };
+  }, []);
 
-  const deleteSession = async (id) => {
+  const deleteSession = useCallback(async (id) => {
     const res = await sessionsAPI.deleteSession(id);
     return res;
-  };
+  }, []);
 
-  const getSessionAttendance = async (sessionId) => {
+  const getSessionAttendance = useCallback(async (sessionId) => {
     const res = await attendanceAPI.getSessionAttendance(sessionId);
-    return res.data?.records || [];
-  };
+    return (res.data?.records || []).map((record) => ({
+      ...record,
+      reason: record.reason ?? record.notes ?? '',
+    }));
+  }, []);
 
-  const saveSessionAttendance = async (sessionId, data) => {
-    const res = await attendanceAPI.saveSessionAttendance(sessionId, data);
+  const saveSessionAttendance = useCallback(async (sessionId, data) => {
+    const records = data.records || data.attendanceData || [];
+    const payload = {
+      records: records.map((record) => ({
+        ...record,
+        notes: record.notes ?? record.reason ?? '',
+      })),
+    };
+    const res = await attendanceAPI.saveSessionAttendance(sessionId, payload);
     return res;
-  };
+  }, []);
 
   return {
     sessions, loading, error,
