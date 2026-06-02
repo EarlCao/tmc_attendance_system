@@ -604,7 +604,7 @@ export default function Attendance() {
 
   return (
     <div className="page-shell">
-      <div className="card p-6 bg-gradient-to-br from-white to-blue-50/30">
+      <div className="card p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <button
