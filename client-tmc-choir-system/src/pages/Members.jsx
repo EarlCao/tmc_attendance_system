@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react'
 import { UserPlus, LayoutGrid, List, Pencil, Trash2, Phone, Mail, MapPin, Loader2 } from 'lucide-react'
 import { useMembers } from '../hooks/useMembers'
+import { useToast } from '../hooks/useToast'
 import { getVoicePartColor, getStatusColor, cn } from '../lib/utils'
 import SearchBar from '../components/common/SearchBar'
 import Avatar from '../components/common/Avatar'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
+import Toast from '../components/common/Toast'
 
 const VOICE_PARTS = ['Soprano', 'Alto', 'Tenor', 'Bass']
 const COURSE_OPTIONS = ['BSIT', 'BSOA', 'BSCRIM', 'BSPOL', 'BSCOM', 'BEED', 'BSED']
@@ -95,17 +97,18 @@ function MemberForm({ form, setForm, errors = {} }) {
 
 export default function Members() {
   const { members: memberList, loading, createMember, updateMember, deleteMember } = useMembers()
-  const [search, setSearch]         = useState('')
+  const { toasts, toast, dismiss } = useToast()
+  const [search, setSearch]           = useState('')
   const [voiceFilter, setVoiceFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
-  const [view, setView]             = useState('table')
-  const [addModal, setAddModal]     = useState(false)
-  const [editModal, setEditModal]   = useState(null)
+  const [view, setView]               = useState('table')
+  const [addModal, setAddModal]       = useState(false)
+  const [editModal, setEditModal]     = useState(null)
   const [profileDrawer, setProfileDrawer] = useState(null)
-  const [form, setForm]             = useState(emptyForm)
-  const [formErrors, setFormErrors] = useState({})
+  const [form, setForm]               = useState(emptyForm)
+  const [formErrors, setFormErrors]   = useState({})
   const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isSaving, setIsSaving]       = useState(false)
 
   const filtered = useMemo(() =>
     memberList.filter((m) => {
@@ -137,8 +140,10 @@ export default function Members() {
     try {
       await createMember(form)
       setAddModal(false)
+      toast('Member added successfully.')
     } catch (e) {
       console.error(e)
+      toast('Failed to add member. Please try again.', 'error')
     } finally {
       setIsSaving(false)
     }
@@ -151,21 +156,25 @@ export default function Members() {
     try {
       await updateMember(editModal.id, form)
       setEditModal(null)
+      toast('Member updated successfully.')
     } catch (e) {
       console.error(e)
+      toast('Failed to update member. Please try again.', 'error')
     } finally {
       setIsSaving(false)
     }
   }
 
   async function handleDelete(id) {
+    const name = deleteConfirm ? `${deleteConfirm.firstName} ${deleteConfirm.lastName}` : 'Member'
     setIsSaving(true)
     try {
       await deleteMember(id)
       setDeleteConfirm(null)
-      if (profileDrawer?.id === id) setProfileDrawer(null)
+      toast(`${name} has been removed.`)
     } catch (e) {
       console.error(e)
+      toast('Failed to remove member. Please try again.', 'error')
     } finally {
       setIsSaving(false)
     }
@@ -349,7 +358,12 @@ export default function Members() {
               
               <div className="flex gap-3 pt-6 mt-auto">
                 <button onClick={() => { openEdit(profileDrawer); setProfileDrawer(null) }} className="btn-primary flex-1 justify-center py-2.5">Edit Details</button>
-                <button onClick={() => setDeleteConfirm(profileDrawer)} className="btn-danger py-2.5">Remove</button>
+                <button
+                  onClick={() => { setDeleteConfirm(profileDrawer); setProfileDrawer(null) }}
+                  className="btn-danger py-2.5"
+                >
+                  Remove
+                </button>
               </div>
             </div>
           </div>
@@ -370,9 +384,22 @@ export default function Members() {
 
       {/* Delete Confirm */}
       <Modal open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Remove Member" size="sm"
-        footer={<><button onClick={() => setDeleteConfirm(null)} className="btn-secondary" disabled={isSaving}>Cancel</button><button onClick={() => handleDelete(deleteConfirm.id)} className="btn-danger" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" size={16} /> : 'Yes, Remove'}</button></>}>
-        <p className="text-[13px] text-slate-600 leading-relaxed">Are you sure you want to remove <strong className="text-slate-800">{deleteConfirm?.firstName} {deleteConfirm?.lastName}</strong>? This action cannot be undone.</p>
+        footer={
+          <>
+            <button onClick={() => setDeleteConfirm(null)} className="btn-secondary" disabled={isSaving}>Cancel</button>
+            <button onClick={() => deleteConfirm && handleDelete(deleteConfirm.id)} className="btn-danger" disabled={isSaving}>
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : 'Yes, Remove'}
+            </button>
+          </>
+        }>
+        <p className="text-[13px] text-slate-600 leading-relaxed">
+          Are you sure you want to remove{' '}
+          <strong className="text-slate-800">{deleteConfirm?.firstName} {deleteConfirm?.lastName}</strong>?
+          {' '}This action cannot be undone.
+        </p>
       </Modal>
+
+      <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   )
 }
