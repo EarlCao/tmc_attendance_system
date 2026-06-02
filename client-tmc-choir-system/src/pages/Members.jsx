@@ -11,46 +11,62 @@ const VOICE_PARTS = ['Soprano', 'Alto', 'Tenor', 'Bass']
 const COURSE_OPTIONS = ['BSIT', 'BSOA', 'BSCRIM', 'BSPOL', 'BSCOM', 'BEED', 'BSED']
 const emptyForm = { firstName: '', lastName: '', email: '', voicePart: 'Soprano', course: '', yearLevel: '', religion: '', status: 'active', contactNumber: '', address: '' }
 
-function MemberForm({ form, setForm }) {
+function validateMemberForm(form) {
+  const errors = {}
+  if (!form.firstName?.trim()) errors.firstName = 'First name is required.'
+  if (!form.lastName?.trim()) errors.lastName = 'Last name is required.'
+  if (!form.course) errors.course = 'Please select a course.'
+  if (!form.voicePart) errors.voicePart = 'Please select a voice part.'
+  if (!form.yearLevel) errors.yearLevel = 'Please select a year level.'
+  if (!form.religion?.trim()) errors.religion = 'Religion is required.'
+  return errors
+}
+
+function MemberForm({ form, setForm, errors = {} }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">First Name *</label>
-          <input className="input" value={form.firstName || ''} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))} placeholder="e.g. Maria" />
+          <input className={cn('input', errors.firstName && 'border-red-400 ring-1 ring-red-300/50')} value={form.firstName || ''} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))} placeholder="e.g. Maria" />
+          {errors.firstName && <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.firstName}</p>}
         </div>
         <div>
           <label className="label">Last Name *</label>
-          <input className="input" value={form.lastName || ''} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))} placeholder="e.g. Santos" />
+          <input className={cn('input', errors.lastName && 'border-red-400 ring-1 ring-red-300/50')} value={form.lastName || ''} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))} placeholder="e.g. Santos" />
+          {errors.lastName && <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.lastName}</p>}
         </div>
         <div className="col-span-2">
-          <label className="label">Email Address *</label>
+          <label className="label">Email Address</label>
           <input type="email" className="input" value={form.email || ''} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
         </div>
         <div>
           <label className="label">Voice Part *</label>
-          <select className="input" value={form.voicePart} onChange={e => setForm(p => ({ ...p, voicePart: e.target.value }))}>
+          <select className={cn('input', errors.voicePart && 'border-red-400 ring-1 ring-red-300/50')} value={form.voicePart} onChange={e => setForm(p => ({ ...p, voicePart: e.target.value }))}>
             {VOICE_PARTS.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
+          {errors.voicePart && <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.voicePart}</p>}
         </div>
         <div>
-          <label className="label">Course</label>
-          <select className="input" value={form.course} onChange={e => setForm(p => ({ ...p, course: e.target.value }))}>
+          <label className="label">Course *</label>
+          <select className={cn('input', errors.course && 'border-red-400 ring-1 ring-red-300/50')} value={form.course} onChange={e => setForm(p => ({ ...p, course: e.target.value }))}>
             <option value="">Select course</option>
             {(form.course && !COURSE_OPTIONS.includes(form.course) ? [form.course, ...COURSE_OPTIONS] : COURSE_OPTIONS).map((course) => (
               <option key={course} value={course}>{course}</option>
             ))}
           </select>
+          {errors.course && <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.course}</p>}
         </div>
         <div>
-          <label className="label">Year Level</label>
-          <select className="input" value={form.yearLevel} onChange={e => setForm(p => ({ ...p, yearLevel: e.target.value }))}>
+          <label className="label">Year Level *</label>
+          <select className={cn('input', errors.yearLevel && 'border-red-400 ring-1 ring-red-300/50')} value={form.yearLevel} onChange={e => setForm(p => ({ ...p, yearLevel: e.target.value }))}>
             <option value="">Select year</option>
             <option value="1">1st Year</option>
             <option value="2">2nd Year</option>
             <option value="3">3rd Year</option>
             <option value="4">4th Year</option>
           </select>
+          {errors.yearLevel && <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.yearLevel}</p>}
         </div>
         <div>
           <label className="label">Status</label>
@@ -60,8 +76,9 @@ function MemberForm({ form, setForm }) {
           </select>
         </div>
         <div>
-          <label className="label">Religion</label>
-          <input className="input" value={form.religion || ''} onChange={e => setForm(p => ({ ...p, religion: e.target.value }))} placeholder="e.g. Roman Catholic" />
+          <label className="label">Religion *</label>
+          <input className={cn('input', errors.religion && 'border-red-400 ring-1 ring-red-300/50')} value={form.religion || ''} onChange={e => setForm(p => ({ ...p, religion: e.target.value }))} placeholder="e.g. Roman Catholic" />
+          {errors.religion && <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.religion}</p>}
         </div>
         <div>
           <label className="label">Phone</label>
@@ -86,6 +103,7 @@ export default function Members() {
   const [editModal, setEditModal]   = useState(null)
   const [profileDrawer, setProfileDrawer] = useState(null)
   const [form, setForm]             = useState(emptyForm)
+  const [formErrors, setFormErrors] = useState({})
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -109,10 +127,12 @@ export default function Members() {
     bass:     memberList.filter(m => m.voicePart === 'Bass').length,
   }
 
-  function openAdd() { setForm(emptyForm); setAddModal(true) }
-  function openEdit(m) { setForm({ ...m }); setEditModal(m) }
+  function openAdd() { setForm(emptyForm); setFormErrors({}); setAddModal(true) }
+  function openEdit(m) { setForm({ ...m }); setFormErrors({}); setEditModal(m) }
 
   async function handleAdd() {
+    const errors = validateMemberForm(form)
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
     setIsSaving(true)
     try {
       await createMember(form)
@@ -125,6 +145,8 @@ export default function Members() {
   }
 
   async function handleEdit() {
+    const errors = validateMemberForm(form)
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
     setIsSaving(true)
     try {
       await updateMember(editModal.id, form)
@@ -335,15 +357,15 @@ export default function Members() {
       )}
 
       {/* Add Modal */}
-      <Modal open={addModal} onClose={() => setAddModal(false)} title="Add New Member" size="md"
-        footer={<><button onClick={() => setAddModal(false)} className="btn-secondary" disabled={isSaving}>Cancel</button><button onClick={handleAdd} className="btn-primary" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" size={16} /> : 'Add Member'}</button></>}>
-        <MemberForm form={form} setForm={setForm} />
+      <Modal open={addModal} onClose={() => { setAddModal(false); setFormErrors({}) }} title="Add New Member" size="md"
+        footer={<><button onClick={() => { setAddModal(false); setFormErrors({}) }} className="btn-secondary" disabled={isSaving}>Cancel</button><button onClick={handleAdd} className="btn-primary" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" size={16} /> : 'Add Member'}</button></>}>
+        <MemberForm form={form} setForm={setForm} errors={formErrors} />
       </Modal>
 
       {/* Edit Modal */}
-      <Modal open={!!editModal} onClose={() => setEditModal(null)} title="Edit Member" size="md"
-        footer={<><button onClick={() => setEditModal(null)} className="btn-secondary" disabled={isSaving}>Cancel</button><button onClick={handleEdit} className="btn-primary" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" size={16} /> : 'Save Changes'}</button></>}>
-        <MemberForm form={form} setForm={setForm} />
+      <Modal open={!!editModal} onClose={() => { setEditModal(null); setFormErrors({}) }} title="Edit Member" size="md"
+        footer={<><button onClick={() => { setEditModal(null); setFormErrors({}) }} className="btn-secondary" disabled={isSaving}>Cancel</button><button onClick={handleEdit} className="btn-primary" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" size={16} /> : 'Save Changes'}</button></>}>
+        <MemberForm form={form} setForm={setForm} errors={formErrors} />
       </Modal>
 
       {/* Delete Confirm */}

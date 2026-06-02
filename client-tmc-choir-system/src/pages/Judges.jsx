@@ -6,6 +6,12 @@ import { getStatusColor, cn } from '../lib/utils'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
 
+function validateJudgeForm(form) {
+  const errors = {}
+  if (!form.name?.trim()) errors.name = 'Judge name is required.'
+  return errors
+}
+
 export default function Judges() {
   const { semesters, activeSemester: currentSemester, loading: sLoading } = useSemesters()
   const { judges, loading: jLoading, createJudge, updateJudge } = useJudges()
@@ -13,6 +19,7 @@ export default function Judges() {
   const [judgeModal, setJudgeModal] = useState(false)
   const [editingJudge, setEditingJudge] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [formErrors, setFormErrors] = useState({})
   const [judgeForm, setJudgeForm] = useState({
     name: '',
     title: '',
@@ -41,11 +48,13 @@ export default function Judges() {
         status: 'active',
       })
     }
+    setFormErrors({})
     setJudgeModal(true)
   }
 
   async function handleSaveJudge() {
-    if (!judgeForm.name.trim()) return
+    const errors = validateJudgeForm(judgeForm)
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
     setIsSaving(true)
     try {
       if (editingJudge) {
@@ -131,12 +140,12 @@ export default function Judges() {
 
       <Modal
         open={judgeModal}
-        onClose={() => setJudgeModal(false)}
+        onClose={() => { setJudgeModal(false); setFormErrors({}) }}
         title={editingJudge ? 'Edit Judge' : 'Add Judge'}
         size="md"
         footer={
           <>
-            <button onClick={() => setJudgeModal(false)} disabled={isSaving} className="btn-secondary">Cancel</button>
+            <button onClick={() => { setJudgeModal(false); setFormErrors({}) }} disabled={isSaving} className="btn-secondary">Cancel</button>
             <button onClick={handleSaveJudge} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Save Judge'}</button>
           </>
         }
@@ -144,7 +153,13 @@ export default function Judges() {
         <div className="space-y-4">
           <div>
             <label className="label">Name *</label>
-            <input className="input bg-white" value={judgeForm.name} onChange={e => setJudgeForm(p => ({ ...p, name: e.target.value }))} placeholder="Judge name" />
+            <input
+              className={cn('input bg-white', formErrors.name && 'border-red-400 ring-1 ring-red-300/50')}
+              value={judgeForm.name}
+              onChange={e => setJudgeForm(p => ({ ...p, name: e.target.value }))}
+              placeholder="Judge name"
+            />
+            {formErrors.name && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.name}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

@@ -14,6 +14,16 @@ const CATEGORY_LABELS = { vocalQuality: 'Vocal Quality', pitchAccuracy: 'Pitch A
 const VOICE_PARTS = ['Soprano','Alto','Tenor','Bass']
 const COURSE_OPTIONS = ['BSIT', 'BSOA', 'BSCRIM', 'BSPOL', 'BSCOM', 'BEED', 'BSED']
 
+function validateAuditioneeForm(form) {
+  const errors = {}
+  if (!form.firstName?.trim()) errors.firstName = 'First name is required.'
+  if (!form.lastName?.trim()) errors.lastName = 'Last name is required.'
+  if (!form.course) errors.course = 'Please select a course.'
+  if (!form.yearLevel) errors.yearLevel = 'Please select a year level.'
+  if (!form.religion?.trim()) errors.religion = 'Religion is required.'
+  return errors
+}
+
 function avgRating(ratings) {
   if (!ratings || !ratings.length) return null
   const total = ratings.reduce((s, r) => s + CATEGORIES.reduce((cs, c) => cs + Number(r[c] || 0), 0) / CATEGORIES.length, 0)
@@ -73,6 +83,7 @@ export default function Auditions() {
   const [addModal, setAddModal]       = useState(false)
   const [editModal, setEditModal]     = useState(null)
   const [form, setForm]               = useState(emptyForm)
+  const [formErrors, setFormErrors]   = useState({})
   const [ratingForm, setRatingForm]   = useState(emptyRatingForm)
   const [editingRatingId, setEditingRatingId] = useState(null)
   const [evaluationModal, setEvaluationModal] = useState(false)
@@ -100,12 +111,15 @@ export default function Auditions() {
   }
 
   async function handleAdd() {
+    const errors = validateAuditioneeForm(form)
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
     setIsSaving(true)
     try {
       const payload = { ...form, age: Number(form.age) || null }
       await createAuditionee(payload)
       setAddModal(false)
       setForm(emptyForm)
+      setFormErrors({})
     } catch (e) {
       console.error(e)
     } finally {
@@ -115,6 +129,7 @@ export default function Auditions() {
 
   function openEditAuditionee(auditionee) {
     setEditModal(auditionee)
+    setFormErrors({})
     setForm({
       ...emptyForm,
       ...auditionee,
@@ -125,12 +140,15 @@ export default function Auditions() {
 
   async function handleEditAuditionee() {
     if (!editModal) return
+    const errors = validateAuditioneeForm(form)
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
     setIsSaving(true)
     try {
       const payload = { ...form, age: Number(form.age) || null }
       await updateAuditionee(editModal.id, payload)
       setEditModal(null)
       setForm(emptyForm)
+      setFormErrors({})
     } catch (e) {
       console.error(e)
     } finally {
@@ -190,8 +208,6 @@ export default function Auditions() {
       }
       
       await saveEvaluation(payload)
-      // Optimistic update of local evalModal is tricky if we don't have full object, 
-      // best is to fetch Auditionees, but for now we rely on the hook returning the updated data.
       setEvalModal(null) 
       resetRatingForm()
     } catch (e) {
@@ -267,7 +283,7 @@ export default function Auditions() {
             <button onClick={() => openEvaluationModal()} disabled={auditionees.length === 0} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
               <Star size={16}/> Add Evaluation
             </button>
-            <button onClick={() => setAddModal(true)} className="btn-primary shadow-blue-500/40">
+            <button onClick={() => { setForm(emptyForm); setFormErrors({}); setAddModal(true) }} className="btn-primary shadow-blue-500/40">
               <UserPlus size={16}/> Register Auditionee
             </button>
           </div>
@@ -434,7 +450,6 @@ export default function Auditions() {
                               <Star size={16} fill="currentColor"/>
                               {(CATEGORIES.reduce((s, c) => s + (Number(r[c]) || 0), 0) / CATEGORIES.length).toFixed(1)}
                             </span>
-                            {/* Edit disabled for now in new backend model as it replaces rather than updates easily, but logic is there */}
                           </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-4 mb-4 bg-slate-50/50 p-4 rounded-xl">
@@ -617,17 +632,19 @@ export default function Auditions() {
       </Modal>
 
       {/* Add Modal */}
-      <Modal open={addModal} onClose={() => setAddModal(false)} title="Register New Auditionee" size="md"
-        footer={<><button onClick={() => { setAddModal(false); setForm(emptyForm) }} disabled={isSaving} className="btn-secondary">Cancel</button><button onClick={handleAdd} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Register'}</button></>}>
+      <Modal open={addModal} onClose={() => { setAddModal(false); setForm(emptyForm); setFormErrors({}) }} title="Register New Auditionee" size="md"
+        footer={<><button onClick={() => { setAddModal(false); setForm(emptyForm); setFormErrors({}) }} disabled={isSaving} className="btn-secondary">Cancel</button><button onClick={handleAdd} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Register'}</button></>}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">First Name *</label>
-              <input className="input bg-white" value={form.firstName} onChange={e => setForm(p => ({...p, firstName: e.target.value}))} placeholder="First name" />
+              <input className={cn('input bg-white', formErrors.firstName && 'border-red-400 ring-1 ring-red-300/50')} value={form.firstName} onChange={e => setForm(p => ({...p, firstName: e.target.value}))} placeholder="First name" />
+              {formErrors.firstName && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.firstName}</p>}
             </div>
             <div>
               <label className="label">Last Name *</label>
-              <input className="input bg-white" value={form.lastName} onChange={e => setForm(p => ({...p, lastName: e.target.value}))} placeholder="Last name" />
+              <input className={cn('input bg-white', formErrors.lastName && 'border-red-400 ring-1 ring-red-300/50')} value={form.lastName} onChange={e => setForm(p => ({...p, lastName: e.target.value}))} placeholder="Last name" />
+              {formErrors.lastName && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.lastName}</p>}
             </div>
             <div>
               <label className="label">Target Voice Part</label>
@@ -640,25 +657,28 @@ export default function Auditions() {
               <input className="input bg-white" type="number" value={form.age} onChange={e => setForm(p => ({...p, age: e.target.value}))} placeholder="Age" />
             </div>
             <div>
-              <label className="label">Course</label>
-              <select className="input bg-white" value={form.course} onChange={e => setForm(p => ({...p, course: e.target.value}))}>
+              <label className="label">Course *</label>
+              <select className={cn('input bg-white', formErrors.course && 'border-red-400 ring-1 ring-red-300/50')} value={form.course} onChange={e => setForm(p => ({...p, course: e.target.value}))}>
                 <option value="">Select course</option>
                 {COURSE_OPTIONS.map((course) => <option key={course} value={course}>{course}</option>)}
               </select>
+              {formErrors.course && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.course}</p>}
             </div>
             <div>
-              <label className="label">Year Level</label>
-              <select className="input bg-white" value={form.yearLevel} onChange={e => setForm(p => ({...p, yearLevel: e.target.value}))}>
+              <label className="label">Year Level *</label>
+              <select className={cn('input bg-white', formErrors.yearLevel && 'border-red-400 ring-1 ring-red-300/50')} value={form.yearLevel} onChange={e => setForm(p => ({...p, yearLevel: e.target.value}))}>
                 <option value="">Select year</option>
                 <option value="1">1st Year</option>
                 <option value="2">2nd Year</option>
                 <option value="3">3rd Year</option>
                 <option value="4">4th Year</option>
               </select>
+              {formErrors.yearLevel && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.yearLevel}</p>}
             </div>
             <div className="col-span-2">
-              <label className="label">Religion / Denomination</label>
-              <input className="input bg-white" value={form.religion} onChange={e => setForm(p => ({...p, religion: e.target.value}))} placeholder="e.g. Roman Catholic" />
+              <label className="label">Religion / Denomination *</label>
+              <input className={cn('input bg-white', formErrors.religion && 'border-red-400 ring-1 ring-red-300/50')} value={form.religion} onChange={e => setForm(p => ({...p, religion: e.target.value}))} placeholder="e.g. Roman Catholic" />
+              {formErrors.religion && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.religion}</p>}
             </div>
             <div>
               <label className="label">Contact Number</label>
@@ -685,17 +705,19 @@ export default function Auditions() {
       </Modal>
 
       {/* Edit Registry Modal */}
-      <Modal open={!!editModal} onClose={() => { setEditModal(null); setForm(emptyForm) }} title="Edit Auditionee Registry" size="md"
-        footer={<><button onClick={() => { setEditModal(null); setForm(emptyForm) }} disabled={isSaving} className="btn-secondary">Cancel</button><button onClick={handleEditAuditionee} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Save Registry'}</button></>}>
+      <Modal open={!!editModal} onClose={() => { setEditModal(null); setForm(emptyForm); setFormErrors({}) }} title="Edit Auditionee Registry" size="md"
+        footer={<><button onClick={() => { setEditModal(null); setForm(emptyForm); setFormErrors({}) }} disabled={isSaving} className="btn-secondary">Cancel</button><button onClick={handleEditAuditionee} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Save Registry'}</button></>}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">First Name *</label>
-              <input className="input bg-white" value={form.firstName} onChange={e => setForm(p => ({...p, firstName: e.target.value}))} placeholder="First name" />
+              <input className={cn('input bg-white', formErrors.firstName && 'border-red-400 ring-1 ring-red-300/50')} value={form.firstName} onChange={e => setForm(p => ({...p, firstName: e.target.value}))} placeholder="First name" />
+              {formErrors.firstName && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.firstName}</p>}
             </div>
             <div>
               <label className="label">Last Name *</label>
-              <input className="input bg-white" value={form.lastName} onChange={e => setForm(p => ({...p, lastName: e.target.value}))} placeholder="Last name" />
+              <input className={cn('input bg-white', formErrors.lastName && 'border-red-400 ring-1 ring-red-300/50')} value={form.lastName} onChange={e => setForm(p => ({...p, lastName: e.target.value}))} placeholder="Last name" />
+              {formErrors.lastName && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.lastName}</p>}
             </div>
             <div>
               <label className="label">Target Voice Part</label>
@@ -708,25 +730,28 @@ export default function Auditions() {
               <input className="input bg-white" type="number" value={form.age} onChange={e => setForm(p => ({...p, age: e.target.value}))} placeholder="Age" />
             </div>
             <div>
-              <label className="label">Course</label>
-              <select className="input bg-white" value={form.course} onChange={e => setForm(p => ({...p, course: e.target.value}))}>
+              <label className="label">Course *</label>
+              <select className={cn('input bg-white', formErrors.course && 'border-red-400 ring-1 ring-red-300/50')} value={form.course} onChange={e => setForm(p => ({...p, course: e.target.value}))}>
                 <option value="">Select course</option>
                 {(form.course && !COURSE_OPTIONS.includes(form.course) ? [form.course, ...COURSE_OPTIONS] : COURSE_OPTIONS).map((course) => <option key={course} value={course}>{course}</option>)}
               </select>
+              {formErrors.course && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.course}</p>}
             </div>
             <div>
-              <label className="label">Year Level</label>
-              <select className="input bg-white" value={form.yearLevel} onChange={e => setForm(p => ({...p, yearLevel: e.target.value}))}>
+              <label className="label">Year Level *</label>
+              <select className={cn('input bg-white', formErrors.yearLevel && 'border-red-400 ring-1 ring-red-300/50')} value={form.yearLevel} onChange={e => setForm(p => ({...p, yearLevel: e.target.value}))}>
                 <option value="">Select year</option>
                 <option value="1">1st Year</option>
                 <option value="2">2nd Year</option>
                 <option value="3">3rd Year</option>
                 <option value="4">4th Year</option>
               </select>
+              {formErrors.yearLevel && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.yearLevel}</p>}
             </div>
             <div className="col-span-2">
-              <label className="label">Religion / Denomination</label>
-              <input className="input bg-white" value={form.religion ?? ''} onChange={e => setForm(p => ({...p, religion: e.target.value}))} placeholder="e.g. Roman Catholic" />
+              <label className="label">Religion / Denomination *</label>
+              <input className={cn('input bg-white', formErrors.religion && 'border-red-400 ring-1 ring-red-300/50')} value={form.religion ?? ''} onChange={e => setForm(p => ({...p, religion: e.target.value}))} placeholder="e.g. Roman Catholic" />
+              {formErrors.religion && <p className="mt-1 text-[11px] font-semibold text-red-500">{formErrors.religion}</p>}
             </div>
             <div>
               <label className="label">Contact Number</label>
