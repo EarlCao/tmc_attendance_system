@@ -15,9 +15,9 @@ export function useSessions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchSessions = useCallback(async () => {
+  const fetchSessions = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await sessionsAPI.getSessions();
       setSessions(res.data?.sessions || []);
       setError(null);
@@ -25,7 +25,7 @@ export function useSessions() {
       setError(err.response?.data?.message || 'Failed to fetch sessions');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -54,7 +54,7 @@ export function useSessions() {
 
     // When attendance is saved for a session, refetch to get updated counts
     const onAttendanceSaved = ({ sessionId }) => {
-      fetchSessions();
+      fetchSessions({ silent: true });
     };
 
     socket.on('session:created', onCreated);

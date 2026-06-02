@@ -295,7 +295,8 @@ export default function Attendance() {
     setSaved(false)
   }
 
-  async function handleSave() {
+  async function handleSave(event) {
+    event?.preventDefault()
     if (!selectedSession || readOnly) return
     setIsSaving(true)
     try {
@@ -637,7 +638,7 @@ export default function Attendance() {
                 <Edit size={18} /> Edit Session
               </button>
             )}
-            <button onClick={handleSave} disabled={readOnly || isSaving || isFetchingAttendance} className="btn-primary py-3 px-6 shadow-blue-500/40">
+            <button type="button" onClick={handleSave} disabled={readOnly || isSaving || isFetchingAttendance} className="btn-primary py-3 px-6 shadow-blue-500/40">
               {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18} />} {saved ? 'Saved!' : 'Save Attendance'}
             </button>
           </div>
