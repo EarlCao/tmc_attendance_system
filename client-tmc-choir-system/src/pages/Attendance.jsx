@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
 import {
   ArrowLeft, CalendarDays, CheckCircle2, Clock, FileText,
-  ListPlus, MapPin, Save, SlidersHorizontal, Trash2, XCircle, Loader2
+  ListPlus, MapPin, Save, SlidersHorizontal, Trash2, XCircle, Loader2, Edit
 } from 'lucide-react'
 import { useMembers } from '../hooks/useMembers'
 import { useSessions } from '../hooks/useSessions'
@@ -23,19 +23,30 @@ const MEMBER_SORTS = [
   { value: 'status-asc', label: 'Attendance status' },
 ]
 const SESSION_SORTS = [
-  { value: 'date-desc', label: 'Newest first' },
-  { value: 'date-asc', label: 'Oldest first' },
+  { value: 'created-desc', label: 'Recently created' },
+  { value: 'created-asc', label: 'Oldest created' },
+  { value: 'date-desc', label: 'Session date ↓' },
+  { value: 'date-asc', label: 'Session date ↑' },
   { value: 'title-asc', label: 'Title A-Z' },
   { value: 'type-asc', label: 'Type' },
 ]
 const statusIcon = { Present: CheckCircle2, Late: Clock, Absent: XCircle, Excused: FileText }
 
-const newSessionForm = {
-  title: '',
-  date: new Date().toISOString().slice(0, 10),
-  type: 'Practice',
-  notes: '',
+const getLocalDateString = () => {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
+
+const getNewSessionForm = () => ({
+  title: '',
+  date: getLocalDateString(),
+  type: 'Practice',
+  location: 'TMC Music Room',
+  notes: '',
+})
 
 function countStatuses(attendanceList = []) {
   return {
@@ -50,9 +61,17 @@ function compareText(a, b) {
   return a.localeCompare(b, undefined, { sensitivity: 'base' })
 }
 
+function getSessionDisplayTitle(session) {
+  const title = session?.title?.trim()
+  const notes = session?.notes?.trim()
+  if (title) return title
+  if (notes) return notes
+  return formatDateShort(session?.date)
+}
+
 export default function Attendance() {
   const { members, loading: membersLoading } = useMembers()
-  const { sessions, loading: sessionsLoading, createSession, getSessionAttendance, saveSessionAttendance } = useSessions()
+  const { sessions, loading: sessionsLoading, createSession, updateSession, deleteSession, getSessionAttendance, saveSessionAttendance } = useSessions()
   const { semesters, activeSemester, loading: semestersLoading } = useSemesters()
 
   const [selectedSemId, setSelectedSemId] = useState(null)
@@ -76,9 +95,11 @@ export default function Attendance() {
   const [memberSort, setMemberSort] = useState('name-asc')
   const [sessionSearch, setSessionSearch] = useState('')
   const [sessionTypeFilter, setSessionTypeFilter] = useState('All')
-  const [sessionSort, setSessionSort] = useState('date-desc')
+  const [sessionSort, setSessionSort] = useState('created-desc')
   const [createModal, setCreateModal] = useState(false)
-  const [sessionForm, setSessionForm] = useState(newSessionForm)
+  const [editModal, setEditModal] = useState(false)
+  const [selectedEditSession, setSelectedEditSession] = useState(null)
+  const [sessionForm, setSessionForm] = useState(getNewSessionForm())
   const [notesModal, setNotesModal] = useState(null) // member object
   const [noteText, setNoteText] = useState('')
   const [saved, setSaved] = useState(false)
@@ -92,16 +113,21 @@ export default function Attendance() {
     return semesterSessions
       .filter((session) => {
         const normalizedSearch = sessionSearch.toLowerCase()
-        const matchSearch = session.type.toLowerCase().includes(normalizedSearch) || (session.notes || '').toLowerCase().includes(normalizedSearch)
+        const matchSearch = session.title?.toLowerCase().includes(normalizedSearch) || session.type.toLowerCase().includes(normalizedSearch) || (session.notes || '').toLowerCase().includes(normalizedSearch)
         const matchType = sessionTypeFilter === 'All' || session.type === sessionTypeFilter
         return matchSearch && matchType
       })
       .sort((a, b) => {
         const dateA = new Date(a.date).getTime()
         const dateB = new Date(b.date).getTime()
+        const createdA = new Date(a.createdAt).getTime()
+        const createdB = new Date(b.createdAt).getTime()
+        if (sessionSort === 'created-asc') return createdA - createdB
+        if (sessionSort === 'date-desc') return dateB - dateA
         if (sessionSort === 'date-asc') return dateA - dateB
+        if (sessionSort === 'title-asc') return compareText(getSessionDisplayTitle(a), getSessionDisplayTitle(b))
         if (sessionSort === 'type-asc') return compareText(a.type, b.type) || dateB - dateA
-        return dateB - dateA // date-desc default
+        return createdB - createdA // created-desc default
       })
   }, [semesterSessions, sessionSearch, sessionSort, sessionTypeFilter])
 
@@ -137,6 +163,8 @@ export default function Attendance() {
 
   const counts = useMemo(() => countStatuses(currentAttendance), [currentAttendance])
 
+  const STATUS_ORDER = ['Present', 'Late', 'Excused', 'Absent']
+
   const filteredMembers = useMemo(() =>
     members
       .filter((member) => {
@@ -149,14 +177,20 @@ export default function Attendance() {
         const nameB = b.firstName + ' ' + b.lastName
         if (memberSort === 'name-desc') return compareText(nameB, nameA)
         if (memberSort === 'voice-asc') return compareText(a.voicePart, b.voicePart) || compareText(nameA, nameB)
+        if (memberSort === 'status-asc') {
+          const statusA = currentAttendance.find(att => att.memberId === a.id)?.status || 'Absent'
+          const statusB = currentAttendance.find(att => att.memberId === b.id)?.status || 'Absent'
+          const orderDiff = STATUS_ORDER.indexOf(statusA) - STATUS_ORDER.indexOf(statusB)
+          return orderDiff !== 0 ? orderDiff : compareText(nameA, nameB)
+        }
         return compareText(nameA, nameB)
       }),
-    [members, search, voiceFilter, memberSort]
+    [members, search, voiceFilter, memberSort, currentAttendance]
   )
 
   function openCreateModal() {
     if (readOnly) return
-    setSessionForm(newSessionForm)
+    setSessionForm(getNewSessionForm())
     setCreateModal(true)
   }
 
@@ -166,11 +200,64 @@ export default function Attendance() {
     try {
       await createSession({
         semesterId: selectedSemId,
+        title: sessionForm.title.trim() || undefined,
         date: new Date(sessionForm.date).toISOString(),
         type: sessionForm.type,
+        location: sessionForm.location,
         notes: sessionForm.notes
       })
       setCreateModal(false)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  function openEditModal(session) {
+    if (readOnly) return
+    setSelectedEditSession(session)
+    setSessionForm({
+      title: session.title || '',
+      date: session.date ? new Date(session.date).toISOString().split('T')[0] : '',
+      type: session.type || 'Practice',
+      location: session.location || 'TMC Music Room',
+      notes: session.notes || '',
+    })
+    setEditModal(true)
+  }
+
+  async function handleUpdateSession() {
+    if (readOnly || !selectedEditSession) return
+    setIsSaving(true)
+    try {
+      await updateSession(selectedEditSession.id, {
+        title: sessionForm.title.trim(),
+        date: new Date(sessionForm.date).toISOString(),
+        type: sessionForm.type,
+        location: sessionForm.location,
+        notes: sessionForm.notes
+      })
+      setEditModal(false)
+      setSelectedEditSession(null)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleDeleteSession() {
+    if (readOnly || !selectedEditSession) return
+    if (!window.confirm("Are you sure you want to delete this session? This will also delete all associated attendance records.")) return
+    setIsSaving(true)
+    try {
+      await deleteSession(selectedEditSession.id)
+      if (selectedSessionId === selectedEditSession.id) {
+        setSelectedSessionId(null)
+      }
+      setEditModal(false)
+      setSelectedEditSession(null)
     } catch (e) {
       console.error(e)
     } finally {
@@ -242,6 +329,100 @@ export default function Attendance() {
     setNotesModal(null)
     setSaved(false)
   }
+
+  const renderEditSessionModal = () => (
+    <Modal
+      open={editModal}
+      onClose={() => {
+        setEditModal(false)
+        setSelectedEditSession(null)
+      }}
+      title="Edit Attendance Session"
+      size="md"
+      footer={
+        <>
+          <button
+            onClick={handleDeleteSession}
+            className="btn-secondary text-rose-600 hover:border-rose-200 hover:bg-rose-50"
+            disabled={isSaving}
+          >
+            <Trash2 size={16} /> Delete
+          </button>
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              onClick={() => {
+                setEditModal(false)
+                setSelectedEditSession(null)
+              }}
+              className="btn-secondary"
+              disabled={isSaving}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleUpdateSession}
+              className="btn-primary"
+              disabled={isSaving || !sessionForm.date}
+            >
+              {isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : <Save size={16} />} Save Changes
+            </button>
+          </div>
+        </>
+      }
+    >
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          <label className="label">Title / Description</label>
+          <input
+            className="input"
+            type="text"
+            value={sessionForm.title}
+            onChange={(event) => setSessionForm((prev) => ({ ...prev, title: event.target.value }))}
+            placeholder="e.g. Weekly Practice, Foundation Day Rehearsal..."
+          />
+        </div>
+        <div>
+          <label className="label">Date</label>
+          <input
+            className="input"
+            type="date"
+            value={sessionForm.date}
+            onChange={(event) => setSessionForm((prev) => ({ ...prev, date: event.target.value }))}
+          />
+        </div>
+        <div>
+          <label className="label">Type</label>
+          <select
+            className="input"
+            value={sessionForm.type}
+            onChange={(event) => setSessionForm((prev) => ({ ...prev, type: event.target.value }))}
+          >
+            {SESSION_TYPES.map((type) => <option key={type}>{type}</option>)}
+          </select>
+        </div>
+        <div className="col-span-2">
+          <label className="label">Location</label>
+          <input
+            className="input"
+            type="text"
+            value={sessionForm.location}
+            onChange={(event) => setSessionForm((prev) => ({ ...prev, location: event.target.value }))}
+            placeholder="e.g. TMC Music Room"
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="label">Notes</label>
+          <textarea
+            className="input resize-none"
+            rows={2}
+            value={sessionForm.notes}
+            onChange={(event) => setSessionForm((prev) => ({ ...prev, notes: event.target.value }))}
+            placeholder="Optional additional notes"
+          />
+        </div>
+      </div>
+    </Modal>
+  )
 
   if (membersLoading || sessionsLoading || semestersLoading) {
     return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
@@ -317,12 +498,23 @@ export default function Attendance() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-[15px] font-bold text-slate-800">{formatDateShort(session.date)}</h4>
+                      <h4 className="text-[15px] font-bold text-slate-800">{getSessionDisplayTitle(session)}</h4>
                       <span className="rounded-full bg-white border border-slate-200 shadow-sm px-3 py-0.5 text-[11px] font-bold text-slate-600">{session.type}</span>
                     </div>
-                    {session.notes && <p className="mt-1.5 text-[13px] font-medium text-slate-500">{session.notes}</p>}
+                    <p className="mt-1 text-[12px] font-semibold text-blue-500 flex items-center gap-1">
+                      <CalendarDays size={11} />{formatDateShort(session.date)}
+                    </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-2.5">
+                    {!readOnly && (
+                      <button
+                        onClick={() => openEditModal(session)}
+                        className="rounded-xl border border-slate-200/80 bg-white p-2 text-slate-500 hover:border-slate-300 hover:text-blue-600 hover:bg-blue-50/50 shadow-sm transition-all"
+                        title="Edit Session"
+                      >
+                        <Edit size={16} />
+                      </button>
+                    )}
                     <button onClick={() => setSelectedSessionId(session.id)} className="btn-primary text-xs py-2 px-6">
                       Open Sheet
                     </button>
@@ -354,6 +546,16 @@ export default function Attendance() {
           }
         >
           <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="label">Title / Description</label>
+              <input
+                className="input"
+                type="text"
+                value={sessionForm.title}
+                onChange={(event) => setSessionForm((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="e.g. Weekly Practice, Foundation Day Rehearsal..."
+              />
+            </div>
             <div>
               <label className="label">Date</label>
               <input
@@ -374,17 +576,28 @@ export default function Attendance() {
               </select>
             </div>
             <div className="col-span-2">
-              <label className="label">Notes / Location</label>
+              <label className="label">Location</label>
+              <input
+                className="input"
+                type="text"
+                value={sessionForm.location}
+                onChange={(event) => setSessionForm((prev) => ({ ...prev, location: event.target.value }))}
+                placeholder="e.g. TMC Music Room"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="label">Notes</label>
               <textarea
                 className="input resize-none"
-                rows={3}
+                rows={2}
                 value={sessionForm.notes}
                 onChange={(event) => setSessionForm((prev) => ({ ...prev, notes: event.target.value }))}
-                placeholder="Optional details for this meeting"
+                placeholder="Optional additional notes"
               />
             </div>
           </div>
         </Modal>
+        {renderEditSessionModal()}
       </div>
     )
   }
@@ -401,19 +614,33 @@ export default function Attendance() {
               <ArrowLeft size={16} /> Back to sessions
             </button>
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">{formatDateShort(selectedSession.date)}</h2>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">{getSessionDisplayTitle(selectedSession)}</h2>
               <span className="rounded-full bg-white border border-slate-200 shadow-sm px-3 py-1 text-xs font-bold text-slate-600">{selectedSession.type}</span>
               {readOnly && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">View only</span>}
             </div>
+            <p className="mt-1.5 text-sm font-semibold text-blue-500 flex items-center gap-1.5">
+              <CalendarDays size={14} />{formatDateShort(selectedSession.date)}
+            </p>
             {selectedSession.notes && (
-              <p className="mt-2 text-sm font-medium text-slate-500">
+              <p className="mt-1 text-sm font-medium text-slate-500">
                 {selectedSession.notes}
               </p>
             )}
           </div>
-          <button onClick={handleSave} disabled={readOnly || isSaving || isFetchingAttendance} className="btn-primary py-3 px-6 shadow-blue-500/40">
-            {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18} />} {saved ? 'Saved!' : 'Save Attendance'}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {!readOnly && (
+              <button
+                onClick={() => openEditModal(selectedSession)}
+                disabled={isSaving || isFetchingAttendance}
+                className="btn-secondary py-3 px-6"
+              >
+                <Edit size={18} /> Edit Session
+              </button>
+            )}
+            <button onClick={handleSave} disabled={readOnly || isSaving || isFetchingAttendance} className="btn-primary py-3 px-6 shadow-blue-500/40">
+              {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18} />} {saved ? 'Saved!' : 'Save Attendance'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -574,6 +801,7 @@ export default function Attendance() {
           className="input resize-none"
         />
       </Modal>
+      {renderEditSessionModal()}
     </div>
   )
 }

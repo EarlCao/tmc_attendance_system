@@ -87,7 +87,7 @@ export const createSession = async (req, res) => {
 
     const sessionType = type || 'Practice';
     const sessionDate = new Date(date);
-    const sessionTitle = title || `${sessionType} - ${sessionDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    const sessionTitle = title?.trim() || '';
 
     const newSession = await prisma.session.create({
       data: {
@@ -130,7 +130,7 @@ export const updateSession = async (req, res) => {
     const { title, date, type, location, notes, description } = req.body;
 
     const data = {};
-    if (title !== undefined) data.title = title;
+    if (title !== undefined) data.title = title.trim();
     if (date !== undefined) data.sessionDate = new Date(date);
     if (type !== undefined) data.type = type;
     if (location !== undefined) data.location = location;
