@@ -142,6 +142,8 @@ export const getExcuses = async (req, res) => {
 
     const excuses = records.map((rec) => ({
       id: rec.id,
+      sessionId: rec.sessionId,
+      semesterId: rec.session.semesterId,
       memberId: rec.memberId,
       memberName: rec.member.fullName,
       voicePart: rec.member.voiceType.charAt(0) + rec.member.voiceType.slice(1).toLowerCase(),

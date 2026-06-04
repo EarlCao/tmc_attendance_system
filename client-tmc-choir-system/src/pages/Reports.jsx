@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileText, Loader2 } from 'lucide-react'
+import { CheckCircle2, FileText, Loader2 } from 'lucide-react'
 import { useSemesters } from '../hooks/useSemesters'
 import { useMembers } from '../hooks/useMembers'
 import { useSessions } from '../hooks/useSessions'
@@ -21,15 +21,56 @@ export default function Reports() {
 
   const loading = sLoading || mLoading || sessLoading || aLoading || oLoading || eLoading
 
-  const totalAuditions = auditionees.length
-  const passedAuditions = auditionees.filter((a) => a.status === 'Passed').length
+  const currentSemesterId = currentSemester?.id
+  const currentSessions = currentSemesterId
+    ? sessions.filter((session) => Number(session.semesterId) === Number(currentSemesterId))
+    : []
+  const currentAuditionees = currentSemesterId
+    ? auditionees.filter((auditionee) => Number(auditionee.semesterId) === Number(currentSemesterId))
+    : []
+  const currentExcuses = currentSemesterId
+    ? excuses.filter((excuse) => Number(excuse.semesterId) === Number(currentSemesterId))
+    : []
+
+  const totalAuditions = currentAuditionees.length
+  const passedAuditions = currentAuditionees.filter((a) => a.status === 'Passed').length
 
   const activeMembers = members.filter((m) => m.status?.toLowerCase() === 'active')
-  const pendingExcuses = excuses.filter((e) => e.status === 'Pending')
+  const pendingExcuses = currentExcuses.filter((e) => e.status === 'Pending')
 
   function getMemberName(member) {
     if (!member) return 'Unknown'
     return `${member.firstName || ''} ${member.lastName || ''}`.trim()
+  }
+
+  function getAuditionAverage(auditionee) {
+    if (auditionee.averageRating) return Number(auditionee.averageRating).toFixed(1)
+    const evaluations = auditionee.evaluations || []
+    if (!evaluations.length) return null
+
+    const categoryKeys = ['vocalQuality', 'pitchAccuracy', 'tone', 'rhythm', 'confidence', 'stagePresence']
+    const total = evaluations.reduce((sum, evaluation) => {
+      const ratedCategories = categoryKeys.filter((key) => evaluation[key] !== undefined && evaluation[key] !== null)
+      if (!ratedCategories.length) return sum
+      const score = ratedCategories.reduce((catSum, key) => catSum + Number(evaluation[key] || 0), 0) / ratedCategories.length
+      return sum + score
+    }, 0)
+
+    return (total / evaluations.length).toFixed(1)
+  }
+
+  function getFinalRecommendation(auditionee) {
+    if (auditionee.status === 'Passed') return 'Recommended for membership'
+    if (auditionee.status === 'Failed') return 'Not recommended'
+    return 'For final decision'
+  }
+
+  function getEvaluationNotes(auditionee) {
+    const notes = (auditionee.evaluations || [])
+      .map((evaluation) => evaluation.comments)
+      .filter(Boolean)
+
+    return notes.length ? notes.join(' / ') : 'No judge comments recorded'
   }
 
   const reportTypes = [
@@ -62,7 +103,7 @@ export default function Reports() {
         </div>
         <div className="card p-5 bg-white shadow-sm">
           <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Sessions</p>
-          <p className="mt-2 text-3xl font-black text-slate-800">{sessions.length}</p>
+          <p className="mt-2 text-3xl font-black text-slate-800">{currentSessions.length}</p>
         </div>
         <div className="card p-5 bg-white shadow-sm">
           <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Audition Pass Rate</p>
@@ -87,7 +128,7 @@ export default function Reports() {
                 <h3 className="text-[15px] font-black text-slate-800">{report.title}</h3>
                 <p className="mt-1.5 text-[13px] font-medium text-slate-500 leading-relaxed">{report.details}</p>
                 <button onClick={() => setPreparedReport(report)} className="btn-secondary mt-4 text-[12px] py-2 px-4 shadow-sm hover:shadow-md">
-                  <FileText size={14} /> Prepare Report
+                  <CheckCircle2 size={14} /> Generate Final Report
                 </button>
               </div>
             </div>
@@ -118,7 +159,7 @@ export default function Reports() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Prepared for</p>
               <h3 className="mt-1 text-[16px] font-black text-slate-800">{currentSemester?.name ?? 'No active semester'}</h3>
               <p className="mt-1 text-[13px] font-medium text-slate-500">Trinidad Municipal College Choir</p>
-              <p className="mt-1 text-[11px] font-medium text-slate-400">Generated from current system records.</p>
+              <p className="mt-1 text-[11px] font-medium text-slate-400">Final report generated from current system records.</p>
             </div>
 
             {preparedReport.id === 'attendance' && (
@@ -134,7 +175,7 @@ export default function Reports() {
                   </div>
                   <div className="rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sessions</p>
-                    <p className="mt-1 text-2xl font-black text-slate-800">{sessions.length}</p>
+                    <p className="mt-1 text-2xl font-black text-slate-800">{currentSessions.length}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Inactive</p>
@@ -179,11 +220,11 @@ export default function Reports() {
                   </div>
                   <div className="rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Failed</p>
-                    <p className="mt-1 text-2xl font-black text-red-600">{auditionees.filter((a) => a.status === 'Failed').length}</p>
+                    <p className="mt-1 text-2xl font-black text-red-600">{currentAuditionees.filter((a) => a.status === 'Failed').length}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pending</p>
-                    <p className="mt-1 text-2xl font-black text-yellow-600">{auditionees.filter((a) => a.status === 'Pending').length}</p>
+                    <p className="mt-1 text-2xl font-black text-yellow-600">{currentAuditionees.filter((a) => a.status === 'Pending').length}</p>
                   </div>
                 </div>
                 <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
@@ -193,16 +234,41 @@ export default function Reports() {
                         <th className="px-5 py-4 text-left font-bold text-slate-500">Auditionee</th>
                         <th className="px-5 py-4 text-left font-bold text-slate-500">Part</th>
                         <th className="px-5 py-4 text-left font-bold text-slate-500">Date</th>
-                        <th className="px-5 py-4 text-left font-bold text-slate-500">Status</th>
+                        <th className="px-5 py-4 text-left font-bold text-slate-500">Avg</th>
+                        <th className="px-5 py-4 text-left font-bold text-slate-500">Judges</th>
+                        <th className="px-5 py-4 text-left font-bold text-slate-500">Final Recommendation</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {auditionees.map((auditionee) => (
+                      {currentAuditionees.map((auditionee) => (
                         <tr key={auditionee.id} className="hover:bg-slate-50/50">
                           <td className="px-5 py-4 font-black text-slate-800">{auditionee.firstName} {auditionee.lastName}</td>
                           <td className="px-5 py-4 font-medium text-slate-600">{auditionee.voicePart}</td>
                           <td className="px-5 py-4 font-medium text-slate-600">{formatDateShort(auditionee.auditionDate)}</td>
-                          <td className="px-5 py-4 font-bold text-slate-700">{auditionee.status}</td>
+                          <td className="px-5 py-4 font-bold text-slate-700">{getAuditionAverage(auditionee) ?? '—'}</td>
+                          <td className="px-5 py-4 font-medium text-slate-600">{(auditionee.evaluations || []).length}</td>
+                          <td className="px-5 py-4 font-bold text-slate-700">
+                            <div>{getFinalRecommendation(auditionee)}</div>
+                            <div className="mt-1 text-[11px] font-medium text-slate-500">{auditionee.status}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+                  <table className="w-full text-[13px]">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th className="px-5 py-4 text-left font-bold text-slate-500">Auditionee</th>
+                        <th className="px-5 py-4 text-left font-bold text-slate-500">Final Notes / Evaluation</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {currentAuditionees.map((auditionee) => (
+                        <tr key={`${auditionee.id}-notes`} className="hover:bg-slate-50/50">
+                          <td className="px-5 py-4 font-black text-slate-800">{auditionee.firstName} {auditionee.lastName}</td>
+                          <td className="px-5 py-4 font-medium text-slate-600">{getEvaluationNotes(auditionee)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -246,11 +312,11 @@ export default function Reports() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total</p>
-                    <p className="mt-1 text-2xl font-black text-slate-800">{excuses.length}</p>
+                    <p className="mt-1 text-2xl font-black text-slate-800">{currentExcuses.length}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Approved</p>
-                    <p className="mt-1 text-2xl font-black text-green-600">{excuses.filter((e) => e.status === 'Approved').length}</p>
+                    <p className="mt-1 text-2xl font-black text-green-600">{currentExcuses.filter((e) => e.status === 'Approved').length}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 p-4 bg-white shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pending</p>
@@ -268,7 +334,7 @@ export default function Reports() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {excuses.map((excuse) => (
+                      {currentExcuses.map((excuse) => (
                         <tr key={excuse.id} className="hover:bg-slate-50/50">
                           <td className="px-5 py-4 font-black text-slate-800">{excuse.memberName}</td>
                           <td className="px-5 py-4 font-medium text-slate-600">{formatDateShort(excuse.date)}</td>
