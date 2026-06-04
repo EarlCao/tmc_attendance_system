@@ -150,7 +150,7 @@ export default function Officers() {
                   const member = officer.member || members.find((m) => m.id === Number(officer.memberId))
 
                   return (
-                    <tr key={officer.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <tr key={officer.id} className="hover:bg-blue-600/25 transition-colors group">
                       <td className="px-6 py-4">
                         <p className="font-black text-slate-800">{getMemberName(member)}</p>
                         {officer.duties && (
@@ -167,8 +167,8 @@ export default function Officers() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => openOfficerModal(officer)} className="rounded-xl p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                        <div className="flex items-center justify-end gap-2 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => openOfficerModal(officer)} className="p-2 rounded-xl text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                             <Pencil size={15} />
                           </button>
                           <button onClick={() => setDeleteOfficerConfirm(officer)} className="rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors">
