@@ -594,7 +594,7 @@ export default function Auditions() {
             <div>
               <label className="label">Auditionee *</label>
               <select
-                className="input bg-white"
+                className="input bg-white dark:bg-slate-950/70 dark:text-slate-100 dark:border-slate-700"
                 value={evaluationForm.auditioneeId}
                 onChange={e => {
                   const auditionee = auditionees.find((item) => String(item.id) === String(e.target.value))
@@ -616,7 +616,7 @@ export default function Auditions() {
             <div>
               <label className="label">Judge *</label>
               <select
-                className="input bg-white"
+                className="input bg-white dark:bg-slate-950/70 dark:text-slate-100 dark:border-slate-700"
                 value={evaluationForm.judgeId}
                 onChange={e => setEvaluationForm(p => ({ ...p, judgeId: e.target.value }))}
               >
@@ -627,13 +627,13 @@ export default function Auditions() {
             </div>
           </div>
 
-          <div className="rounded-2xl bg-slate-50/80 p-5 border border-slate-100/50">
+          <div className="rounded-2xl bg-slate-50/80 p-5 border border-slate-100/50 dark:bg-slate-950/40 dark:border-slate-700/70">
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
               {CATEGORIES.map((cat) => (
                 <div key={cat}>
                   <label className="label">{CATEGORY_LABELS[cat]}</label>
                   <input
-                    className="input bg-white font-bold"
+                    className="input bg-white font-bold dark:bg-slate-950/70 dark:text-slate-100 dark:border-slate-700"
                     type="number"
                     min="0"
                     max="10"
@@ -648,7 +648,7 @@ export default function Auditions() {
           <div>
             <label className="label">Notes / Comments / Evaluation</label>
             <textarea
-              className="input min-h-28 resize-y bg-white"
+              className="input min-h-28 resize-y bg-white dark:bg-slate-950/70 dark:text-slate-100 dark:border-slate-700"
               value={evaluationForm.comments}
               onChange={e => setEvaluationForm(p => ({ ...p, comments: e.target.value }))}
               placeholder="Type the judge's comments, recommendation, or evaluation notes"
