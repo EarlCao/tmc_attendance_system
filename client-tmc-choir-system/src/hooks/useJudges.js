@@ -2,6 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { judgesAPI } from '../lib/api';
 import socket from '../lib/socket';
 
+const formatJudge = (judge = {}) => ({
+  ...judge,
+  name: judge.name ?? judge.fullName ?? '',
+  title: judge.title ?? judge.titleRole ?? '',
+  specialization: judge.specialization ?? '',
+  contact: judge.contact ?? judge.contactNo ?? '',
+  email: judge.email ?? '',
+  facebookAccount: judge.facebookAccount ?? '',
+  notes: judge.notes ?? '',
+  status: judge.status ?? 'active',
+  ratingsGiven: judge.ratingsGiven ?? judge._count?.evaluations ?? 0,
+});
+
 export function useJudges() {
   const [judges, setJudges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,7 +24,7 @@ export function useJudges() {
     try {
       setLoading(true);
       const res = await judgesAPI.getJudges();
-      setJudges(res.data?.judges || []);
+      setJudges((res.data?.judges || []).map(formatJudge));
       setError(null);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch judges');
@@ -28,14 +41,16 @@ export function useJudges() {
   // Real-time sync
   useEffect(() => {
     const onCreated = (judge) => {
+      const formatted = formatJudge(judge);
       setJudges((prev) => {
-        if (prev.find((j) => j.id === judge.id)) return prev;
-        return [...prev, judge].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        if (prev.find((j) => j.id === formatted.id)) return prev;
+        return [...prev, formatted].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       });
     };
 
     const onUpdated = (judge) => {
-      setJudges((prev) => prev.map((j) => (j.id === judge.id ? { ...j, ...judge } : j)));
+      const formatted = formatJudge(judge);
+      setJudges((prev) => prev.map((j) => (j.id === formatted.id ? { ...j, ...formatted } : j)));
     };
 
     const onDeleted = ({ id }) => {
@@ -55,11 +70,24 @@ export function useJudges() {
 
   const createJudge = async (data) => {
     const res = await judgesAPI.createJudge(data);
+    const judge = res.data?.judge;
+    if (judge) {
+      const formatted = formatJudge(judge);
+      setJudges((prev) => {
+        if (prev.find((j) => j.id === formatted.id)) return prev;
+        return [...prev, formatted].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      });
+    }
     return res;
   };
 
   const updateJudge = async (id, data) => {
     const res = await judgesAPI.updateJudge(id, data);
+    const judge = res.data?.judge;
+    if (judge) {
+      const formatted = formatJudge(judge);
+      setJudges((prev) => prev.map((j) => (j.id === formatted.id ? { ...j, ...formatted } : j)));
+    }
     return res;
   };
 
