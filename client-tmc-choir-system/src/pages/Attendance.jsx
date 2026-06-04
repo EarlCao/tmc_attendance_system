@@ -20,6 +20,7 @@ const SESSION_TYPES = ['Practice', 'Performance', 'Audition', 'Meeting', 'Other'
 const MEMBER_SORTS = [
   { value: 'name-asc', label: 'Name A-Z' },
   { value: 'name-desc', label: 'Name Z-A' },
+  { value: 'officer-first', label: 'Officers first' },
   { value: 'voice-asc', label: 'Voice part' },
   { value: 'status-asc', label: 'Attendance status' },
 ]
@@ -192,6 +193,14 @@ export default function Attendance() {
         const nameA = getMemberDisplayName(a)
         const nameB = getMemberDisplayName(b)
         if (memberSort === 'name-desc') return compareText(nameB, nameA)
+        if (memberSort === 'officer-first') {
+          const positionA = officerPositionsByMemberId.get(String(a.id))
+          const positionB = officerPositionsByMemberId.get(String(b.id))
+          if (positionA && !positionB) return -1
+          if (!positionA && positionB) return 1
+          if (positionA && positionB) return compareText(positionA, positionB) || compareText(nameA, nameB)
+          return compareText(nameA, nameB)
+        }
         if (memberSort === 'voice-asc') return compareText(a.voicePart, b.voicePart) || compareText(nameA, nameB)
         if (memberSort === 'status-asc') {
           const statusA = currentAttendance.find(att => att.memberId === a.id)?.status || 'Absent'

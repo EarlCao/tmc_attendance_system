@@ -12,6 +12,11 @@ import Toast from '../components/common/Toast'
 
 const VOICE_PARTS = ['Soprano', 'Alto', 'Tenor', 'Bass']
 const COURSE_OPTIONS = ['BSIT', 'BSOA', 'BSCRIM', 'BSPOL', 'BSCOM', 'BEED', 'BSED']
+const MEMBER_SORTS = [
+  { value: 'name-asc', label: 'Name A-Z' },
+  { value: 'name-desc', label: 'Name Z-A' },
+  { value: 'officer-first', label: 'Officers first' },
+]
 const emptyForm = { firstName: '', lastName: '', email: '', voicePart: 'Soprano', course: '', yearLevel: '', religion: '', status: 'active', contactNumber: '', address: '' }
 
 function validateMemberForm(form) {
@@ -103,6 +108,7 @@ export default function Members() {
   const [search, setSearch]           = useState('')
   const [voiceFilter, setVoiceFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [memberSort, setMemberSort]   = useState('name-asc')
   const [view, setView]               = useState('table')
   const [addModal, setAddModal]       = useState(false)
   const [editModal, setEditModal]     = useState(null)
@@ -126,16 +132,34 @@ export default function Members() {
     return position ? `${name} (${position})` : name
   }
 
+  function compareMemberNames(a, b) {
+    return getMemberDisplayName(a).localeCompare(getMemberDisplayName(b), undefined, { sensitivity: 'base' })
+  }
+
   const filtered = useMemo(() =>
-    memberList.filter((m) => {
-      const displayName = getMemberDisplayName(m)
-      const matchSearch = displayName.toLowerCase().includes(search.toLowerCase()) ||
-                          m.email.toLowerCase().includes(search.toLowerCase())
-      const matchVoice  = voiceFilter === 'All' || m.voicePart === voiceFilter
-      const matchStatus = statusFilter === 'All' || m.status === statusFilter
-      return matchSearch && matchVoice && matchStatus
-    }),
-    [memberList, search, voiceFilter, statusFilter, officerPositionsByMemberId]
+    memberList
+      .filter((m) => {
+        const displayName = getMemberDisplayName(m)
+        const matchSearch = displayName.toLowerCase().includes(search.toLowerCase()) ||
+                            m.email.toLowerCase().includes(search.toLowerCase())
+        const matchVoice  = voiceFilter === 'All' || m.voicePart === voiceFilter
+        const matchStatus = statusFilter === 'All' || m.status === statusFilter
+        return matchSearch && matchVoice && matchStatus
+      })
+      .sort((a, b) => {
+        const aPosition = officerPositionsByMemberId.get(String(a.id))
+        const bPosition = officerPositionsByMemberId.get(String(b.id))
+        if (memberSort === 'name-desc') return compareMemberNames(b, a)
+        if (memberSort === 'officer-first') {
+          if (aPosition && !bPosition) return -1
+          if (!aPosition && bPosition) return 1
+          if (aPosition && bPosition) {
+            return aPosition.localeCompare(bPosition, undefined, { sensitivity: 'base' }) || compareMemberNames(a, b)
+          }
+        }
+        return compareMemberNames(a, b)
+      }),
+    [memberList, search, voiceFilter, statusFilter, memberSort, officerPositionsByMemberId]
   )
 
   const stats = {
@@ -243,6 +267,13 @@ export default function Members() {
             <option value="All">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+          </select>
+          <select
+            value={memberSort}
+            onChange={e => setMemberSort(e.target.value)}
+            className="flex-none rounded-xl border border-slate-200/80 bg-white/50 px-4 py-2 text-[13px] font-medium text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          >
+            {MEMBER_SORTS.map((sort) => <option key={sort.value} value={sort.value}>{sort.label}</option>)}
           </select>
           <div className="ml-auto flex items-center gap-3 flex-none">
             <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl">
