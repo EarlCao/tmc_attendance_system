@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { Pencil, Plus, Trash2, Loader2 } from 'lucide-react'
 import { useOfficers } from '../hooks/useOfficers'
-import { useSemesters } from '../hooks/useSemesters'
 import { useMembers } from '../hooks/useMembers'
 import { getStatusColor } from '../lib/utils'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
 
 export default function Officers() {
-  const { semesters, activeSemester: currentSemester, loading: sLoading } = useSemesters()
   const { officers, loading: oLoading, createOfficer, updateOfficer, deleteOfficer } = useOfficers()
   const { members, loading: mLoading } = useMembers()
 
@@ -16,38 +14,37 @@ export default function Officers() {
   const [editingOfficer, setEditingOfficer] = useState(null)
   const [deleteOfficerConfirm, setDeleteOfficerConfirm] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const [officerForm, setOfficerForm] = useState({
     memberId: '',
     position: '',
-    semesterId: '',
     duties: '',
     status: 'active',
   })
 
-  const loading = sLoading || oLoading || mLoading
+  const loading = oLoading || mLoading
 
   function getMemberName(member) {
     if (!member) return 'Unknown Member'
-    return `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown Member'
+    return member.fullName || 'Unknown Member'
   }
 
   function openOfficerModal(officer) {
+    setFormError('')
     if (officer) {
       setEditingOfficer(officer)
       setOfficerForm({
-        memberId: officer.memberId || '',
+        memberId: officer.memberId ? String(officer.memberId) : '',
         position: officer.position || '',
-        semesterId: officer.semesterId || currentSemester?.id || semesters[0]?.id || '',
         duties: officer.duties || '',
-        status: officer.status || 'active',
+        status: officer.status?.toLowerCase() || 'active',
       })
     } else {
       setEditingOfficer(null)
       setOfficerForm({
-        memberId: members[0]?.id || '',
+        memberId: members[0]?.id ? String(members[0].id) : '',
         position: '',
-        semesterId: currentSemester?.id || semesters[0]?.id || '',
         duties: '',
         status: 'active',
       })
@@ -56,15 +53,46 @@ export default function Officers() {
   }
 
   async function handleSaveOfficer() {
-    if (!officerForm.memberId || !officerForm.position.trim()) return
+    setFormError('')
+
+    // Validate required fields
+    if (!officerForm.memberId) {
+      setFormError('Please select a member.')
+      return
+    }
+    if (!officerForm.position.trim()) {
+      setFormError('Please enter a position.')
+      return
+    }
+
+    // Prevent duplicate: same member already an officer (skip check when editing same record)
+    const isDuplicate = officers.some(
+      (o) =>
+        String(o.memberId) === String(officerForm.memberId) &&
+        (!editingOfficer || o.id !== editingOfficer.id)
+    )
+    if (isDuplicate) {
+      const memberName = getMemberName(members.find((m) => String(m.id) === String(officerForm.memberId)))
+      setFormError(`${memberName} is already an officer.`)
+      return
+    }
+
     setIsSaving(true)
     try {
+      const payload = {
+        memberId: parseInt(officerForm.memberId),
+        position: officerForm.position.trim(),
+        duties: officerForm.duties || '',
+        status: officerForm.status,
+      }
       if (editingOfficer) {
-        await updateOfficer(editingOfficer.id, officerForm)
+        await updateOfficer(editingOfficer.id, payload)
       } else {
-        await createOfficer(officerForm)
+        await createOfficer(payload)
       }
       setOfficerModal(false)
+    } catch (err) {
+      setFormError(err?.response?.data?.message || err?.message || 'Failed to save officer. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -95,7 +123,7 @@ export default function Officers() {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">Choir leadership</p>
             <h2 className="mt-1 text-2xl font-black text-slate-800 tracking-tight">Officers</h2>
-            <p className="mt-1 text-sm font-medium text-slate-500">Manually add officers, keep their positions, and edit the list per semester.</p>
+            <p className="mt-1 text-sm font-medium text-slate-500">Manage choir officers and their positions.</p>
           </div>
           <button onClick={() => openOfficerModal()} className="btn-primary shadow-blue-500/30">
             <Plus size={16} /> Add Officer
@@ -111,7 +139,6 @@ export default function Officers() {
                 <tr className="border-b border-slate-100 bg-slate-50/50">
                   <th className="px-6 py-4 text-left font-bold text-slate-500">Officer</th>
                   <th className="px-5 py-4 text-left font-bold text-slate-500">Position</th>
-                  <th className="px-5 py-4 text-left font-bold text-slate-500">Semester</th>
                   <th className="px-5 py-4 text-left font-bold text-slate-500">Contact</th>
                   <th className="px-5 py-4 text-left font-bold text-slate-500">Status</th>
                   <th className="px-6 py-4 text-right font-bold text-slate-500">Actions</th>
@@ -119,8 +146,8 @@ export default function Officers() {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {officers.map((officer) => {
-                  const semester = semesters.find((item) => item.id === Number(officer.semesterId))
-                  const member = members.find((item) => item.id === Number(officer.memberId))
+                  // Use embedded member from API response; fall back to members array lookup
+                  const member = officer.member || members.find((m) => m.id === Number(officer.memberId))
 
                   return (
                     <tr key={officer.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -131,10 +158,8 @@ export default function Officers() {
                         )}
                       </td>
                       <td className="px-5 py-4 font-bold text-slate-700">{officer.position}</td>
-                      <td className="px-5 py-4 font-medium text-slate-500">{semester?.name ?? 'No semester'}</td>
                       <td className="px-5 py-4 font-medium text-slate-500">
-                        <p>{member?.email || 'No email'}</p>
-                        <p>{member?.contactNumber || 'No phone'}</p>
+                        <p>{member?.emailOrFacebook || member?.contactNo || 'No contact'}</p>
                       </td>
                       <td className="px-5 py-4">
                         <span className={`rounded-full px-3 py-1 text-[11px] font-bold ring-1 shadow-sm ${getStatusColor(officer.status)}`}>
@@ -162,14 +187,15 @@ export default function Officers() {
         )}
       </div>
 
+      {/* Add / Edit Modal */}
       <Modal
         open={officerModal}
-        onClose={() => setOfficerModal(false)}
+        onClose={() => { setOfficerModal(false); setFormError('') }}
         title={editingOfficer ? 'Edit Officer' : 'Add Officer'}
         size="md"
         footer={
           <>
-            <button onClick={() => setOfficerModal(false)} disabled={isSaving} className="btn-secondary">Cancel</button>
+            <button onClick={() => { setOfficerModal(false); setFormError('') }} disabled={isSaving} className="btn-secondary">Cancel</button>
             <button onClick={handleSaveOfficer} disabled={isSaving} className="btn-primary shadow-blue-500/40">
               {isSaving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Save Officer'}
             </button>
@@ -177,36 +203,55 @@ export default function Officers() {
         }
       >
         <div className="space-y-4">
+          {formError && (
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-[13px] font-medium text-red-600">
+              {formError}
+            </div>
+          )}
           <div>
             <label className="label">Member *</label>
-            <select className="input bg-white" value={officerForm.memberId} onChange={e => setOfficerForm(p => ({ ...p, memberId: Number(e.target.value) }))}>
+            <select
+              className="input bg-white"
+              value={officerForm.memberId}
+              onChange={e => {
+                setFormError('')
+                setOfficerForm(p => ({ ...p, memberId: e.target.value }))
+              }}
+            >
               <option value="">Select a member...</option>
               {members.map(m => (
-                <option key={m.id} value={m.id}>{getMemberName(m)}</option>
+                <option key={m.id} value={String(m.id)}>{getMemberName(m)}</option>
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Position *</label>
-              <input className="input bg-white" value={officerForm.position} onChange={e => setOfficerForm(p => ({ ...p, position: e.target.value }))} placeholder="President" />
-            </div>
-            <div>
-              <label className="label">Semester</label>
-              <select className="input bg-white" value={officerForm.semesterId} onChange={e => setOfficerForm(p => ({ ...p, semesterId: Number(e.target.value) }))}>
-                {semesters.map((semester) => (
-                  <option key={semester.id} value={semester.id}>{semester.name}</option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label className="label">Position *</label>
+            <input
+              className="input bg-white"
+              value={officerForm.position}
+              onChange={e => {
+                setFormError('')
+                setOfficerForm(p => ({ ...p, position: e.target.value }))
+              }}
+              placeholder="e.g. President, Secretary, Treasurer"
+            />
           </div>
           <div>
             <label className="label">Duties / Notes</label>
-            <textarea className="input bg-white min-h-24 resize-y" value={officerForm.duties} onChange={e => setOfficerForm(p => ({ ...p, duties: e.target.value }))} placeholder="Responsibilities, assignments, reminders" />
+            <textarea
+              className="input bg-white min-h-24 resize-y"
+              value={officerForm.duties}
+              onChange={e => setOfficerForm(p => ({ ...p, duties: e.target.value }))}
+              placeholder="Responsibilities, assignments, reminders"
+            />
           </div>
           <div>
             <label className="label">Status</label>
-            <select className="input bg-white" value={officerForm.status} onChange={e => setOfficerForm(p => ({ ...p, status: e.target.value }))}>
+            <select
+              className="input bg-white"
+              value={officerForm.status}
+              onChange={e => setOfficerForm(p => ({ ...p, status: e.target.value }))}
+            >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
@@ -214,6 +259,7 @@ export default function Officers() {
         </div>
       </Modal>
 
+      {/* Delete Confirmation Modal */}
       <Modal
         open={!!deleteOfficerConfirm}
         onClose={() => setDeleteOfficerConfirm(null)}
@@ -229,7 +275,7 @@ export default function Officers() {
         }
       >
         <p className="text-[13px] font-medium text-slate-600 leading-relaxed">
-          Are you sure you want to remove <strong>{getMemberName(members.find(m => m.id === deleteOfficerConfirm?.memberId))}</strong> as <strong>{deleteOfficerConfirm?.position}</strong>? This action cannot be undone.
+          Are you sure you want to remove <strong>{getMemberName(deleteOfficerConfirm?.member)}</strong> as <strong>{deleteOfficerConfirm?.position}</strong>? This action cannot be undone.
         </p>
       </Modal>
     </div>

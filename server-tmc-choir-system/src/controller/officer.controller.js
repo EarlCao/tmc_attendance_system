@@ -2,16 +2,8 @@ import { prisma } from '../lib/prisma.js';
 
 export const getOfficers = async (req, res) => {
   try {
-    const { semesterId } = req.query;
-
-    const whereClause = {};
-    if (semesterId) {
-      whereClause.semesterId = parseInt(semesterId);
-    }
-
     const officers = await prisma.officer.findMany({
-      where: whereClause,
-      include: { semester: true },
+      include: { member: true },
       orderBy: { position: 'asc' },
     });
 
@@ -27,26 +19,23 @@ export const getOfficers = async (req, res) => {
 
 export const createOfficer = async (req, res) => {
   try {
-    const { semesterId, fullName, position, contactNo, email, facebookAccount, dutiesNotes, status } = req.body;
+    const { memberId, position, duties, status } = req.body;
 
-    if (!semesterId || !fullName || !position) {
+    if (!memberId || !position) {
       return res.status(400).json({
         status: 'fail',
-        message: 'Please provide semesterId, fullName, and position.',
+        message: 'Please provide memberId and position.',
       });
     }
 
     const newOfficer = await prisma.officer.create({
       data: {
-        semesterId: parseInt(semesterId),
-        fullName,
+        memberId: parseInt(memberId),
         position,
-        contactNo: contactNo || '',
-        email: email || '',
-        facebookAccount: facebookAccount || '',
-        dutiesNotes: dutiesNotes || '',
+        duties: duties || null,
         status: status ? status.toUpperCase() : 'ACTIVE',
       },
+      include: { member: true },
     });
 
     res.status(201).json({
@@ -62,20 +51,18 @@ export const createOfficer = async (req, res) => {
 export const updateOfficer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullName, position, contactNo, email, facebookAccount, dutiesNotes, status } = req.body;
+    const { memberId, position, duties, status } = req.body;
 
     const data = {};
-    if (fullName) data.fullName = fullName;
+    if (memberId !== undefined) data.memberId = parseInt(memberId);
     if (position) data.position = position;
-    if (contactNo !== undefined) data.contactNo = contactNo;
-    if (email !== undefined) data.email = email;
-    if (facebookAccount !== undefined) data.facebookAccount = facebookAccount;
-    if (dutiesNotes !== undefined) data.dutiesNotes = dutiesNotes;
+    if (duties !== undefined) data.duties = duties || null;
     if (status) data.status = status.toUpperCase();
 
     const updatedOfficer = await prisma.officer.update({
       where: { id: parseInt(id) },
       data,
+      include: { member: true },
     });
 
     res.status(200).json({

@@ -59,7 +59,6 @@ model Semester {
 
   // Relations
   sessions  Session[]
-  officers  Officer[]
   auditions Auditionee[]
   rules     RuleRegulation[]
 }
@@ -84,6 +83,7 @@ model Member {
   updatedAt         DateTime           @updatedAt
   // Relations
   attendanceRecords AttendanceRecord[]
+  officers          Officer[]
 }
 
 //////////////////////////////////////////////////////
@@ -137,23 +137,18 @@ model AttendanceRecord {
 model Officer {
   id Int @id @default(autoincrement())
 
-  semesterId Int
-
-  fullName String
+  memberId Int
   position String
 
-  contactNo       String?
-  email           String?
-  facebookAccount String?
-
-  dutiesNotes String? @db.Text
+  duties String? @db.Text
 
   status OfficerStatus @default(ACTIVE)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  semester Semester @relation(fields: [semesterId], references: [id])
+  member Member @relation(fields: [memberId], references: [id])
 }
 
 //////////////////////////////////////////////////////
