@@ -493,7 +493,7 @@ export default function Attendance() {
           <div className="divide-y divide-slate-100/50">
             {visibleSessions.map((session) => {
               return (
-                <div key={session.id} className="flex flex-col gap-4 px-6 py-5 hover:bg-blue-50/30 transition-colors lg:flex-row lg:items-center group">
+                <div key={session.id} className="flex flex-col gap-4 px-6 py-5 hover:bg-blue-600/25  transition-colors lg:flex-row lg:items-center group">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-500 to-blue-400 text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
                     <CalendarDays size={20} />
                   </div>
@@ -707,7 +707,7 @@ export default function Attendance() {
             const hasNote = !!att?.reason
             const isInactive = member.status === 'inactive'
             return (
-              <div key={member.id} className="flex flex-col gap-4 px-6 py-4 transition-colors hover:bg-blue-50/30 sm:flex-row sm:items-center sm:gap-6 group">
+              <div key={member.id} className="flex flex-col gap-4 px-6 py-4 transition-colors hover:bg-blue-600/25 sm:flex-row sm:items-center sm:gap-6 group">
                 <Avatar name={member.firstName + ' ' + member.lastName} voicePart={member.voicePart} size="md" />
 
                 <div className="min-w-0 flex-1">
