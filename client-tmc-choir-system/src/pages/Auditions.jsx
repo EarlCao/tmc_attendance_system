@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { UserPlus, Star, Eye, CheckCircle2, XCircle, Clock, Mic2, Pencil, Loader2 } from 'lucide-react'
 import { useAuditions } from '../hooks/useAuditions'
 import { useJudges } from '../hooks/useJudges'
+import { useSemesters } from '../hooks/useSemesters'
 import { getStatusColor, getVoicePartColor, formatDateShort, cn } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Modal from '../components/common/Modal'
@@ -73,8 +74,9 @@ const emptyEvaluationForm = {
 }
 
 export default function Auditions() {
-  const { auditionees, loading: auditionsLoading, createAuditionee, updateAuditionee, updateStatus, saveEvaluation } = useAuditions()
+  const { auditionees, loading: auditionsLoading, createAuditionee, updateAuditionee, updateStatus, saveEvaluation, fetchAuditionees } = useAuditions()
   const { judges, loading: judgesLoading } = useJudges()
+  const { activeSemester, loading: semestersLoading } = useSemesters()
   
   const [search, setSearch]           = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -110,13 +112,31 @@ export default function Auditions() {
     pending: auditionees.filter(a => a.status === 'Pending').length,
   }
 
+  function buildAuditioneePayload(source) {
+    return {
+      semesterId: activeSemester?.id,
+      fullName: `${source.firstName || ''} ${source.lastName || ''}`.trim(),
+      targetPart: source.targetPart,
+      age: Number(source.age) || null,
+      course: source.course,
+      yearLevel: source.yearLevel,
+      religion: source.religion,
+      contactNo: source.contactNumber,
+      email: source.email,
+      address: source.address,
+      registryNotes: source.notes,
+      auditionDate: source.auditionDate,
+      status: source.status,
+    }
+  }
+
   async function handleAdd() {
     const errors = validateAuditioneeForm(form)
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
+    if (!activeSemester?.id) { setFormErrors({ form: 'Please create or open an active semester before registering auditionees.' }); return }
     setIsSaving(true)
     try {
-      const payload = { ...form, age: Number(form.age) || null }
-      await createAuditionee(payload)
+      await createAuditionee(buildAuditioneePayload(form))
       setAddModal(false)
       setForm(emptyForm)
       setFormErrors({})
@@ -144,8 +164,7 @@ export default function Auditions() {
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return }
     setIsSaving(true)
     try {
-      const payload = { ...form, age: Number(form.age) || null }
-      await updateAuditionee(editModal.id, payload)
+      await updateAuditionee(editModal.id, buildAuditioneePayload(form))
       setEditModal(null)
       setForm(emptyForm)
       setFormErrors({})
@@ -208,6 +227,7 @@ export default function Auditions() {
       }
       
       await saveEvaluation(payload)
+      await fetchAuditionees()
       setEvalModal(null) 
       resetRatingForm()
     } catch (e) {
@@ -240,6 +260,7 @@ export default function Auditions() {
         comments: evaluationForm.comments,
       }
       await saveEvaluation(payload)
+      await fetchAuditionees()
       setEvaluationModal(false)
       setEvaluationForm(emptyEvaluationForm)
     } catch (e) {
@@ -249,7 +270,7 @@ export default function Auditions() {
     }
   }
 
-  if (auditionsLoading || judgesLoading) {
+  if (auditionsLoading || judgesLoading || semestersLoading) {
     return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
   }
 
@@ -280,10 +301,10 @@ export default function Auditions() {
             {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
           </select>
           <div className="ml-auto flex items-center gap-3 flex-none">
-            <button onClick={() => openEvaluationModal()} disabled={auditionees.length === 0} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
+            <button onClick={() => openEvaluationModal()} disabled={auditionees.length === 0 || judges.length === 0} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
               <Star size={16}/> Add Evaluation
             </button>
-            <button onClick={() => { setForm(emptyForm); setFormErrors({}); setAddModal(true) }} className="btn-primary shadow-blue-500/40">
+            <button onClick={() => { setForm(emptyForm); setFormErrors({}); setAddModal(true) }} disabled={!activeSemester?.id} className="btn-primary shadow-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50">
               <UserPlus size={16}/> Register Auditionee
             </button>
           </div>
@@ -309,7 +330,7 @@ export default function Auditions() {
             {filtered.map((a) => {
               const avg = avgRating(a.evaluations || [])
               return (
-                <tr key={a.id} className="hover:bg-blue-50/30 transition-colors group">
+                <tr key={a.id} className="hover:bg-blue-600/25 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <Avatar name={a.firstName + ' ' + a.lastName} voicePart={a.voicePart} size="md" />
@@ -337,11 +358,11 @@ export default function Auditions() {
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${getStatusColor(a.status)}`}>{a.status}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-end gap-2 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => openEditAuditionee(a)} className="btn-secondary text-[12px] py-2 px-3 shadow-sm hover:shadow-md">
                         <Pencil size={14}/> Edit
                       </button>
-                      <button onClick={() => openEvaluationModal(a)} className="btn-secondary text-[12px] py-2 px-3 shadow-sm hover:shadow-md">
+                      <button onClick={() => openEvaluationModal(a)} disabled={judges.length === 0} className="btn-secondary text-[12px] py-2 px-3 shadow-sm hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50">
                         <Star size={14}/> Add
                       </button>
                       <button onClick={() => setEvalModal(a)} className="btn-primary text-[12px] py-2 px-3 shadow-blue-500/30 hover:shadow-blue-500/50">
@@ -377,7 +398,7 @@ export default function Auditions() {
         {evalModal && (
           <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center gap-5 p-6 bg-gradient-to-r from-slate-50 to-white border border-slate-100/80 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-5 p-6  border-slate-100/80 rounded-2xl shadow-sm">
               <Avatar name={evalModal.firstName + ' ' + evalModal.lastName} voicePart={evalModal.voicePart} size="xl" />
               <div className="flex-1">
                 <p className="text-xl font-black text-slate-800 tracking-tight">{evalModal.firstName} {evalModal.lastName}</p>
@@ -434,7 +455,7 @@ export default function Auditions() {
               <div className="pt-2">
                 <div className="mb-4 flex items-center justify-between gap-4 px-1">
                   <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Judge Evaluations</p>
-                  <button onClick={() => openRatingForm()} className="btn-secondary text-[12px] py-2 px-3 shadow-sm hover:shadow-md">
+                  <button onClick={() => openRatingForm()} disabled={judges.length === 0} className="btn-secondary text-[12px] py-2 px-3 shadow-sm hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50">
                     <UserPlus size={14} /> Add Evaluation
                   </button>
                 </div>
@@ -474,7 +495,7 @@ export default function Auditions() {
               <div className="py-12 text-center bg-slate-50/50 rounded-2xl border border-slate-100/80 border-dashed">
                 <Mic2 size={40} className="text-slate-300 mx-auto mb-3" />
                 <p className="text-[14px] font-bold text-slate-500">No evaluations submitted yet.</p>
-                <button onClick={() => openRatingForm()} className="btn-primary mt-5 text-[13px] px-6 py-2.5 shadow-blue-500/30">
+                <button onClick={() => openRatingForm()} disabled={judges.length === 0} className="btn-primary mt-5 text-[13px] px-6 py-2.5 shadow-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50">
                   <UserPlus size={16} /> Add Judge Evaluation
                 </button>
               </div>
@@ -635,6 +656,11 @@ export default function Auditions() {
       <Modal open={addModal} onClose={() => { setAddModal(false); setForm(emptyForm); setFormErrors({}) }} title="Register New Auditionee" size="md"
         footer={<><button onClick={() => { setAddModal(false); setForm(emptyForm); setFormErrors({}) }} disabled={isSaving} className="btn-secondary">Cancel</button><button onClick={handleAdd} disabled={isSaving} className="btn-primary shadow-blue-500/40">{isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : 'Register'}</button></>}>
         <div className="space-y-4">
+          {formErrors.form && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-600">
+              {formErrors.form}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">First Name *</label>
