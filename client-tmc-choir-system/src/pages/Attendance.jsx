@@ -4,6 +4,7 @@ import {
   ListPlus, MapPin, Save, SlidersHorizontal, Trash2, XCircle, Loader2, Edit
 } from 'lucide-react'
 import { useMembers } from '../hooks/useMembers'
+import { useOfficers } from '../hooks/useOfficers'
 import { useSessions } from '../hooks/useSessions'
 import { useSemesters } from '../hooks/useSemesters'
 import { cn, formatDateShort, getVoicePartColor } from '../lib/utils'
@@ -71,6 +72,7 @@ function getSessionDisplayTitle(session) {
 
 export default function Attendance() {
   const { members, loading: membersLoading } = useMembers()
+  const { officers, loading: officersLoading } = useOfficers()
   const { sessions, loading: sessionsLoading, createSession, updateSession, deleteSession, getSessionAttendance, saveSessionAttendance } = useSessions()
   const { semesters, activeSemester, loading: semestersLoading } = useSemesters()
 
@@ -165,16 +167,30 @@ export default function Attendance() {
 
   const STATUS_ORDER = ['Present', 'Late', 'Excused', 'Absent']
 
+  const officerPositionsByMemberId = useMemo(() => {
+    const positions = new Map()
+    officers
+      .filter((officer) => officer.status === 'ACTIVE')
+      .forEach((officer) => positions.set(String(officer.memberId), officer.position))
+    return positions
+  }, [officers])
+
+  function getMemberDisplayName(member) {
+    const name = `${member.firstName} ${member.lastName}`.trim()
+    const position = officerPositionsByMemberId.get(String(member.id))
+    return position ? `${name} (${position})` : name
+  }
+
   const filteredMembers = useMemo(() =>
     members
       .filter((member) => {
-        const matchSearch = (member.firstName + ' ' + member.lastName).toLowerCase().includes(search.toLowerCase())
+        const matchSearch = getMemberDisplayName(member).toLowerCase().includes(search.toLowerCase())
         const matchVoice = voiceFilter === 'All' || member.voicePart === voiceFilter
         return matchSearch && matchVoice
       })
       .sort((a, b) => {
-        const nameA = a.firstName + ' ' + a.lastName
-        const nameB = b.firstName + ' ' + b.lastName
+        const nameA = getMemberDisplayName(a)
+        const nameB = getMemberDisplayName(b)
         if (memberSort === 'name-desc') return compareText(nameB, nameA)
         if (memberSort === 'voice-asc') return compareText(a.voicePart, b.voicePart) || compareText(nameA, nameB)
         if (memberSort === 'status-asc') {
@@ -185,7 +201,7 @@ export default function Attendance() {
         }
         return compareText(nameA, nameB)
       }),
-    [members, search, voiceFilter, memberSort, currentAttendance]
+    [members, search, voiceFilter, memberSort, currentAttendance, officerPositionsByMemberId]
   )
 
   function openCreateModal() {
@@ -425,7 +441,7 @@ export default function Attendance() {
     </Modal>
   )
 
-  if (membersLoading || sessionsLoading || semestersLoading) {
+  if (membersLoading || officersLoading || sessionsLoading || semestersLoading) {
     return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
   }
 
@@ -713,7 +729,7 @@ export default function Attendance() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-3">
                     <p className="text-[14px] font-bold text-slate-800">
-                      {member.firstName} {member.lastName}
+                      {getMemberDisplayName(member)}
                     </p>
                     {isInactive && <Badge variant="default">Inactive</Badge>}
                   </div>
@@ -783,7 +799,7 @@ export default function Attendance() {
       <Modal
         open={!!notesModal}
         onClose={() => setNotesModal(null)}
-        title={`Attendance Note - ${notesModal?.firstName} ${notesModal?.lastName}`}
+        title={`Attendance Note - ${notesModal ? getMemberDisplayName(notesModal) : ''}`}
         size="sm"
         footer={
           <>

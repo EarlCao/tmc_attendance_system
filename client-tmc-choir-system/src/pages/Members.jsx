@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { UserPlus, LayoutGrid, List, Pencil, Trash2, Phone, Mail, MapPin, Loader2 } from 'lucide-react'
 import { useMembers } from '../hooks/useMembers'
+import { useOfficers } from '../hooks/useOfficers'
 import { useToast } from '../hooks/useToast'
 import { getVoicePartColor, getStatusColor, cn } from '../lib/utils'
 import SearchBar from '../components/common/SearchBar'
@@ -97,6 +98,7 @@ function MemberForm({ form, setForm, errors = {} }) {
 
 export default function Members() {
   const { members: memberList, loading, createMember, updateMember, deleteMember } = useMembers()
+  const { officers, loading: officersLoading } = useOfficers()
   const { toasts, toast, dismiss } = useToast()
   const [search, setSearch]           = useState('')
   const [voiceFilter, setVoiceFilter] = useState('All')
@@ -110,15 +112,30 @@ export default function Members() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [isSaving, setIsSaving]       = useState(false)
 
+  const officerPositionsByMemberId = useMemo(() => {
+    const positions = new Map()
+    officers
+      .filter((officer) => officer.status === 'ACTIVE')
+      .forEach((officer) => positions.set(String(officer.memberId), officer.position))
+    return positions
+  }, [officers])
+
+  function getMemberDisplayName(member) {
+    const name = `${member.firstName} ${member.lastName}`.trim()
+    const position = officerPositionsByMemberId.get(String(member.id))
+    return position ? `${name} (${position})` : name
+  }
+
   const filtered = useMemo(() =>
     memberList.filter((m) => {
-      const matchSearch = (m.firstName + ' ' + m.lastName).toLowerCase().includes(search.toLowerCase()) ||
+      const displayName = getMemberDisplayName(m)
+      const matchSearch = displayName.toLowerCase().includes(search.toLowerCase()) ||
                           m.email.toLowerCase().includes(search.toLowerCase())
       const matchVoice  = voiceFilter === 'All' || m.voicePart === voiceFilter
       const matchStatus = statusFilter === 'All' || m.status === statusFilter
       return matchSearch && matchVoice && matchStatus
     }),
-    [memberList, search, voiceFilter, statusFilter]
+    [memberList, search, voiceFilter, statusFilter, officerPositionsByMemberId]
   )
 
   const stats = {
@@ -180,7 +197,7 @@ export default function Members() {
     }
   }
 
-  if (loading) {
+  if (loading || officersLoading) {
     return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
   }
 
@@ -264,7 +281,7 @@ export default function Members() {
                     <div className="flex items-center gap-4">
                       <Avatar name={m.firstName + ' ' + m.lastName} voicePart={m.voicePart} size="md" />
                       <div>
-                        <button onClick={() => setProfileDrawer(m)} className="text-sm font-bold text-slate-800 hover:text-blue-600 transition-colors">{m.firstName} {m.lastName}</button>
+                        <button onClick={() => setProfileDrawer(m)} className="text-sm font-bold text-slate-800 hover:text-blue-600 transition-colors">{getMemberDisplayName(m)}</button>
                         <p className="text-[13px] text-slate-500">{m.email}</p>
                         <p className="text-[12px] text-slate-400 font-medium">{m.course}{m.yearLevel ? ` • Year ${m.yearLevel}` : ''}</p>
                       </div>
@@ -309,7 +326,7 @@ export default function Members() {
                 </span>
               </div>
               <button onClick={() => setProfileDrawer(m)} className="text-base font-bold text-slate-800 hover:text-blue-600 text-left transition-colors truncate">
-                {m.firstName} {m.lastName}
+                {getMemberDisplayName(m)}
               </button>
               <div className="mt-1">
                 <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ${getVoicePartColor(m.voicePart)}`}>{m.voicePart}</span>
@@ -339,7 +356,7 @@ export default function Members() {
             <div className="p-8 border-b border-slate-100/50 bg-white/50">
               <button onClick={() => setProfileDrawer(null)} className="mb-6 text-[13px] font-semibold text-slate-400 hover:text-slate-700 transition-colors">← Close Profile</button>
               <Avatar name={profileDrawer.firstName + ' ' + profileDrawer.lastName} voicePart={profileDrawer.voicePart} size="xl" />
-              <h3 className="text-2xl font-black text-slate-800 mt-4">{profileDrawer.firstName} {profileDrawer.lastName}</h3>
+              <h3 className="text-2xl font-black text-slate-800 mt-4">{getMemberDisplayName(profileDrawer)}</h3>
               <div className="mt-2 flex gap-2">
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ring-1 ${getVoicePartColor(profileDrawer.voicePart)}`}>{profileDrawer.voicePart}</span>
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ring-1 ${getStatusColor(profileDrawer.status)}`}>{profileDrawer.status}</span>
