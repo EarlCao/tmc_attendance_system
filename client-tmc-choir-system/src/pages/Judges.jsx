@@ -1,7 +1,6 @@
-import { useState, useMemo } from 'react'
-import { Mail, Pencil, Phone, Plus, Loader2, Calendar } from 'lucide-react'
+import { useState } from 'react'
+import { Mail, Pencil, Phone, Plus, Loader2 } from 'lucide-react'
 import { useJudges } from '../hooks/useJudges'
-import { useSemesters } from '../hooks/useSemesters'
 import { getStatusColor, cn } from '../lib/utils'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
@@ -13,7 +12,6 @@ function validateJudgeForm(form) {
 }
 
 export default function Judges() {
-  const { semesters, activeSemester: currentSemester, loading: sLoading } = useSemesters()
   const { judges, loading: jLoading, createJudge, updateJudge } = useJudges()
 
   const [judgeModal, setJudgeModal] = useState(false)
@@ -26,11 +24,10 @@ export default function Judges() {
     specialization: '',
     contact: '',
     email: '',
-    semesterId: '',
     status: 'active',
   })
 
-  const loading = sLoading || jLoading
+  const loading = jLoading
 
   function openJudgeModal(judge) {
     if (judge) {
@@ -44,7 +41,6 @@ export default function Judges() {
         specialization: '',
         contact: '',
         email: '',
-        semesterId: currentSemester?.id || (semesters[0]?.id ?? ''),
         status: 'active',
       })
     }
@@ -79,7 +75,7 @@ export default function Judges() {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">Audition panel</p>
             <h2 className="mt-1 text-2xl font-black text-slate-800 tracking-tight">Judges</h2>
-            <p className="mt-1 text-sm font-medium text-slate-500">Add the judges assigned to each semester and use Auditions to manually enter their ratings and comments.</p>
+            <p className="mt-1 text-sm font-medium text-slate-500">Add judges and use Auditions to manually enter their ratings and comments.</p>
           </div>
           <button onClick={() => openJudgeModal()} className="btn-primary shadow-blue-500/30">
             <Plus size={16} /> Add Judge
@@ -89,8 +85,6 @@ export default function Judges() {
 
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
         {judges.map((judge) => {
-          const semester = semesters.find((item) => item.id === Number(judge.semesterId))
-
           return (
             <div key={judge.id} className="card p-5 hover:bg-slate-50/30 transition-colors group">
               <div className="flex items-start justify-between gap-3">
@@ -114,9 +108,6 @@ export default function Judges() {
                   </p>
                   <p className="flex items-center gap-2 text-[12px] font-medium text-slate-500">
                     <Phone size={14} className="text-slate-400" /> {judge.contact || 'No contact listed'}
-                  </p>
-                  <p className="flex items-center gap-2 text-[12px] font-medium text-slate-500">
-                    <Calendar size={14} className="text-slate-400" /> {semester?.name ?? 'Semester not selected'}
                   </p>
                 </div>
               </div>
@@ -167,15 +158,9 @@ export default function Judges() {
               <input className="input bg-white" value={judgeForm.title} onChange={e => setJudgeForm(p => ({ ...p, title: e.target.value }))} placeholder="Music Director" />
             </div>
             <div>
-              <label className="label">Semester</label>
-              <select className="input bg-white" value={judgeForm.semesterId} onChange={e => setJudgeForm(p => ({ ...p, semesterId: Number(e.target.value) }))}>
-                {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
-              </select>
+              <label className="label">Specialization</label>
+              <input className="input bg-white" value={judgeForm.specialization} onChange={e => setJudgeForm(p => ({ ...p, specialization: e.target.value }))} placeholder="Vocal performance" />
             </div>
-          </div>
-          <div>
-            <label className="label">Specialization</label>
-            <input className="input bg-white" value={judgeForm.specialization} onChange={e => setJudgeForm(p => ({ ...p, specialization: e.target.value }))} placeholder="Vocal performance, choral conducting" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

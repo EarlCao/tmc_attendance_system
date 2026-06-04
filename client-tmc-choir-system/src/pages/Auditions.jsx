@@ -92,8 +92,13 @@ export default function Auditions() {
   const [evaluationForm, setEvaluationForm] = useState(emptyEvaluationForm)
   const [isSaving, setIsSaving] = useState(false)
 
+  const currentSemesterAuditionees = useMemo(() => {
+    if (!activeSemester?.id) return []
+    return auditionees.filter((auditionee) => Number(auditionee.semesterId) === Number(activeSemester.id))
+  }, [auditionees, activeSemester])
+
   const filtered = useMemo(() =>
-    auditionees.filter((a) => {
+    currentSemesterAuditionees.filter((a) => {
       const normalizedSearch = search.toLowerCase()
       const matchSearch = (a.firstName + ' ' + a.lastName).toLowerCase().includes(normalizedSearch) ||
         (a.email ?? '').toLowerCase().includes(normalizedSearch) ||
@@ -102,14 +107,14 @@ export default function Auditions() {
       const matchPart   = partFilter === 'All' || a.voicePart === partFilter
       return matchSearch && matchStatus && matchPart
     }),
-    [auditionees, search, statusFilter, partFilter]
+    [currentSemesterAuditionees, search, statusFilter, partFilter]
   )
 
   const stats = {
-    total:   auditionees.length,
-    passed:  auditionees.filter(a => a.status === 'Passed').length,
-    failed:  auditionees.filter(a => a.status === 'Failed').length,
-    pending: auditionees.filter(a => a.status === 'Pending').length,
+    total:   currentSemesterAuditionees.length,
+    passed:  currentSemesterAuditionees.filter(a => a.status === 'Passed').length,
+    failed:  currentSemesterAuditionees.filter(a => a.status === 'Failed').length,
+    pending: currentSemesterAuditionees.filter(a => a.status === 'Pending').length,
   }
 
   function buildAuditioneePayload(source) {
@@ -238,7 +243,7 @@ export default function Auditions() {
   }
 
   function openEvaluationModal(auditionee) {
-    const targetAuditionee = auditionee ?? filtered[0] ?? auditionees[0]
+    const targetAuditionee = auditionee ?? filtered[0] ?? currentSemesterAuditionees[0]
     const ratedJudgeIds = new Set(targetAuditionee?.evaluations?.map((rating) => rating.judgeId) || [])
     const nextJudge = judges.find((judge) => !ratedJudgeIds.has(judge.id)) ?? judges[0]
 
@@ -301,7 +306,7 @@ export default function Auditions() {
             {VOICE_PARTS.map(v => <option key={v}>{v}</option>)}
           </select>
           <div className="ml-auto flex items-center gap-3 flex-none">
-            <button onClick={() => openEvaluationModal()} disabled={auditionees.length === 0 || judges.length === 0} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
+            <button onClick={() => openEvaluationModal()} disabled={currentSemesterAuditionees.length === 0 || judges.length === 0} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
               <Star size={16}/> Add Evaluation
             </button>
             <button onClick={() => { setForm(emptyForm); setFormErrors({}); setAddModal(true) }} disabled={!activeSemester?.id} className="btn-primary shadow-blue-500/40 disabled:cursor-not-allowed disabled:opacity-50">
@@ -603,7 +608,7 @@ export default function Auditions() {
                   }))
                 }}
               >
-                {auditionees.map((auditionee) => (
+                {currentSemesterAuditionees.map((auditionee) => (
                   <option key={auditionee.id} value={auditionee.id}>{auditionee.firstName} {auditionee.lastName} - {auditionee.voicePart}</option>
                 ))}
               </select>

@@ -119,6 +119,7 @@ export const getAuditionees = async (req, res) => {
 
       return {
         id: a.id,
+        semesterId: a.semesterId,
         name: a.fullName,
         targetPart: a.targetVoiceType ? a.targetVoiceType.charAt(0) + a.targetVoiceType.slice(1).toLowerCase() : 'Soprano',
         age: a.age || 0,
