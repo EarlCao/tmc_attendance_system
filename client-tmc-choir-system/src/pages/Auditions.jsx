@@ -73,6 +73,28 @@ const emptyEvaluationForm = {
   ...emptyRatingForm,
 }
 
+function findJudgeEvaluation(auditionee, judgeId) {
+  if (!auditionee || !judgeId) return null
+  return (auditionee.evaluations || []).find((rating) => String(rating.judgeId) === String(judgeId)) || null
+}
+
+function buildRatingForm(judgeId, rating) {
+  return {
+    ...emptyRatingForm,
+    judgeId: judgeId ? String(judgeId) : '',
+    ...Object.fromEntries(CATEGORIES.map((cat) => [cat, rating?.[cat] ?? emptyRatingForm[cat]])),
+    comments: rating?.comments ?? '',
+  }
+}
+
+function buildEvaluationForm(auditioneeId, judgeId, rating) {
+  return {
+    ...emptyEvaluationForm,
+    auditioneeId: auditioneeId ? String(auditioneeId) : '',
+    ...buildRatingForm(judgeId, rating),
+  }
+}
+
 export default function Auditions() {
   const { auditionees, loading: auditionsLoading, createAuditionee, updateAuditionee, updateStatus, saveEvaluation, fetchAuditionees } = useAuditions()
   const { judges, loading: judgesLoading } = useJudges()
@@ -195,23 +217,15 @@ export default function Auditions() {
   function openRatingForm(rating) {
     if (rating) {
       setEditingRatingId(rating.judgeId)
-      setRatingForm({
-        judgeId: String(rating.judgeId),
-        vocalQuality: rating.vocalQuality,
-        pitchAccuracy: rating.pitchAccuracy,
-        tone: rating.tone,
-        rhythm: rating.rhythm,
-        confidence: rating.confidence,
-        stagePresence: rating.stagePresence,
-        comments: rating.comments ?? '',
-      })
+      setRatingForm(buildRatingForm(rating.judgeId, rating))
       return
     }
 
     const ratedJudgeIds = new Set(evalModal?.evaluations?.map((rating) => rating.judgeId) || [])
     const nextJudge = judges.find((judge) => !ratedJudgeIds.has(judge.id)) ?? judges[0]
+    const existingRating = findJudgeEvaluation(evalModal, nextJudge?.id)
     setEditingRatingId(null)
-    setRatingForm({ ...emptyRatingForm, judgeId: nextJudge ? String(nextJudge.id) : '' })
+    setRatingForm(buildRatingForm(nextJudge?.id, existingRating))
   }
 
   function resetRatingForm() {
@@ -246,12 +260,9 @@ export default function Auditions() {
     const targetAuditionee = auditionee ?? filtered[0] ?? currentSemesterAuditionees[0]
     const ratedJudgeIds = new Set(targetAuditionee?.evaluations?.map((rating) => rating.judgeId) || [])
     const nextJudge = judges.find((judge) => !ratedJudgeIds.has(judge.id)) ?? judges[0]
+    const existingRating = findJudgeEvaluation(targetAuditionee, nextJudge?.id)
 
-    setEvaluationForm({
-      ...emptyEvaluationForm,
-      auditioneeId: targetAuditionee ? String(targetAuditionee.id) : '',
-      judgeId: nextJudge ? String(nextJudge.id) : '',
-    })
+    setEvaluationForm(buildEvaluationForm(targetAuditionee?.id, nextJudge?.id, existingRating))
     setEvaluationModal(true)
   }
 
@@ -476,6 +487,9 @@ export default function Auditions() {
                               <Star size={16} fill="currentColor"/>
                               {(CATEGORIES.reduce((s, c) => s + (Number(r[c]) || 0), 0) / CATEGORIES.length).toFixed(1)}
                             </span>
+                            <button onClick={() => openRatingForm(r)} className="btn-secondary text-[12px] py-1.5 px-3">
+                              <Pencil size={12} /> Edit
+                            </button>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-4 mb-4 bg-slate-50/50 p-4 rounded-xl">
@@ -519,7 +533,10 @@ export default function Auditions() {
                       className="input bg-white"
                       value={ratingForm.judgeId}
                       disabled={!!editingRatingId}
-                      onChange={e => setRatingForm(p => ({ ...p, judgeId: e.target.value }))}
+                      onChange={e => {
+                        const selectedRating = findJudgeEvaluation(evalModal, e.target.value)
+                        setRatingForm(buildRatingForm(e.target.value, selectedRating))
+                      }}
                     >
                       {judges.map((judge) => (
                         <option key={judge.id} value={judge.id}>{judge.name}</option>
@@ -600,12 +617,9 @@ export default function Auditions() {
                   const auditionee = auditionees.find((item) => String(item.id) === String(e.target.value))
                   const ratedJudgeIds = new Set(auditionee?.evaluations?.map((rating) => String(rating.judgeId)) || [])
                   const nextJudge = judges.find((judge) => !ratedJudgeIds.has(String(judge.id))) ?? judges[0]
+                  const existingRating = findJudgeEvaluation(auditionee, nextJudge?.id)
 
-                  setEvaluationForm(p => ({
-                    ...p,
-                    auditioneeId: e.target.value,
-                    judgeId: nextJudge ? String(nextJudge.id) : '',
-                  }))
+                  setEvaluationForm(buildEvaluationForm(e.target.value, nextJudge?.id, existingRating))
                 }}
               >
                 {currentSemesterAuditionees.map((auditionee) => (
@@ -618,7 +632,11 @@ export default function Auditions() {
               <select
                 className="input bg-white dark:bg-slate-950/70 dark:text-slate-100 dark:border-slate-700"
                 value={evaluationForm.judgeId}
-                onChange={e => setEvaluationForm(p => ({ ...p, judgeId: e.target.value }))}
+                onChange={e => {
+                  const auditionee = auditionees.find((item) => String(item.id) === String(evaluationForm.auditioneeId))
+                  const selectedRating = findJudgeEvaluation(auditionee, e.target.value)
+                  setEvaluationForm(buildEvaluationForm(evaluationForm.auditioneeId, e.target.value, selectedRating))
+                }}
               >
                 {judges.map((judge) => (
                   <option key={judge.id} value={judge.id}>{judge.name}</option>
