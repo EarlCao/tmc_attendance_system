@@ -27,7 +27,7 @@ export default function Officers() {
 
   function getMemberName(member) {
     if (!member) return 'Unknown Member'
-    return member.fullName || 'Unknown Member'
+    return member.fullName || member.name || 'Unknown Member'
   }
 
   function openOfficerModal(officer) {
@@ -159,7 +159,7 @@ export default function Officers() {
                       </td>
                       <td className="px-5 py-4 font-bold text-slate-700">{officer.position}</td>
                       <td className="px-5 py-4 font-medium text-slate-500">
-                        <p>{member?.emailOrFacebook || member?.contactNo || 'No contact'}</p>
+                        <p>{member?.emailOrFacebook || member?.email || member?.contactNo || member?.contactNumber || 'No contact'}</p>
                       </td>
                       <td className="px-5 py-4">
                         <span className={`rounded-full px-3 py-1 text-[11px] font-bold ring-1 shadow-sm ${getStatusColor(officer.status)}`}>

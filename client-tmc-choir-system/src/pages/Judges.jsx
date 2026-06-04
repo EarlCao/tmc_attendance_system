@@ -115,7 +115,7 @@ export default function Judges() {
               </div>
               <div className="mt-5 flex items-center justify-between border-t border-slate-100/60 pt-4">
                 <span className="text-[12px] font-bold text-slate-600 bg-slate-50 px-3 py-1 rounded-lg">{judge.ratingsGiven ?? 0} ratings</span>
-                <button onClick={() => openJudgeModal(judge)} className="btn-secondary text-[12px] py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => openJudgeModal(judge)} className="btn-secondary text-[12px] py-1.5">
                   <Pencil size={12} /> Edit
                 </button>
               </div>
