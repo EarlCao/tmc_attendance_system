@@ -97,8 +97,8 @@ function buildEvaluationForm(auditioneeId, judgeId, rating) {
 
 export default function Auditions() {
   const { auditionees, loading: auditionsLoading, createAuditionee, updateAuditionee, updateStatus, saveEvaluation, fetchAuditionees } = useAuditions()
-  const { judges, loading: judgesLoading } = useJudges()
   const { activeSemester, loading: semestersLoading } = useSemesters()
+  const { judges, loading: judgesLoading } = useJudges(activeSemester?.id)
   
   const [search, setSearch]           = useState('')
   const [statusFilter, setStatusFilter] = useState('All')

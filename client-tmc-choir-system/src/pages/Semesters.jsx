@@ -157,8 +157,8 @@ export default function Semesters() {
     [selectedSemester, auditionees]
   )
   const selectedJudges = useMemo(
-    () => (selectedSemester ? judges.filter(j => j.semesterId === selectedSemester.id || currentSemester?.id === selectedSemester.id) : []),
-    [selectedSemester, judges, currentSemester]
+    () => (selectedSemester ? judges.filter(j => Number(j.semesterId) === Number(selectedSemester.id)) : []),
+    [selectedSemester, judges]
   )
   const selectedAuditionSummary = useMemo(
     () => ({

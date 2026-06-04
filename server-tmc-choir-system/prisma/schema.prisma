@@ -61,6 +61,7 @@ model Semester {
   sessions  Session[]
   auditions Auditionee[]
   rules     RuleRegulation[]
+  judges    Judge[]
 }
 
 //////////////////////////////////////////////////////
@@ -158,6 +159,8 @@ model Officer {
 model Judge {
   id Int @id @default(autoincrement())
 
+  semesterId Int?
+
   fullName       String
   titleRole      String?
   specialization String?
@@ -171,6 +174,7 @@ model Judge {
   createdAt DateTime @default(now())
 
   // Relations
+  semester    Semester? @relation(fields: [semesterId], references: [id], onDelete: SetNull)
   evaluations JudgeEvaluation[]
 }
 

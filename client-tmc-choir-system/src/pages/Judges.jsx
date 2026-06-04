@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Mail, Pencil, Phone, Plus, Loader2 } from 'lucide-react'
 import { useJudges } from '../hooks/useJudges'
+import { useSemesters } from '../hooks/useSemesters'
 import { getStatusColor, cn } from '../lib/utils'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
@@ -12,7 +13,8 @@ function validateJudgeForm(form) {
 }
 
 export default function Judges() {
-  const { judges, loading: jLoading, createJudge, updateJudge } = useJudges()
+  const { activeSemester, loading: sLoading } = useSemesters()
+  const { judges, loading: jLoading, createJudge, updateJudge } = useJudges(activeSemester?.id)
 
   const [judgeModal, setJudgeModal] = useState(false)
   const [editingJudge, setEditingJudge] = useState(null)
@@ -27,7 +29,7 @@ export default function Judges() {
     status: 'active',
   })
 
-  const loading = jLoading
+  const loading = sLoading || jLoading
 
   function openJudgeModal(judge) {
     if (judge) {
@@ -56,7 +58,7 @@ export default function Judges() {
       if (editingJudge) {
         await updateJudge(editingJudge.id, judgeForm)
       } else {
-        await createJudge(judgeForm)
+        await createJudge({ ...judgeForm, semesterId: activeSemester?.id })
       }
       setJudgeModal(false)
     } finally {

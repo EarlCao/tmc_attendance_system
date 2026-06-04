@@ -59,7 +59,7 @@ export const semestersAPI = {
 };
 
 export const judgesAPI = {
-  getJudges: () => api.get('/judges').then(res => res.data),
+  getJudges: (params) => api.get('/judges', { params }).then(res => res.data),
   createJudge: (data) => api.post('/judges', data).then(res => res.data),
   updateJudge: (id, data) => api.put(`/judges/${id}`, data).then(res => res.data),
   deleteJudge: (id) => api.delete(`/judges/${id}`).then(res => res.data),

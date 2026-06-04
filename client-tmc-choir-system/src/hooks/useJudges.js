@@ -15,15 +15,19 @@ const formatJudge = (judge = {}) => ({
   ratingsGiven: judge.ratingsGiven ?? judge._count?.evaluations ?? 0,
 });
 
-export function useJudges() {
+export function useJudges(semesterId) {
   const [judges, setJudges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isInScope = useCallback(
+    (judge) => !semesterId || String(judge.semesterId) === String(semesterId),
+    [semesterId]
+  );
 
   const fetchJudges = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await judgesAPI.getJudges();
+      const res = await judgesAPI.getJudges(semesterId ? { semesterId } : undefined);
       setJudges((res.data?.judges || []).map(formatJudge));
       setError(null);
     } catch (err) {
@@ -32,7 +36,7 @@ export function useJudges() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [semesterId]);
 
   useEffect(() => {
     fetchJudges();
@@ -42,6 +46,7 @@ export function useJudges() {
   useEffect(() => {
     const onCreated = (judge) => {
       const formatted = formatJudge(judge);
+      if (!isInScope(formatted)) return;
       setJudges((prev) => {
         if (prev.find((j) => j.id === formatted.id)) return prev;
         return [...prev, formatted].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -50,7 +55,13 @@ export function useJudges() {
 
     const onUpdated = (judge) => {
       const formatted = formatJudge(judge);
-      setJudges((prev) => prev.map((j) => (j.id === formatted.id ? { ...j, ...formatted } : j)));
+      setJudges((prev) => {
+        if (!isInScope(formatted)) return prev.filter((j) => j.id !== formatted.id);
+        if (!prev.find((j) => j.id === formatted.id)) {
+          return [...prev, formatted].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        }
+        return prev.map((j) => (j.id === formatted.id ? { ...j, ...formatted } : j));
+      });
     };
 
     const onDeleted = ({ id }) => {
@@ -66,17 +77,19 @@ export function useJudges() {
       socket.off('judge:updated', onUpdated);
       socket.off('judge:deleted', onDeleted);
     };
-  }, []);
+  }, [isInScope]);
 
   const createJudge = async (data) => {
     const res = await judgesAPI.createJudge(data);
     const judge = res.data?.judge;
     if (judge) {
       const formatted = formatJudge(judge);
-      setJudges((prev) => {
-        if (prev.find((j) => j.id === formatted.id)) return prev;
-        return [...prev, formatted].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      });
+      if (isInScope(formatted)) {
+        setJudges((prev) => {
+          if (prev.find((j) => j.id === formatted.id)) return prev;
+          return [...prev, formatted].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        });
+      }
     }
     return res;
   };
@@ -86,7 +99,10 @@ export function useJudges() {
     const judge = res.data?.judge;
     if (judge) {
       const formatted = formatJudge(judge);
-      setJudges((prev) => prev.map((j) => (j.id === formatted.id ? { ...j, ...formatted } : j)));
+      setJudges((prev) => {
+        if (!isInScope(formatted)) return prev.filter((j) => j.id !== formatted.id);
+        return prev.map((j) => (j.id === formatted.id ? { ...j, ...formatted } : j));
+      });
     }
     return res;
   };
