@@ -60,7 +60,19 @@ export const createAccount = async (req, res) => {
 export const updateAccount = async (req, res) => {
   try {
     const { id } = req.params;
-    const { username, password, role, isActive } = req.body;
+    const { username, password, currentPassword, role, isActive } = req.body;
+
+    const existingUser = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+    if (!existingUser) {
+      return res.status(404).json({ status: 'fail', message: 'Account not found' });
+    }
+
+    if (password && currentPassword) {
+      const isMatch = await bcrypt.compare(currentPassword, existingUser.passwordHash);
+      if (!isMatch) {
+        return res.status(400).json({ status: 'fail', message: 'Incorrect current password' });
+      }
+    }
 
     const data = {};
     if (username) data.username = username;

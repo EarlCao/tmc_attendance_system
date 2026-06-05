@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 import {
   Plus, Trash2, Pencil, Loader2,
-  Download, Upload, Star, BookOpen, HardDrive, AlertTriangle,
+  Download, Upload, Star, BookOpen, HardDrive, AlertTriangle, Shield
 } from 'lucide-react'
+import { useAccounts } from '../hooks/useAccounts'
 import { useRules } from '../hooks/useRules'
 import { useCategories } from '../hooks/useCategories'
 import { getStatusColor } from '../lib/utils'
@@ -14,6 +15,7 @@ import EmptyState from '../components/common/EmptyState'
 const TABS = [
   { id: 'rules',      label: 'Choir Rules',        icon: BookOpen },
   { id: 'categories', label: 'Rating Categories',   icon: Star },
+  { id: 'superadmin', label: 'System Admins',       icon: Shield },
   { id: 'backup',     label: 'Backup & Recovery',   icon: HardDrive },
 ]
 
@@ -22,6 +24,7 @@ const RULE_CATEGORIES = ['General', 'Attendance', 'Conduct', 'Membership', 'Audi
 export default function Settings() {
   const { rules, loading: rulesLoading, createRule, updateRule, deleteRule } = useRules()
   const { categories, loading: catsLoading, createCategory, updateCategory, deleteCategory } = useCategories()
+  const { accounts, loading: accountsLoading, createAccount, updateAccount, deleteAccount } = useAccounts()
 
   const [activeTab, setActiveTab] = useState('rules')
 
@@ -39,6 +42,14 @@ export default function Settings() {
   const [deleteCatConfirm, setDeleteCatConfirm]     = useState(null)
   const [catError, setCatError]                     = useState('')
 
+  // ── SuperAdmin state ──────────────────────────────────────────────────────
+  const [adminModal, setAdminModal]                 = useState(false)
+  const [editingAdmin, setEditingAdmin]             = useState(null)
+  const [adminForm, setAdminForm]                   = useState({ username: '', currentPassword: '', password: '', confirmPassword: '', role: 'admin' })
+  const [adminError, setAdminError]                 = useState('')
+
+  const superAdmins = (accounts || []).filter(a => a.role.toLowerCase() === 'admin' && !a.member)
+
   // ── Backup state ──────────────────────────────────────────────────────────
   const [exportLoading, setExportLoading]           = useState(false)
   const [exportMsg, setExportMsg]                   = useState('')
@@ -49,7 +60,7 @@ export default function Settings() {
   const fileInputRef                                = useRef(null)
 
   const [isSaving, setIsSaving] = useState(false)
-  const loading = rulesLoading || catsLoading
+  const loading = rulesLoading || catsLoading || accountsLoading
 
   // ── Rule helpers ──────────────────────────────────────────────────────────
   function openRuleModal(rule = null) {
@@ -142,6 +153,52 @@ export default function Settings() {
     try { await deleteCategory(id); setDeleteCatConfirm(null) }
     catch (err) { setCatError(err?.response?.data?.message || 'Failed to delete category.'); setDeleteCatConfirm(null) }
     finally { setIsSaving(false) }
+  }
+
+  // ── SuperAdmin helpers ────────────────────────────────────────────────────
+  function openAdminModal(admin = null) {
+    setAdminError('')
+    if (admin) {
+      setEditingAdmin(admin)
+      setAdminForm({ username: admin.username, role: 'admin', currentPassword: '', password: '', confirmPassword: '' })
+    } else {
+      setEditingAdmin(null)
+      setAdminForm({ username: '', currentPassword: '', password: '', confirmPassword: '', role: 'admin' })
+    }
+    setAdminModal(true)
+  }
+
+  async function handleSaveAdmin() {
+    setAdminError('')
+    if (!adminForm.username.trim()) { setAdminError('Username is required.'); return }
+    
+    if (editingAdmin) {
+      if (adminForm.password || adminForm.currentPassword || adminForm.confirmPassword) {
+        if (!adminForm.currentPassword) { setAdminError('Current password is required to change password.'); return }
+        if (adminForm.password !== adminForm.confirmPassword) { setAdminError('New passwords do not match.'); return }
+      }
+    } else {
+      if (!adminForm.password) { setAdminError('Password is required for new accounts.'); return }
+      if (adminForm.password !== adminForm.confirmPassword) { setAdminError('Passwords do not match.'); return }
+    }
+
+    setIsSaving(true)
+    try {
+      const payload = {
+        username: adminForm.username,
+        role: adminForm.role,
+        ...(adminForm.password && { password: adminForm.password }),
+        ...(adminForm.currentPassword && { currentPassword: adminForm.currentPassword })
+      }
+      
+      if (editingAdmin) await updateAccount(editingAdmin.id, payload)
+      else await createAccount(payload)
+      setAdminModal(false)
+    } catch (err) {
+      setAdminError(err?.response?.data?.message || err?.message || 'Failed to save admin.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // ── Backup helpers ────────────────────────────────────────────────────────
@@ -339,6 +396,56 @@ export default function Settings() {
                 title="No rating categories yet"
                 description="Add categories like Vocal Quality, Pitch Accuracy, or Stage Presence that judges will score during auditions."
               />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: System Admins ─────────────────────────────────────────────── */}
+      {activeTab === 'superadmin' && (
+        <div className="card p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="text-[15px] font-black text-slate-800">System Administrators</h3>
+              <p className="mt-1 text-[13px] font-medium text-slate-500">
+                Core super admin accounts not linked to any specific choir member.
+              </p>
+            </div>
+            <button onClick={() => openAdminModal()} className="btn-primary shadow-blue-500/30">
+              <Plus size={16} /> Add Admin
+            </button>
+          </div>
+          <div className="mt-5">
+            {adminError && !adminModal && (
+              <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-[13px] font-medium text-red-600">{adminError}</div>
+            )}
+            {superAdmins.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <th className="px-5 py-3 text-left font-bold text-slate-500">Username</th>
+                      <th className="px-5 py-3 text-right font-bold text-slate-500">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {superAdmins.map((admin) => (
+                      <tr key={admin.id} className="hover:bg-blue-600/5 transition-colors">
+                        <td className="px-5 py-4 font-black text-slate-800">{admin.username}</td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => openAdminModal(admin)} className="p-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                              <Pencil size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState title="No system admins" description="There are no core system administrators." />
             )}
           </div>
         </div>
@@ -559,6 +666,54 @@ export default function Settings() {
           Are you sure you want to remove <strong>{deleteCatConfirm?.name}</strong>?
           Categories with existing evaluation scores cannot be deleted.
         </p>
+      </Modal>
+
+      {/* ── Admin Add/Edit Modal ───────────────────────────────────────────── */}
+      <Modal
+        open={adminModal}
+        onClose={() => { setAdminModal(false); setAdminError('') }}
+        title={editingAdmin ? 'Edit System Admin' : 'Add System Admin'}
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => { setAdminModal(false); setAdminError('') }} disabled={isSaving} className="btn-secondary">Cancel</button>
+            <button onClick={handleSaveAdmin} disabled={isSaving} className="btn-primary shadow-blue-500/40">
+              {isSaving ? <Loader2 className="animate-spin w-4 h-4" /> : 'Save Admin'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {adminError && (
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-[13px] font-medium text-red-600">{adminError}</div>
+          )}
+          <div>
+            <label className="label">Username *</label>
+            <input className="input bg-white" value={adminForm.username}
+              onChange={e => { setAdminError(''); setAdminForm(p => ({ ...p, username: e.target.value })) }}
+              placeholder="e.g. super.admin" />
+          </div>
+          {editingAdmin && (
+            <div>
+              <label className="label">Current Password (leave blank to keep current)</label>
+              <input type="password" className="input bg-white" value={adminForm.currentPassword}
+                onChange={e => { setAdminError(''); setAdminForm(p => ({ ...p, currentPassword: e.target.value })) }}
+                placeholder="••••••••" />
+            </div>
+          )}
+          <div>
+            <label className="label">{editingAdmin ? 'New Password' : 'Password *'}</label>
+            <input type="password" className="input bg-white" value={adminForm.password}
+              onChange={e => { setAdminError(''); setAdminForm(p => ({ ...p, password: e.target.value })) }}
+              placeholder="••••••••" />
+          </div>
+          <div>
+            <label className="label">Confirm {editingAdmin ? 'New ' : ''}Password {editingAdmin ? '' : '*'}</label>
+            <input type="password" className="input bg-white" value={adminForm.confirmPassword}
+              onChange={e => { setAdminError(''); setAdminForm(p => ({ ...p, confirmPassword: e.target.value })) }}
+              placeholder="••••••••" />
+          </div>
+        </div>
       </Modal>
 
       {/* ── Import Confirm Modal ──────────────────────────────────────────── */}

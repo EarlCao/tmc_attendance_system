@@ -52,21 +52,23 @@ export default function Accounts() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
 
+  const visibleAccounts = useMemo(() => accounts.filter(a => !(a.role.toLowerCase() === 'admin' && !a.member)), [accounts])
+
   const filtered = useMemo(() =>
-    accounts.filter((a) => {
+    visibleAccounts.filter((a) => {
       const matchSearch = a.username.toLowerCase().includes(search.toLowerCase()) ||
                           (a.member?.fullName && a.member.fullName.toLowerCase().includes(search.toLowerCase()))
       const matchRole = roleFilter === 'All' || a.role.toLowerCase() === roleFilter.toLowerCase()
       return matchSearch && matchRole
     }).sort((a, b) => a.username.localeCompare(b.username)),
-    [accounts, search, roleFilter]
+    [visibleAccounts, search, roleFilter]
   )
 
   const stats = {
-    total: accounts.length,
-    admins: accounts.filter(a => a.role.toLowerCase() === 'admin').length,
-    members: accounts.filter(a => a.role.toLowerCase() === 'member').length,
-    active: accounts.filter(a => a.isActive).length,
+    total: visibleAccounts.length,
+    admins: visibleAccounts.filter(a => a.role.toLowerCase() === 'admin').length,
+    members: visibleAccounts.filter(a => a.role.toLowerCase() === 'member').length,
+    active: visibleAccounts.filter(a => a.isActive).length,
   }
 
   function openAdd() { setForm(emptyForm); setAddModal(true) }
