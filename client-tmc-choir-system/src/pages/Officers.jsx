@@ -6,9 +6,17 @@ import { getStatusColor } from '../lib/utils'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
 
+const STATUS_FILTERS = [
+  { value: 'active',   label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'all',      label: 'All' },
+]
+
 export default function Officers() {
   const { officers, loading: oLoading, createOfficer, updateOfficer, deleteOfficer } = useOfficers()
   const { members, loading: mLoading } = useMembers()
+
+  const [statusFilter, setStatusFilter] = useState('active')
 
   const [officerModal, setOfficerModal] = useState(false)
   const [editingOfficer, setEditingOfficer] = useState(null)
@@ -24,6 +32,10 @@ export default function Officers() {
   })
 
   const loading = oLoading || mLoading
+
+  const filteredOfficers = statusFilter === 'all'
+    ? officers
+    : officers.filter((o) => o.status?.toLowerCase() === statusFilter)
 
   function getMemberName(member) {
     if (!member) return 'Unknown Member'
@@ -55,7 +67,6 @@ export default function Officers() {
   async function handleSaveOfficer() {
     setFormError('')
 
-    // Validate required fields
     if (!officerForm.memberId) {
       setFormError('Please select a member.')
       return
@@ -65,7 +76,6 @@ export default function Officers() {
       return
     }
 
-    // Prevent duplicate: same member already an officer (skip check when editing same record)
     const isDuplicate = officers.some(
       (o) =>
         String(o.memberId) === String(officerForm.memberId) &&
@@ -129,10 +139,36 @@ export default function Officers() {
             <Plus size={16} /> Add Officer
           </button>
         </div>
+
+        {/* Status filter tabs */}
+        <div className="mt-5 flex items-center gap-1 border-b border-slate-100">
+          {STATUS_FILTERS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setStatusFilter(value)}
+              className={[
+                'px-4 py-2 text-[13px] font-semibold rounded-t-lg transition-colors border-b-2 -mb-px',
+                statusFilter === value
+                  ? 'border-blue-600 text-blue-600 bg-blue-50/60'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50',
+              ].join(' ')}
+            >
+              {label}
+              {value !== 'all' && (
+                <span className={[
+                  'ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                  statusFilter === value ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500',
+                ].join(' ')}>
+                  {officers.filter((o) => o.status?.toLowerCase() === value).length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="card overflow-hidden">
-        {officers.length > 0 ? (
+        {filteredOfficers.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
@@ -145,8 +181,7 @@ export default function Officers() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {officers.map((officer) => {
-                  // Use embedded member from API response; fall back to members array lookup
+                {filteredOfficers.map((officer) => {
                   const member = officer.member || members.find((m) => m.id === Number(officer.memberId))
 
                   return (
@@ -183,7 +218,14 @@ export default function Officers() {
             </table>
           </div>
         ) : (
-          <EmptyState title="No officers found" description="There are no officers assigned. Click 'Add Officer' to assign one." />
+          <EmptyState
+            title={`No ${statusFilter === 'all' ? '' : statusFilter + ' '}officers found`}
+            description={
+              statusFilter === 'all'
+                ? "There are no officers assigned. Click 'Add Officer' to assign one."
+                : `No officers with status "${statusFilter}". Switch to All or add a new officer.`
+            }
+          />
         )}
       </div>
 

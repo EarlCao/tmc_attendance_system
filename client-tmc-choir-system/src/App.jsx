@@ -13,7 +13,6 @@ import Dashboard from './pages/Dashboard'
 import Attendance from './pages/Attendance'
 import Members from './pages/Members'
 import Auditions from './pages/Auditions'
-import Absences from './pages/Absences'
 import Semesters from './pages/Semesters'
 import Judges from './pages/Judges'
 import Officers from './pages/Officers'
@@ -67,7 +66,6 @@ function AppRoutes() {
         <Route path="/attendance" element={<RequireActiveSemester currentSemester={currentSemester}><Attendance /></RequireActiveSemester>} />
         <Route path="/members" element={<RequireActiveSemester currentSemester={currentSemester}><Members /></RequireActiveSemester>} />
         <Route path="/auditions" element={<RequireActiveSemester currentSemester={currentSemester}><Auditions /></RequireActiveSemester>} />
-        <Route path="/absences" element={<RequireActiveSemester currentSemester={currentSemester}><Absences /></RequireActiveSemester>} />
         <Route path="/judges" element={<RequireActiveSemester currentSemester={currentSemester}><Judges /></RequireActiveSemester>} />
         <Route path="/officers" element={<RequireActiveSemester currentSemester={currentSemester}><Officers /></RequireActiveSemester>} />
         <Route
