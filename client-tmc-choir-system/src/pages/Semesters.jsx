@@ -1,18 +1,28 @@
-import { useState, useMemo } from 'react'
-import { CalendarDays, Eye, Lock, Pencil, Plus, Loader2 } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { CalendarDays, Eye, Lock, Pencil, Plus, Loader2, Mic2, Users, Star } from 'lucide-react'
 import { useSemesters } from '../hooks/useSemesters'
 import { useSessions } from '../hooks/useSessions'
 import { useMembers } from '../hooks/useMembers'
 import { useAuditions } from '../hooks/useAuditions'
 import { useJudges } from '../hooks/useJudges'
 import { useExcuses } from '../hooks/useExcuses'
+import { useDebounce } from '../hooks/useDebounce'
 import { getStatusColor, formatDateShort, cn, getAttendanceColor, getVoicePartColor } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Modal from '../components/common/Modal'
+import SearchBar from '../components/common/SearchBar'
+import EmptyState from '../components/common/EmptyState'
 
 const semesterTabs = ['Overview', 'Attendance', 'Sessions', 'People', 'Auditions']
 
 const today = new Date().toISOString().split('T')[0]
+
+const AUDIT_CATS = ['vocalQuality','pitchAccuracy','tone','rhythm','confidence','stagePresence']
+function avgRating(evals = []) {
+  if (!evals.length) return null
+  const total = evals.reduce((s, r) => s + AUDIT_CATS.reduce((cs, c) => cs + Number(r[c] || 0), 0) / AUDIT_CATS.length, 0)
+  return (total / evals.length).toFixed(1)
+}
 
 function formatSemesterRange(semester) {
   if (!semester.startDate && !semester.endDate) return 'Dates not set'
@@ -38,7 +48,18 @@ export default function Semesters() {
   const [endConfirmText, setEndConfirmText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  // Edit modal state
+  // Tab search states — raw input drives SearchBar; debounced value drives filtering
+  const [attSearchInput,  setAttSearchInput]  = useState('')
+  const [sessSearchInput, setSessSearchInput] = useState('')
+  const [pplSearchInput,  setPplSearchInput]  = useState('')
+  const [audSearchInput,  setAudSearchInput]  = useState('')
+  const attSearch  = useDebounce(attSearchInput,  300)
+  const sessSearch = useDebounce(sessSearchInput, 300)
+  const pplSearch  = useDebounce(pplSearchInput,  300)
+  const audSearch  = useDebounce(audSearchInput,  300)
+  // Tab filter states
+  const [pplVoiceFilter,  setPplVoiceFilter]  = useState('All')
+  const [audStatusFilter, setAudStatusFilter] = useState('All')
   const [editModal, setEditModal] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [editForm, setEditForm] = useState({ name: '', endDate: '' })
@@ -167,6 +188,68 @@ export default function Semesters() {
       pending: selectedAuditionees.filter((a) => a.status === 'Pending').length,
     }),
     [selectedAuditionees]
+  )
+
+  // Reset tab search / filters whenever the user opens a different semester
+  useEffect(() => {
+    setAttSearchInput('')
+    setSessSearchInput('')
+    setPplSearchInput('')
+    setAudSearchInput('')
+    setPplVoiceFilter('All')
+    setAudStatusFilter('All')
+  }, [selectedSemester?.id])
+
+  // ── Attendance tab ───────────────────────────────────────────
+  const filteredAttSessions = useMemo(() =>
+    selectedSessions.filter(s => {
+      if (!attSearch) return true
+      const q = attSearch.toLowerCase()
+      return (s.title || '').toLowerCase().includes(q) || s.type.toLowerCase().includes(q)
+    }),
+    [selectedSessions, attSearch]
+  )
+  const attAggregate = useMemo(() => ({
+    Present: selectedSessions.reduce((n, s) => n + (s.counts?.Present || 0), 0),
+    Late:    selectedSessions.reduce((n, s) => n + (s.counts?.Late    || 0), 0),
+    Absent:  selectedSessions.reduce((n, s) => n + (s.counts?.Absent  || 0), 0),
+    Excused: selectedSessions.reduce((n, s) => n + (s.counts?.Excused || 0), 0),
+  }), [selectedSessions])
+
+  // ── Sessions tab ─────────────────────────────────────────────
+  const filteredSessList = useMemo(() =>
+    selectedSessions.filter(s => {
+      if (!sessSearch) return true
+      const q = sessSearch.toLowerCase()
+      return (s.title || '').toLowerCase().includes(q) ||
+             s.type.toLowerCase().includes(q) ||
+             (s.notes || '').toLowerCase().includes(q)
+    }),
+    [selectedSessions, sessSearch]
+  )
+
+  // ── People tab ───────────────────────────────────────────────
+  const filteredPeople = useMemo(() =>
+    members.filter(m => {
+      if (m.status !== 'active') return false
+      const name = `${m.firstName} ${m.lastName}`.toLowerCase()
+      const matchSearch = !pplSearch || name.includes(pplSearch.toLowerCase())
+      const matchVoice  = pplVoiceFilter === 'All' || m.voicePart === pplVoiceFilter
+      return matchSearch && matchVoice
+    }),
+    [members, pplSearch, pplVoiceFilter]
+  )
+
+  // ── Auditions tab ────────────────────────────────────────────
+  const filteredAudit = useMemo(() =>
+    selectedAuditionees.filter(a => {
+      const q = audSearch.toLowerCase()
+      const name = `${a.firstName} ${a.lastName}`.toLowerCase()
+      const matchSearch = !q || name.includes(q) || (a.course || '').toLowerCase().includes(q)
+      const matchStatus = audStatusFilter === 'All' || a.status === audStatusFilter
+      return matchSearch && matchStatus
+    }),
+    [selectedAuditionees, audSearch, audStatusFilter]
   )
 
   if (loading) {
@@ -327,9 +410,200 @@ export default function Semesters() {
             )}
 
             {selectedTab !== 'Overview' && (
-              <div className="rounded-2xl bg-slate-50/50 p-8 text-center border border-slate-100/50 border-dashed">
-                <p className="text-[14px] font-bold text-slate-500">Detailed {selectedTab.toLowerCase()} view is available in specific modules.</p>
-              </div>
+              <>
+                {/* ── Attendance Tab ──────────────────────────────── */}
+                {selectedTab === 'Attendance' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {[
+                        { label: 'Present', value: attAggregate.Present, cls: 'text-emerald-700 bg-emerald-50 ring-emerald-200' },
+                        { label: 'Late',    value: attAggregate.Late,    cls: 'text-amber-700  bg-amber-50  ring-amber-200'  },
+                        { label: 'Absent',  value: attAggregate.Absent,  cls: 'text-rose-700   bg-rose-50   ring-rose-200'   },
+                        { label: 'Excused', value: attAggregate.Excused, cls: 'text-blue-700   bg-blue-50   ring-blue-200'   },
+                      ].map(s => (
+                        <div key={s.label} className={`rounded-2xl p-4 ring-1 ${s.cls}`}>
+                          <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{s.label}</p>
+                          <p className="mt-1 text-2xl font-black">{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <SearchBar value={attSearchInput} onChange={setAttSearchInput} placeholder="Search sessions…" />
+                    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                      {filteredAttSessions.length === 0 ? (
+                        <EmptyState
+                          icon={CalendarDays}
+                          title={selectedSessions.length === 0 ? 'No sessions yet' : 'No sessions match your search'}
+                          description={selectedSessions.length === 0 ? 'Sessions created for this semester will appear here.' : 'Try a different keyword.'}
+                        />
+                      ) : (
+                        <div className="divide-y divide-slate-100">
+                          {filteredAttSessions.map(s => (
+                            <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/50 transition-colors">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-bold text-slate-800 truncate">{s.title || formatDateShort(s.date)}</p>
+                                <p className="text-[11px] font-medium text-slate-400 mt-0.5">{s.type} · {formatDateShort(s.date)}</p>
+                              </div>
+                              <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+                                {['Present','Late','Absent','Excused'].map(st => (
+                                  <span key={st} className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ring-1 ${getAttendanceColor(st)}`}>
+                                    {s.counts?.[st] ?? 0}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Sessions Tab ────────────────────────────────── */}
+                {selectedTab === 'Sessions' && (
+                  <div className="space-y-4">
+                    <SearchBar value={sessSearchInput} onChange={setSessSearchInput} placeholder="Search sessions…" />
+                    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                      {filteredSessList.length === 0 ? (
+                        <EmptyState
+                          icon={CalendarDays}
+                          title={selectedSessions.length === 0 ? 'No sessions yet' : 'No sessions match your search'}
+                          description="Sessions created for this semester appear here."
+                        />
+                      ) : (
+                        <div className="divide-y divide-slate-100">
+                          {filteredSessList.map(s => (
+                            <div key={s.id} className="px-4 py-3 hover:bg-slate-50/50 transition-colors">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-[13px] font-bold text-slate-800">{s.title || '(Untitled session)'}</p>
+                                  <p className="mt-0.5 text-[11px] font-semibold text-blue-500 flex items-center gap-1">
+                                    <CalendarDays size={11}/> {formatDateShort(s.date)}
+                                  </p>
+                                  {s.notes && <p className="mt-1 text-[12px] font-medium text-slate-400 line-clamp-1">{s.notes}</p>}
+                                </div>
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600 ring-1 ring-slate-200">{s.type}</span>
+                                  {s.location && <span className="text-[11px] font-medium text-slate-400">{s.location}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── People Tab ──────────────────────────────────── */}
+                {selectedTab === 'People' && (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-3">
+                      <SearchBar value={pplSearchInput} onChange={setPplSearchInput} placeholder="Search members…" className="flex-1 min-w-[180px]" />
+                      <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl shrink-0">
+                        {['All','Soprano','Alto','Tenor','Bass'].map(v => (
+                          <button
+                            key={v}
+                            onClick={() => setPplVoiceFilter(v)}
+                            className={cn(
+                              'px-3 py-1.5 text-[12px] font-bold rounded-lg transition-all',
+                              pplVoiceFilter === v ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            )}
+                          >{v}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                      {filteredPeople.length === 0 ? (
+                        <EmptyState icon={Users} title="No members found" description="No active members match your filters." />
+                      ) : (
+                        <div className="divide-y divide-slate-100">
+                          {filteredPeople.map(m => (
+                            <div key={m.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/50 transition-colors">
+                              <Avatar name={`${m.firstName} ${m.lastName}`} voicePart={m.voicePart} size="sm" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-bold text-slate-800 truncate">{m.firstName} {m.lastName}</p>
+                                <p className="text-[11px] font-medium text-slate-400">{m.course}{m.yearLevel ? ` · Yr ${m.yearLevel}` : ''}</p>
+                              </div>
+                              <span className={`shrink-0 text-[11px] font-bold px-2.5 py-0.5 rounded-full ring-1 ${getVoicePartColor(m.voicePart)}`}>{m.voicePart}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-center text-[12px] font-medium text-slate-400">
+                      {filteredPeople.length} active member{filteredPeople.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                )}
+
+                {/* ── Auditions Tab ────────────────────────────────── */}
+                {selectedTab === 'Auditions' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { label: 'Passed',  value: selectedAuditionSummary.passed,  cls: 'text-emerald-700 bg-emerald-50 ring-emerald-200' },
+                        { label: 'Failed',  value: selectedAuditionSummary.failed,  cls: 'text-rose-700   bg-rose-50   ring-rose-200'   },
+                        { label: 'Pending', value: selectedAuditionSummary.pending, cls: 'text-amber-700  bg-amber-50  ring-amber-200'  },
+                      ].map(s => (
+                        <div key={s.label} className={`rounded-2xl p-4 ring-1 ${s.cls}`}>
+                          <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{s.label}</p>
+                          <p className="mt-1 text-2xl font-black">{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <SearchBar value={audSearchInput} onChange={setAudSearchInput} placeholder="Search auditionees…" className="flex-1 min-w-[180px]" />
+                      <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl shrink-0">
+                        {['All','Passed','Failed','Pending'].map(st => (
+                          <button
+                            key={st}
+                            onClick={() => setAudStatusFilter(st)}
+                            className={cn(
+                              'px-3 py-1.5 text-[12px] font-bold rounded-lg transition-all',
+                              audStatusFilter === st ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            )}
+                          >{st}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                      {filteredAudit.length === 0 ? (
+                        <EmptyState
+                          icon={Mic2}
+                          title={selectedAuditionees.length === 0 ? 'No auditionees yet' : 'No auditionees match your filters'}
+                          description="Auditionees registered within this semester’s date range appear here."
+                        />
+                      ) : (
+                        <div className="divide-y divide-slate-100">
+                          {filteredAudit.map(a => {
+                            const avg = avgRating(a.evaluations || [])
+                            return (
+                              <div key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50/50 transition-colors">
+                                <Avatar name={`${a.firstName} ${a.lastName}`} voicePart={a.voicePart} size="sm" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[13px] font-bold text-slate-800 truncate">{a.firstName} {a.lastName}</p>
+                                  <p className="text-[11px] font-medium text-slate-400">
+                                    {a.course}{a.yearLevel ? ` · Yr ${a.yearLevel}` : ''} · {formatDateShort(a.auditionDate)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {avg && (
+                                    <span className="flex items-center gap-1 text-[12px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg ring-1 ring-amber-200">
+                                      <Star size={12} fill="currentColor"/>{avg}
+                                    </span>
+                                  )}
+                                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ring-1 ${getVoicePartColor(a.voicePart)}`}>{a.voicePart}</span>
+                                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ring-1 ${getStatusColor(a.status)}`}>{a.status}</span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

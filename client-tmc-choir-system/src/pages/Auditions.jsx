@@ -3,6 +3,7 @@ import { UserPlus, Star, Eye, CheckCircle2, XCircle, Clock, Mic2, Pencil, Loader
 import { useAuditions } from '../hooks/useAuditions'
 import { useJudges } from '../hooks/useJudges'
 import { useSemesters } from '../hooks/useSemesters'
+import { useDebounce } from '../hooks/useDebounce'
 import { getStatusColor, getVoicePartColor, formatDateShort, cn } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Modal from '../components/common/Modal'
@@ -100,7 +101,8 @@ export default function Auditions() {
   const { activeSemester, loading: semestersLoading } = useSemesters()
   const { judges, loading: judgesLoading } = useJudges(activeSemester?.id)
   
-  const [search, setSearch]           = useState('')
+  const [searchInput, setSearch]           = useState('')
+  const search = useDebounce(searchInput, 300)
   const [statusFilter, setStatusFilter] = useState('All')
   const [partFilter, setPartFilter]   = useState('All')
   const [evalModal, setEvalModal]     = useState(null)
@@ -303,7 +305,7 @@ export default function Auditions() {
       {/* Toolbar */}
       <div className="card p-5">
         <div className="flex flex-row items-center gap-4 px-1 overflow-x-auto">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search auditionees..." className="w-60 flex-none" />
+          <SearchBar value={searchInput} onChange={setSearch} placeholder="Search auditionees..." className="w-60 flex-none" />
           <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl flex-none">
             {['All','Passed','Failed','Pending'].map((s) => (
               <button key={s} onClick={() => setStatusFilter(s)}

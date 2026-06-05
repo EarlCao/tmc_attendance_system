@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { CheckCircle2, XCircle, Clock, Eye, Loader2 } from 'lucide-react'
 import { useExcuses } from '../hooks/useExcuses'
+import { useDebounce } from '../hooks/useDebounce'
 import { getStatusColor, getVoicePartColor, formatDateShort, cn } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Modal from '../components/common/Modal'
@@ -13,7 +14,8 @@ const VOICE_PARTS = ['All', 'Soprano', 'Alto', 'Tenor', 'Bass']
 export default function Absences() {
   const { excuses, loading, updateExcuseStatus } = useExcuses()
   const [tab, setTab]         = useState('Pending')
-  const [search, setSearch]   = useState('')
+  const [searchInput, setSearch]   = useState('')
+  const search = useDebounce(searchInput, 300)
   const [voiceFilter, setVoiceFilter] = useState('All')
   const [detailModal, setDetailModal] = useState(null)
   const [reviewNotes, setReviewNotes] = useState('')
@@ -92,7 +94,7 @@ export default function Absences() {
             ))}
           </div>
 
-          <SearchBar value={search} onChange={setSearch} placeholder="Search member..." className="w-full sm:w-64" />
+          <SearchBar value={searchInput} onChange={setSearch} placeholder="Search member..." className="w-full sm:w-64" />
 
           <select
             value={voiceFilter}

@@ -7,6 +7,7 @@ import { useMembers } from '../hooks/useMembers'
 import { useOfficers } from '../hooks/useOfficers'
 import { useSessions } from '../hooks/useSessions'
 import { useSemesterContext } from '../context/SemesterContext'
+import { useDebounce } from '../hooks/useDebounce'
 import { cn, formatDateShort, getVoicePartColor } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Badge from '../components/common/Badge'
@@ -186,10 +187,12 @@ export default function Attendance() {
     }
   }, [selectedSessionId]) // intentionally not listing cache/members — we only want this on session open
 
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearch] = useState('')
+  const search = useDebounce(searchInput, 300)
   const [voiceFilter, setVoiceFilter] = useState('All')
   const [memberSort, setMemberSort] = useState('name-asc')
-  const [sessionSearch, setSessionSearch] = useState('')
+  const [sessionSearchInput, setSessionSearch] = useState('')
+  const sessionSearch = useDebounce(sessionSearchInput, 300)
   const [sessionTypeFilter, setSessionTypeFilter] = useState('All')
   const [sessionSort, setSessionSort] = useState('created-desc')
   const [createModal, setCreateModal] = useState(false)
@@ -567,7 +570,7 @@ export default function Attendance() {
               <p className="text-xs font-medium text-slate-500 mt-0.5">Each meeting has its own attendance sheet.</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <SearchBar value={sessionSearch} onChange={setSessionSearch} placeholder="Search sessions..." className="w-full sm:w-64" />
+              <SearchBar value={sessionSearchInput} onChange={setSessionSearch} placeholder="Search sessions..." className="w-full sm:w-64" />
               <select
                 value={sessionTypeFilter}
                 onChange={(event) => setSessionTypeFilter(event.target.value)}
@@ -762,7 +765,7 @@ export default function Attendance() {
 
       <div className="card">
         <div className="flex flex-nowrap items-center gap-3 overflow-x-auto border-b border-slate-100/50 px-6 py-5 bg-slate-50/50">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search member..." className="w-64 shrink-0" />
+          <SearchBar value={searchInput} onChange={setSearch} placeholder="Search member..." className="w-64 shrink-0" />
           <div className="flex shrink-0 gap-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200/60">
             {['All', 'Soprano', 'Alto', 'Tenor', 'Bass'].map((voicePart) => (
               <button

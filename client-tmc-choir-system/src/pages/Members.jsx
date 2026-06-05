@@ -3,6 +3,7 @@ import { UserPlus, LayoutGrid, List, Pencil, Trash2, Phone, Mail, MapPin, Loader
 import { useMembers } from '../hooks/useMembers'
 import { useOfficers } from '../hooks/useOfficers'
 import { useToast } from '../hooks/useToast'
+import { useDebounce } from '../hooks/useDebounce'
 import { getVoicePartColor, getStatusColor, cn } from '../lib/utils'
 import SearchBar from '../components/common/SearchBar'
 import Avatar from '../components/common/Avatar'
@@ -105,7 +106,8 @@ export default function Members() {
   const { members: memberList, loading, createMember, updateMember, deleteMember } = useMembers()
   const { officers, loading: officersLoading } = useOfficers()
   const { toasts, toast, dismiss } = useToast()
-  const [search, setSearch]           = useState('')
+  const [searchInput, setSearch]           = useState('')
+  const search = useDebounce(searchInput, 300)
   const [voiceFilter, setVoiceFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
   const [memberSort, setMemberSort]   = useState('name-asc')
@@ -247,7 +249,7 @@ export default function Members() {
       {/* Toolbar */}
       <div className="card p-4">
         <div className="flex flex-row items-center px-1 gap-4 overflow-x-auto">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search members..." className="w-60 flex-none" />
+          <SearchBar value={searchInput} onChange={setSearch} placeholder="Search members..." className="w-60 flex-none" />
           <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl flex-none">
             {['All', ...VOICE_PARTS].map((v) => (
               <button
