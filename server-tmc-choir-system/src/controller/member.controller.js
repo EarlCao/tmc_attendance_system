@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import bcrypt from 'bcrypt';
 
 // Normalize DB member record → frontend-friendly shape
 const formatMember = (m) => {
@@ -107,6 +108,25 @@ export const createMember = async (req, res) => {
     });
 
     const newMember = await prisma.member.create({ data: mappedData });
+
+    // Auto-create User account
+    const baseUsername = newMember.fullName.toLowerCase().replace(/\s+/g, '.');
+    let username = baseUsername;
+    let counter = 1;
+    while (await prisma.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+    const passwordHash = await bcrypt.hash('tmc2026', 10);
+    await prisma.user.create({
+      data: {
+        username,
+        passwordHash,
+        role: 'member',
+        memberId: newMember.id,
+      }
+    });
+
     const formatted = formatMember(newMember);
     res.status(201).json({
       status: 'success',
@@ -146,6 +166,10 @@ export const updateMember = async (req, res) => {
 export const deleteMember = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Delete associated User to avoid FK constraint issues
+    await prisma.user.deleteMany({ where: { memberId: parseInt(id) } });
+
     await prisma.member.delete({ where: { id: parseInt(id) } });
     res.status(200).json({ status: 'success', data: null });
   } catch (err) {

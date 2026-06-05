@@ -85,6 +85,7 @@ model Member {
   // Relations
   attendanceRecords AttendanceRecord[]
   officers          Officer[]
+  user              User?
 }
 
 //////////////////////////////////////////////////////
@@ -317,6 +318,11 @@ model User {
 
   isActive Boolean @default(true)
 
+  memberId Int? @unique
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Relations
+  member Member? @relation(fields: [memberId], references: [id])
 }
