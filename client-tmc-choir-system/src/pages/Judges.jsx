@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Mail, Pencil, Phone, Plus, Loader2 } from 'lucide-react'
 import { useJudges } from '../hooks/useJudges'
-import { useSemesters } from '../hooks/useSemesters'
+import { useSemesterContext } from '../context/SemesterContext'
 import { getStatusColor, cn } from '../lib/utils'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
@@ -13,8 +13,8 @@ function validateJudgeForm(form) {
 }
 
 export default function Judges() {
-  const { activeSemester, loading: sLoading } = useSemesters()
-  const { judges, loading: jLoading, createJudge, updateJudge } = useJudges(activeSemester?.id)
+  const { activeSemester, loading: sLoading } = useSemesterContext()
+  const { judges, loading: jLoading, createJudge, updateJudge } = useJudges(activeSemester?.id, sLoading)
 
   const [judgeModal, setJudgeModal] = useState(false)
   const [editingJudge, setEditingJudge] = useState(null)

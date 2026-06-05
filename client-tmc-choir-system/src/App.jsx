@@ -20,8 +20,8 @@ import Officers from './pages/Officers'
 import Reports from './pages/Reports'
 import SettingsPage from './pages/Settings'
 
-// Hooks
-import { useSemesters } from './hooks/useSemesters'
+// Context
+import { SemesterProvider, useSemesterContext } from './context/SemesterContext'
 
 function PlaceholderPage({ icon: Icon, title, description }) {
   return (
@@ -57,7 +57,7 @@ function RequireActiveSemester({ currentSemester, children }) {
 }
 
 function AppRoutes() {
-  const { activeSemester: currentSemester } = useSemesters()
+  const { activeSemester: currentSemester } = useSemesterContext()
 
   return (
     <MainLayout currentSemester={currentSemester}>
@@ -114,7 +114,9 @@ export default function App() {
               path="/*"
               element={
                 <ProtectedRoute>
-                  <AppRoutes />
+                  <SemesterProvider>
+                    <AppRoutes />
+                  </SemesterProvider>
                 </ProtectedRoute>
               }
             />

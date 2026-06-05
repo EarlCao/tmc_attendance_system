@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma.js';
 
 const formatJudge = (j) => ({
   id: j.id,
-  semesterId: j.semesterId,
+  semesterId: j.semesterId ?? null,
   name: j.fullName,
   title: j.titleRole || '',
   specialization: j.specialization || '',
@@ -10,6 +10,7 @@ const formatJudge = (j) => ({
   email: j.email || '',
   facebookAccount: j.facebookAccount || '',
   notes: j.notes || '',
+  status: j.status || 'active',
   ratingsGiven: j._count?.evaluations ?? 0,
   createdAt: j.createdAt,
 });

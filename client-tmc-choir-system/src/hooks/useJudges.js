@@ -15,7 +15,7 @@ const formatJudge = (judge = {}) => ({
   ratingsGiven: judge.ratingsGiven ?? judge._count?.evaluations ?? 0,
 });
 
-export function useJudges(semesterId) {
+export function useJudges(semesterId, semesterLoading = false) {
   const [judges, setJudges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,6 +25,13 @@ export function useJudges(semesterId) {
   );
 
   const fetchJudges = useCallback(async () => {
+    // Wait until the semester context has finished loading before fetching.
+    // Without this guard, the hook fires immediately with semesterId=undefined,
+    // fetches ALL judges, shows them briefly, then re-fetches scoped to the
+    // active semester — and the isInScope filter wipes out any judge whose
+    // semesterId doesn't match, causing the flash-then-disappear bug.
+    if (semesterLoading) return;
+
     try {
       setLoading(true);
       const res = await judgesAPI.getJudges(semesterId ? { semesterId } : undefined);
@@ -36,7 +43,7 @@ export function useJudges(semesterId) {
     } finally {
       setLoading(false);
     }
-  }, [semesterId]);
+  }, [semesterId, semesterLoading]);
 
   useEffect(() => {
     fetchJudges();
