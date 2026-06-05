@@ -6,12 +6,14 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const navItems = [
   { to: '/member',           icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/member/attendance', icon: ClipboardList,   label: 'My Attendance' },
+  { to: '/member/rules',      icon: BookOpen,        label: 'Choir Rules' },
   { to: '/member/profile',    icon: User,            label: 'My Profile' },
 ]
 

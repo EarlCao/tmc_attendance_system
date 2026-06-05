@@ -28,18 +28,23 @@ export function useRules() {
   // Real-time sync
   useEffect(() => {
     const onCreated = (rule) => {
+      if (!rule) return;
+      const formatted = { ...rule, description: rule.content || rule.description };
       setRules((prev) => {
         if (prev.find((r) => r.id === rule.id)) return prev;
-        return [...prev, rule];
+        return [...prev, formatted];
       });
     };
 
     const onUpdated = (rule) => {
-      setRules((prev) => prev.map((r) => (r.id === rule.id ? { ...r, ...rule } : r)));
+      if (!rule) return;
+      const formatted = { ...rule, description: rule.content || rule.description };
+      setRules((prev) => prev.map((r) => (r.id === rule.id ? { ...r, ...formatted } : r)));
     };
 
-    const onDeleted = ({ id }) => {
-      setRules((prev) => prev.filter((r) => r.id !== id));
+    const onDeleted = (data) => {
+      if (!data || !data.id) return;
+      setRules((prev) => prev.filter((r) => r.id !== data.id));
     };
 
     socket.on('rule:created', onCreated);
@@ -55,16 +60,19 @@ export function useRules() {
 
   const createRule = async (data) => {
     const res = await rulesAPI.createRule(data);
+    await fetchRules();
     return res;
   };
 
   const updateRule = async (id, data) => {
     const res = await rulesAPI.updateRule(id, data);
+    await fetchRules();
     return res;
   };
 
   const deleteRule = async (id) => {
     const res = await rulesAPI.deleteRule(id);
+    await fetchRules();
     return res;
   };
 

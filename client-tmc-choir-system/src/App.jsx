@@ -22,6 +22,7 @@ import Accounts from './pages/Accounts'
 import MemberLayout from './layouts/MemberLayout'
 import MemberDashboard from './pages/member/MemberDashboard'
 import MemberAttendance from './pages/member/MemberAttendance'
+import MemberRules from './pages/member/MemberRules'
 import MemberProfile from './pages/member/MemberProfile'
 
 // Context
@@ -123,6 +124,7 @@ function MemberRoutes() {
       <Route element={<MemberLayout />}>
         <Route path="/" element={<MemberDashboard />} />
         <Route path="/attendance" element={<MemberAttendance />} />
+        <Route path="/rules" element={<MemberRules />} />
         <Route path="/profile" element={<MemberProfile />} />
         <Route path="*" element={<PlaceholderPage icon={UserCheck} title="Page not found" description="Choose a section from the sidebar to continue." />} />
       </Route>
