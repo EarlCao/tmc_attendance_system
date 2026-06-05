@@ -141,7 +141,7 @@ export default function Officers() {
         </div>
 
         {/* Status filter tabs */}
-        <div className="mt-5 flex items-center gap-1 border-b border-slate-100">
+        <div className="mt-5 flex items-center gap-1 border-b border-slate-100 dark:border-slate-700/60">
           {STATUS_FILTERS.map(({ value, label }) => (
             <button
               key={value}
@@ -149,15 +149,17 @@ export default function Officers() {
               className={[
                 'px-4 py-2 text-[13px] font-semibold rounded-t-lg transition-colors border-b-2 -mb-px',
                 statusFilter === value
-                  ? 'border-blue-600 text-blue-600 bg-blue-50/60'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50',
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-950/50'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/60',
               ].join(' ')}
             >
               {label}
               {value !== 'all' && (
                 <span className={[
                   'ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                  statusFilter === value ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500',
+                  statusFilter === value
+                    ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
+                    : 'bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400',
                 ].join(' ')}>
                   {officers.filter((o) => o.status?.toLowerCase() === value).length}
                 </span>

@@ -217,7 +217,7 @@ export default function Settings() {
         <p className="mt-1 text-sm font-medium text-slate-500">
           Manage choir rules, audition rating categories, and data backups.
         </p>
-        <div className="mt-5 flex items-center gap-1 border-b border-slate-100">
+        <div className="mt-5 flex items-center gap-1 border-b border-slate-100 dark:border-slate-700/60">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -225,8 +225,8 @@ export default function Settings() {
               className={[
                 'flex items-center gap-2 px-4 py-2 text-[13px] font-semibold rounded-t-lg transition-colors border-b-2 -mb-px',
                 activeTab === id
-                  ? 'border-blue-600 text-blue-600 bg-blue-50/60'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50',
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-950/50'
+                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/60',
               ].join(' ')}
             >
               <Icon size={14} />
@@ -405,7 +405,7 @@ export default function Settings() {
               <p className="mt-2 text-[13px] font-medium text-slate-500 leading-relaxed flex-1">
                 Select a <span className="font-bold text-slate-700">.sql</span> file previously exported from this system. All current data will be replaced — this cannot be undone.
               </p>
-              <div className="mt-4 rounded-xl bg-amber-100/70 px-3 py-2.5 flex items-start gap-2 text-[12px] font-medium text-amber-700">
+              <div className="mt-4 rounded-xl bg-amber-100/70 dark:bg-amber-950/50 px-3 py-2.5 flex items-start gap-2 text-[12px] font-medium text-amber-700 dark:text-amber-400">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                 Export a fresh backup before restoring to avoid losing recent data.
               </div>

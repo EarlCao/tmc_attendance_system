@@ -3,4 +3,8 @@
 npx prisma generate
 npx prisma migrate deploy
 
-npm run dev
+if [ "$NODE_ENV" = "production" ]; then
+  npm start
+else
+  npm run dev
+fi
