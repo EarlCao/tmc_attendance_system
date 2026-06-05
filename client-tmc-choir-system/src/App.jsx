@@ -79,10 +79,10 @@ function AppRoutes() {
         <Route path="/" element={<Dashboard currentSemester={currentSemester} />} />
         <Route path="/semesters" element={<Semesters />} />
         <Route path="/attendance" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Attendance /></RequireActiveSemester>} />
-        <Route path="/members" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Members /></RequireActiveSemester>} />
+        <Route path="/members" element={<Members />} />
         <Route path="/auditions" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Auditions /></RequireActiveSemester>} />
         <Route path="/judges" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Judges /></RequireActiveSemester>} />
-        <Route path="/officers" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Officers /></RequireActiveSemester>} />
+        <Route path="/officers" element={<Officers />} />
         <Route
           path="/elections"
           element={

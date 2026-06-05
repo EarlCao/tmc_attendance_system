@@ -8,7 +8,7 @@ export default function MemberProfile() {
   const { profileData, loading, fetchProfile, updateProfile } = usePortal()
   const { toasts, toast, dismiss } = useToast()
   
-  const [form, setForm] = useState({ username: '', currentPassword: '', newPassword: '' })
+  const [form, setForm] = useState({ username: '', currentPassword: '', newPassword: '', confirmPassword: '' })
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -27,6 +27,10 @@ export default function MemberProfile() {
 
   const handleUpdate = async (e) => {
     e.preventDefault()
+    if (form.newPassword && form.newPassword !== form.confirmPassword) {
+      toast('New password and confirm password do not match.', 'error')
+      return
+    }
     setIsSaving(true)
     try {
       await updateProfile({
@@ -35,7 +39,7 @@ export default function MemberProfile() {
         currentPassword: form.currentPassword || undefined
       })
       toast('Profile credentials updated successfully!')
-      setForm(prev => ({ ...prev, currentPassword: '', newPassword: '' }))
+      setForm(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }))
     } catch (err) {
       toast(err.message || 'Failed to update credentials', 'error')
     } finally {
@@ -114,6 +118,16 @@ export default function MemberProfile() {
                     className="input" 
                     value={form.newPassword} 
                     onChange={e => setForm(p => ({ ...p, newPassword: e.target.value }))} 
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div>
+                  <label className="label">Confirm New Password</label>
+                  <input 
+                    type="password" 
+                    className="input" 
+                    value={form.confirmPassword} 
+                    onChange={e => setForm(p => ({ ...p, confirmPassword: e.target.value }))} 
                     placeholder="••••••••"
                   />
                 </div>
