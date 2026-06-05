@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { useSemesters } from '../hooks/useSemesters'
+import { useSemesterContext } from '../context/SemesterContext'
 import ThemeToggle from '../components/common/ThemeToggle'
 import LogoutModal from '../components/common/LogoutModal'
 
@@ -22,7 +22,7 @@ export default function Header() {
   const location = useLocation()
   const pageTitle = crumbMap[location.pathname] ?? 'Page'
   const { user, logout } = useAuth()
-  const { activeSemester } = useSemesters()
+  const { activeSemester, loading: semesterLoading } = useSemesterContext()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
@@ -59,19 +59,21 @@ export default function Header() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Active semester badge */}
-          {activeSemester ? (
-            <span className="hidden items-center gap-2 rounded-full border border-blue-200/50 bg-blue-50/50 px-4 py-1.5 text-[13px] font-semibold text-blue-700 shadow-sm lg:inline-flex backdrop-blur-sm dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-200">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          {/* Active semester badge — hidden while loading to prevent flash of 'No active semester' */}
+          {!semesterLoading && (
+            activeSemester ? (
+              <span className="hidden items-center gap-2 rounded-full border border-blue-200/50 bg-blue-50/50 px-4 py-1.5 text-[13px] font-semibold text-blue-700 shadow-sm lg:inline-flex backdrop-blur-sm dark:border-blue-500/30 dark:bg-blue-950/40 dark:text-blue-200">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                {activeSemester.name}
               </span>
-              {activeSemester.name}
-            </span>
-          ) : (
-            <span className="hidden items-center gap-2 rounded-full border border-slate-200/50 bg-slate-50/50 px-4 py-1.5 text-[13px] font-semibold text-slate-500 shadow-sm lg:inline-flex backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-400">
-              No active semester
-            </span>
+            ) : (
+              <span className="hidden items-center gap-2 rounded-full border border-slate-200/50 bg-slate-50/50 px-4 py-1.5 text-[13px] font-semibold text-slate-500 shadow-sm lg:inline-flex backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-400">
+                No active semester
+              </span>
+            )
           )}
 
           <ThemeToggle />

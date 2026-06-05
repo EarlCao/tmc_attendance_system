@@ -1,5 +1,5 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
-import { CalendarDays, Lock, UserCheck } from 'lucide-react'
+import { CalendarDays, Lock, UserCheck, Loader2 } from 'lucide-react'
 
 // Layouts and Auth
 import MainLayout from './layouts/MainLayout'
@@ -34,7 +34,17 @@ function PlaceholderPage({ icon: Icon, title, description }) {
   )
 }
 
-function RequireActiveSemester({ currentSemester, children }) {
+function RequireActiveSemester({ currentSemester, semesterLoading, children }) {
+  // While semester data is still loading, show a spinner instead of the
+  // "No ongoing semester" screen — this prevents the flash on page refresh.
+  if (semesterLoading) {
+    return (
+      <div className="page-shell flex items-center justify-center h-64">
+        <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+      </div>
+    )
+  }
+
   if (currentSemester) return children
 
   return (
@@ -56,22 +66,22 @@ function RequireActiveSemester({ currentSemester, children }) {
 }
 
 function AppRoutes() {
-  const { activeSemester: currentSemester } = useSemesterContext()
+  const { activeSemester: currentSemester, loading: semesterLoading } = useSemesterContext()
 
   return (
     <MainLayout currentSemester={currentSemester}>
       <Routes>
         <Route path="/" element={<Dashboard currentSemester={currentSemester} />} />
         <Route path="/semesters" element={<Semesters />} />
-        <Route path="/attendance" element={<RequireActiveSemester currentSemester={currentSemester}><Attendance /></RequireActiveSemester>} />
-        <Route path="/members" element={<RequireActiveSemester currentSemester={currentSemester}><Members /></RequireActiveSemester>} />
-        <Route path="/auditions" element={<RequireActiveSemester currentSemester={currentSemester}><Auditions /></RequireActiveSemester>} />
-        <Route path="/judges" element={<RequireActiveSemester currentSemester={currentSemester}><Judges /></RequireActiveSemester>} />
-        <Route path="/officers" element={<RequireActiveSemester currentSemester={currentSemester}><Officers /></RequireActiveSemester>} />
+        <Route path="/attendance" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Attendance /></RequireActiveSemester>} />
+        <Route path="/members" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Members /></RequireActiveSemester>} />
+        <Route path="/auditions" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Auditions /></RequireActiveSemester>} />
+        <Route path="/judges" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Judges /></RequireActiveSemester>} />
+        <Route path="/officers" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Officers /></RequireActiveSemester>} />
         <Route
           path="/elections"
           element={
-            <RequireActiveSemester currentSemester={currentSemester}>
+            <RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}>
               <div className="page-shell">
                 <PlaceholderPage
                   icon={UserCheck}
@@ -82,7 +92,7 @@ function AppRoutes() {
             </RequireActiveSemester>
           }
         />
-        <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester}><Reports /></RequireActiveSemester>} />
+        <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Reports /></RequireActiveSemester>} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route
           path="*"
