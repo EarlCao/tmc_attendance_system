@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Loader2, KeyRound } from 'lucide-react'
 import { useToast } from '../../hooks/useToast'
 import Toast from '../../components/common/Toast'
+import socket from '../../lib/socket'
 
 export default function MemberProfile() {
   const { profileData, loading, fetchProfile, updateProfile } = usePortal()
@@ -13,6 +14,13 @@ export default function MemberProfile() {
 
   useEffect(() => {
     fetchProfile()
+
+    const onUpdate = () => fetchProfile()
+    socket.on('member:updated', onUpdate)
+
+    return () => {
+      socket.off('member:updated', onUpdate)
+    }
   }, [fetchProfile])
 
   useEffect(() => {

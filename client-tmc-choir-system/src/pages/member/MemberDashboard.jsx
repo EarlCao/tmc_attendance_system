@@ -3,12 +3,31 @@ import { useEffect } from 'react'
 import { Loader2, CalendarCheck, CalendarX, Clock, MapPin, Award, Mic2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import Avatar from '../../components/common/Avatar'
+import socket from '../../lib/socket'
 
 export default function MemberDashboard() {
   const { dashboardData, loading, fetchDashboard } = usePortal()
 
   useEffect(() => {
     fetchDashboard()
+    
+    const onUpdate = () => fetchDashboard()
+    
+    socket.on('attendance:saved', onUpdate)
+    socket.on('attendance:updated', onUpdate)
+    socket.on('session:created', onUpdate)
+    socket.on('session:updated', onUpdate)
+    socket.on('session:deleted', onUpdate)
+    socket.on('member:updated', onUpdate)
+
+    return () => {
+      socket.off('attendance:saved', onUpdate)
+      socket.off('attendance:updated', onUpdate)
+      socket.off('session:created', onUpdate)
+      socket.off('session:updated', onUpdate)
+      socket.off('session:deleted', onUpdate)
+      socket.off('member:updated', onUpdate)
+    }
   }, [fetchDashboard])
 
   if (loading || !dashboardData) {

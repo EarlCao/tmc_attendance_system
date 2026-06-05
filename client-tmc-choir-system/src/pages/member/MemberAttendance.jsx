@@ -2,6 +2,7 @@ import { usePortal } from '../../hooks/usePortal'
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import socket from '../../lib/socket'
 
 export default function MemberAttendance() {
   const { attendanceData, loading, fetchAttendance } = usePortal()
@@ -9,6 +10,22 @@ export default function MemberAttendance() {
 
   useEffect(() => {
     fetchAttendance()
+    
+    const onUpdate = () => fetchAttendance()
+    
+    socket.on('attendance:saved', onUpdate)
+    socket.on('attendance:updated', onUpdate)
+    socket.on('session:created', onUpdate)
+    socket.on('session:updated', onUpdate)
+    socket.on('session:deleted', onUpdate)
+
+    return () => {
+      socket.off('attendance:saved', onUpdate)
+      socket.off('attendance:updated', onUpdate)
+      socket.off('session:created', onUpdate)
+      socket.off('session:updated', onUpdate)
+      socket.off('session:deleted', onUpdate)
+    }
   }, [fetchAttendance])
 
   if (loading) {
