@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import {
   ArrowLeft, CalendarDays, CheckCircle2, Clock, FileText,
   ListPlus, MapPin, Save, SlidersHorizontal, Trash2, XCircle, Loader2, Edit
@@ -6,7 +6,7 @@ import {
 import { useMembers } from '../hooks/useMembers'
 import { useOfficers } from '../hooks/useOfficers'
 import { useSessions } from '../hooks/useSessions'
-import { useSemesters } from '../hooks/useSemesters'
+import { useSemesterContext } from '../context/SemesterContext'
 import { cn, formatDateShort, getVoicePartColor } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
 import Badge from '../components/common/Badge'
@@ -71,14 +71,29 @@ function getSessionDisplayTitle(session) {
   return formatDateShort(session?.date)
 }
 
+// Skeleton row for session list while loading
+function SessionSkeleton() {
+  return (
+    <div className="flex items-center gap-4 px-6 py-5 animate-pulse">
+      <div className="h-12 w-12 shrink-0 rounded-2xl bg-slate-200" />
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-48 rounded-full bg-slate-200" />
+        <div className="h-3 w-28 rounded-full bg-slate-100" />
+      </div>
+      <div className="h-9 w-28 rounded-xl bg-slate-200" />
+    </div>
+  )
+}
+
 export default function Attendance() {
   const { members, loading: membersLoading } = useMembers()
   const { officers, loading: officersLoading } = useOfficers()
   const { sessions, loading: sessionsLoading, createSession, updateSession, deleteSession, getSessionAttendance, saveSessionAttendance } = useSessions()
-  const { semesters, activeSemester, loading: semestersLoading } = useSemesters()
+  // Use shared SemesterContext — no duplicate fetch
+  const { semesters, activeSemester, loading: semestersLoading } = useSemesterContext()
 
   const [selectedSemId, setSelectedSemId] = useState(null)
-  
+
   // Set default semester once loaded
   useEffect(() => {
     if (semesters.length > 0 && !selectedSemId) {
@@ -87,12 +102,90 @@ export default function Attendance() {
   }, [semesters, activeSemester, selectedSemId])
 
   const [selectedSessionId, setSelectedSessionId] = useState(null)
-  
-  // Local state for the OPENED session
+
+  // ─── Attendance cache: pre-load all sessions for the active semester ───────
+  // Key: sessionId → attendance array. This ensures "Open Sheet" is instant.
+  const [attendanceCache, setAttendanceCache] = useState({})
+  const prefetchingRef = useRef(new Set()) // track in-flight prefetches
+
+  // Pre-fetch attendance for every visible session in the background
+  useEffect(() => {
+    if (!sessions.length || !members.length) return
+
+    const semesterSessions = sessions.filter(s => s.semesterId === selectedSemId)
+
+    semesterSessions.forEach(async (session) => {
+      // Skip already cached or already being fetched
+      if (attendanceCache[session.id] !== undefined) return
+      if (prefetchingRef.current.has(session.id)) return
+
+      prefetchingRef.current.add(session.id)
+      try {
+        const data = await getSessionAttendance(session.id)
+        const attendance = data && data.length > 0
+          ? data
+          : members.filter(m => m.status === 'active').map(m => ({
+              memberId: m.id,
+              status: 'Present',
+              reason: '',
+            }))
+        setAttendanceCache(prev => ({ ...prev, [session.id]: attendance }))
+      } catch (e) {
+        console.error('Prefetch attendance error:', e)
+        // Store empty so we don't retry in a loop
+        setAttendanceCache(prev => ({ ...prev, [session.id]: [] }))
+      } finally {
+        prefetchingRef.current.delete(session.id)
+      }
+    })
+  }, [sessions, selectedSemId, members, attendanceCache, getSessionAttendance])
+
+  // Invalidate cache for a session when attendance is saved or session deleted
+  const invalidateCache = useCallback((sessionId) => {
+    setAttendanceCache(prev => {
+      const next = { ...prev }
+      delete next[sessionId]
+      return next
+    })
+    // Also clear the prefetch lock so it re-fetches fresh next time
+    prefetchingRef.current.delete(sessionId)
+  }, [])
+
+  // Current attendance state for the open sheet
   const [currentAttendance, setCurrentAttendance] = useState([])
+  // True only when we don't have cached data yet and must wait for the fetch
   const [isFetchingAttendance, setIsFetchingAttendance] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  
+
+  // When a session is opened, use the cache immediately if available
+  useEffect(() => {
+    if (!selectedSessionId) return
+
+    if (attendanceCache[selectedSessionId] !== undefined) {
+      // Instant — data already loaded
+      setCurrentAttendance(attendanceCache[selectedSessionId])
+      setIsFetchingAttendance(false)
+    } else {
+      // Fallback: cache miss (e.g. session just created), fetch on demand
+      setIsFetchingAttendance(true)
+      getSessionAttendance(selectedSessionId).then(data => {
+        const attendance = data && data.length > 0
+          ? data
+          : members.filter(m => m.status === 'active').map(m => ({
+              memberId: m.id,
+              status: 'Present',
+              reason: '',
+            }))
+        setCurrentAttendance(attendance)
+        setAttendanceCache(prev => ({ ...prev, [selectedSessionId]: attendance }))
+      }).catch(e => {
+        console.error(e)
+      }).finally(() => {
+        setIsFetchingAttendance(false)
+      })
+    }
+  }, [selectedSessionId]) // intentionally not listing cache/members — we only want this on session open
+
   const [search, setSearch] = useState('')
   const [voiceFilter, setVoiceFilter] = useState('All')
   const [memberSort, setMemberSort] = useState('name-asc')
@@ -103,15 +196,15 @@ export default function Attendance() {
   const [editModal, setEditModal] = useState(false)
   const [selectedEditSession, setSelectedEditSession] = useState(null)
   const [sessionForm, setSessionForm] = useState(getNewSessionForm())
-  const [notesModal, setNotesModal] = useState(null) // member object
+  const [notesModal, setNotesModal] = useState(null)
   const [noteText, setNoteText] = useState('')
   const [saved, setSaved] = useState(false)
 
   const selectedSemester = semesters.find((semester) => semester.id === selectedSemId)
   const readOnly = selectedSemester?.status !== 'active'
-  
+
   const semesterSessions = useMemo(() => sessions.filter((session) => session.semesterId === selectedSemId), [sessions, selectedSemId])
-  
+
   const visibleSessions = useMemo(() => {
     return semesterSessions
       .filter((session) => {
@@ -130,39 +223,11 @@ export default function Attendance() {
         if (sessionSort === 'date-asc') return dateA - dateB
         if (sessionSort === 'title-asc') return compareText(getSessionDisplayTitle(a), getSessionDisplayTitle(b))
         if (sessionSort === 'type-asc') return compareText(a.type, b.type) || dateB - dateA
-        return createdB - createdA // created-desc default
+        return createdB - createdA
       })
   }, [semesterSessions, sessionSearch, sessionSort, sessionTypeFilter])
 
   const selectedSession = sessions.find((session) => session.id === selectedSessionId)
-
-  // Fetch attendance when session opens
-  useEffect(() => {
-    async function loadAtt() {
-      if (!selectedSessionId) return
-      setIsFetchingAttendance(true)
-      try {
-        const data = await getSessionAttendance(selectedSessionId)
-        // If empty (new session), build default "Present" array
-        if (data && data.length > 0) {
-          setCurrentAttendance(data)
-        } else {
-          // Initialize active members as present
-          const defaults = members.filter(m => m.status === 'active').map(m => ({
-            memberId: m.id,
-            status: 'Present',
-            reason: ''
-          }))
-          setCurrentAttendance(defaults)
-        }
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setIsFetchingAttendance(false)
-      }
-    }
-    loadAtt()
-  }, [selectedSessionId, members, getSessionAttendance])
 
   const counts = useMemo(() => countStatuses(currentAttendance), [currentAttendance])
 
@@ -281,6 +346,7 @@ export default function Attendance() {
       if (selectedSessionId === selectedEditSession.id) {
         setSelectedSessionId(null)
       }
+      invalidateCache(selectedEditSession.id)
       setEditModal(false)
       setSelectedEditSession(null)
     } catch (e) {
@@ -326,6 +392,8 @@ export default function Attendance() {
     setIsSaving(true)
     try {
       await saveSessionAttendance(selectedSession.id, { attendanceData: currentAttendance })
+      // Update the cache with the freshly saved data
+      setAttendanceCache(prev => ({ ...prev, [selectedSession.id]: currentAttendance }))
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (e) {
@@ -450,7 +518,10 @@ export default function Attendance() {
     </Modal>
   )
 
-  if (membersLoading || officersLoading || sessionsLoading || semestersLoading) {
+  // Only full-page block if we have zero data yet (very first load)
+  const initialLoading = (membersLoading || officersLoading || semestersLoading) && members.length === 0
+
+  if (initialLoading) {
     return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
   }
 
@@ -516,41 +587,53 @@ export default function Attendance() {
           </div>
 
           <div className="divide-y divide-slate-100/50">
-            {visibleSessions.map((session) => {
-              return (
-                <div key={session.id} className="flex flex-col gap-4 px-6 py-5 hover:bg-blue-600/25  transition-colors lg:flex-row lg:items-center group">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-500 to-blue-400 text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                    <CalendarDays size={20} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-[15px] font-bold text-slate-800">{getSessionDisplayTitle(session)}</h4>
-                      <span className="rounded-full bg-white border border-slate-200 shadow-sm px-3 py-0.5 text-[11px] font-bold text-slate-600">{session.type}</span>
+            {/* Show skeletons while session list is loading */}
+            {sessionsLoading && semesterSessions.length === 0
+              ? Array.from({ length: 4 }).map((_, i) => <SessionSkeleton key={i} />)
+              : visibleSessions.map((session) => {
+                  // Show a subtle loading indicator on sessions whose attendance isn't pre-fetched yet
+                  const isCached = attendanceCache[session.id] !== undefined
+                  return (
+                    <div key={session.id} className="flex flex-col gap-4 px-6 py-5 hover:bg-blue-600/25 transition-colors lg:flex-row lg:items-center group">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-500 to-blue-400 text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                        <CalendarDays size={20} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-[15px] font-bold text-slate-800">{getSessionDisplayTitle(session)}</h4>
+                          <span className="rounded-full bg-white border border-slate-200 shadow-sm px-3 py-0.5 text-[11px] font-bold text-slate-600">{session.type}</span>
+                        </div>
+                        <p className="mt-1 text-[12px] font-semibold text-blue-500 flex items-center gap-1">
+                          <CalendarDays size={11} />{formatDateShort(session.date)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2.5">
+                        {!readOnly && (
+                          <button
+                            onClick={() => openEditModal(session)}
+                            className="rounded-xl border border-slate-200/80 bg-white p-2 text-slate-500 hover:border-slate-300 hover:text-blue-600 hover:bg-blue-50/50 shadow-sm transition-all"
+                            title="Edit Session"
+                          >
+                            <Edit size={16} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setSelectedSessionId(session.id)}
+                          className="btn-primary text-xs py-2 px-6 min-w-[110px]"
+                        >
+                          {!isCached
+                            ? <><Loader2 size={13} className="animate-spin" /> Loading…</>
+                            : 'Open Sheet'
+                          }
+                        </button>
+                      </div>
                     </div>
-                    <p className="mt-1 text-[12px] font-semibold text-blue-500 flex items-center gap-1">
-                      <CalendarDays size={11} />{formatDateShort(session.date)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2.5">
-                    {!readOnly && (
-                      <button
-                        onClick={() => openEditModal(session)}
-                        className="rounded-xl border border-slate-200/80 bg-white p-2 text-slate-500 hover:border-slate-300 hover:text-blue-600 hover:bg-blue-50/50 shadow-sm transition-all"
-                        title="Edit Session"
-                      >
-                        <Edit size={16} />
-                      </button>
-                    )}
-                    <button onClick={() => setSelectedSessionId(session.id)} className="btn-primary text-xs py-2 px-6">
-                      Open Sheet
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+                  )
+                })
+            }
           </div>
 
-          {visibleSessions.length === 0 && (
+          {!sessionsLoading && visibleSessions.length === 0 && (
             <EmptyState
               icon={CalendarDays}
               title={semesterSessions.length === 0 ? 'No attendance sessions yet' : 'No sessions match your filters'}
@@ -694,7 +777,7 @@ export default function Attendance() {
               </button>
             ))}
           </div>
-          
+
           <div className="flex shrink-0 items-center gap-2">
             <SlidersHorizontal size={16} className="text-slate-400" />
             <select
@@ -721,9 +804,13 @@ export default function Attendance() {
         </div>
 
         <div className="divide-y divide-slate-100/50 relative">
+          {/* Thin indeterminate progress bar on cache miss — member list stays visible */}
           {isFetchingAttendance && (
-            <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center">
-              <Loader2 className="animate-spin text-blue-500 w-8 h-8" />
+            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-100 z-10 overflow-hidden rounded-t-xl">
+              <div
+                className="h-full bg-blue-500"
+                style={{ animation: 'progress-indeterminate 1.2s ease-in-out infinite' }}
+              />
             </div>
           )}
           {filteredMembers.map((member) => {
