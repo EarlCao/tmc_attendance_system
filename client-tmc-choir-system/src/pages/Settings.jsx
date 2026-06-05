@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   Plus, Trash2, Pencil, Loader2,
-  Download, Star, BookOpen, HardDrive,
+  Download, Upload, Star, BookOpen, HardDrive, AlertTriangle,
 } from 'lucide-react'
 import { useRules } from '../hooks/useRules'
 import { useCategories } from '../hooks/useCategories'
@@ -12,9 +12,9 @@ import EmptyState from '../components/common/EmptyState'
 
 // ─── Section tabs ─────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'rules',      label: 'Choir Rules',         icon: BookOpen },
-  { id: 'categories', label: 'Rating Categories',    icon: Star },
-  { id: 'backup',     label: 'Backup & Recovery',    icon: HardDrive },
+  { id: 'rules',      label: 'Choir Rules',        icon: BookOpen },
+  { id: 'categories', label: 'Rating Categories',   icon: Star },
+  { id: 'backup',     label: 'Backup & Recovery',   icon: HardDrive },
 ]
 
 const RULE_CATEGORIES = ['General', 'Attendance', 'Conduct', 'Membership', 'Auditions', 'Performances', 'Officers']
@@ -26,25 +26,29 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('rules')
 
   // ── Rule modal state ──────────────────────────────────────────────────────
-  const [ruleModal, setRuleModal]               = useState(false)
-  const [editingRule, setEditingRule]           = useState(null)
-  const [ruleForm, setRuleForm]                 = useState({ title: '', category: 'General', description: '', status: 'active' })
-  const [deleteRuleConfirm, setDeleteRuleConfirm] = useState(null)
-  const [ruleError, setRuleError]               = useState('')
+  const [ruleModal, setRuleModal]                   = useState(false)
+  const [editingRule, setEditingRule]               = useState(null)
+  const [ruleForm, setRuleForm]                     = useState({ title: '', category: 'General', description: '', status: 'active' })
+  const [deleteRuleConfirm, setDeleteRuleConfirm]   = useState(null)
+  const [ruleError, setRuleError]                   = useState('')
 
   // ── Category modal state ──────────────────────────────────────────────────
-  const [catModal, setCatModal]                 = useState(false)
-  const [editingCat, setEditingCat]             = useState(null)
-  const [catForm, setCatForm]                   = useState({ name: '', description: '', percentage: '' })
-  const [deleteCatConfirm, setDeleteCatConfirm] = useState(null)
-  const [catError, setCatError]                 = useState('')
+  const [catModal, setCatModal]                     = useState(false)
+  const [editingCat, setEditingCat]                 = useState(null)
+  const [catForm, setCatForm]                       = useState({ name: '', description: '', percentage: '' })
+  const [deleteCatConfirm, setDeleteCatConfirm]     = useState(null)
+  const [catError, setCatError]                     = useState('')
 
   // ── Backup state ──────────────────────────────────────────────────────────
-  const [backupLoading, setBackupLoading]       = useState(false)
-  const [backupMsg, setBackupMsg]               = useState('')
+  const [exportLoading, setExportLoading]           = useState(false)
+  const [exportMsg, setExportMsg]                   = useState('')
+  const [importFile, setImportFile]                 = useState(null)        // File object
+  const [importConfirmOpen, setImportConfirmOpen]   = useState(false)
+  const [importLoading, setImportLoading]           = useState(false)
+  const [importResult, setImportResult]             = useState(null)        // { ok, message }
+  const fileInputRef                                = useRef(null)
 
   const [isSaving, setIsSaving] = useState(false)
-
   const loading = rulesLoading || catsLoading
 
   // ── Rule helpers ──────────────────────────────────────────────────────────
@@ -65,22 +69,16 @@ export default function Settings() {
     setRuleModal(true)
   }
 
-  function closeRuleModal() {
-    setRuleModal(false)
-    setRuleError('')
-  }
+  function closeRuleModal() { setRuleModal(false); setRuleError('') }
 
   async function handleSaveRule() {
     setRuleError('')
-    if (!ruleForm.title.trim()) { setRuleError('Rule title is required.'); return }
+    if (!ruleForm.title.trim())       { setRuleError('Rule title is required.');   return }
     if (!ruleForm.description.trim()) { setRuleError('Rule details are required.'); return }
     setIsSaving(true)
     try {
-      if (editingRule) {
-        await updateRule(editingRule.id, ruleForm)
-      } else {
-        await createRule(ruleForm)
-      }
+      if (editingRule) await updateRule(editingRule.id, ruleForm)
+      else             await createRule(ruleForm)
       closeRuleModal()
     } catch (err) {
       setRuleError(err?.response?.data?.message || err?.message || 'Failed to save rule.')
@@ -91,12 +89,8 @@ export default function Settings() {
 
   async function handleDeleteRule(id) {
     setIsSaving(true)
-    try {
-      await deleteRule(id)
-      setDeleteRuleConfirm(null)
-    } finally {
-      setIsSaving(false)
-    }
+    try { await deleteRule(id); setDeleteRuleConfirm(null) }
+    finally { setIsSaving(false) }
   }
 
   // ── Category helpers ──────────────────────────────────────────────────────
@@ -116,10 +110,7 @@ export default function Settings() {
     setCatModal(true)
   }
 
-  function closeCatModal() {
-    setCatModal(false)
-    setCatError('')
-  }
+  function closeCatModal() { setCatModal(false); setCatError('') }
 
   async function handleSaveCat() {
     setCatError('')
@@ -136,11 +127,8 @@ export default function Settings() {
         description: catForm.description.trim() || '',
         percentage: catForm.percentage !== '' ? pct : 0,
       }
-      if (editingCat) {
-        await updateCategory(editingCat.id, payload)
-      } else {
-        await createCategory(payload)
-      }
+      if (editingCat) await updateCategory(editingCat.id, payload)
+      else            await createCategory(payload)
       closeCatModal()
     } catch (err) {
       setCatError(err?.response?.data?.message || err?.message || 'Failed to save category.')
@@ -151,37 +139,65 @@ export default function Settings() {
 
   async function handleDeleteCat(id) {
     setIsSaving(true)
-    try {
-      await deleteCategory(id)
-      setDeleteCatConfirm(null)
-    } catch (err) {
-      setCatError(err?.response?.data?.message || 'Failed to delete category.')
-      setDeleteCatConfirm(null)
-    } finally {
-      setIsSaving(false)
-    }
+    try { await deleteCategory(id); setDeleteCatConfirm(null) }
+    catch (err) { setCatError(err?.response?.data?.message || 'Failed to delete category.'); setDeleteCatConfirm(null) }
+    finally { setIsSaving(false) }
   }
 
   // ── Backup helpers ────────────────────────────────────────────────────────
   async function handleExportBackup() {
-    setBackupLoading(true)
-    setBackupMsg('')
+    setExportLoading(true)
+    setExportMsg('')
     try {
       const res = await backupAPI.exportBackup()
-      const blob = new Blob([JSON.stringify(JSON.parse(await res.data.text()), null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `tmc-choir-backup-${new Date().toISOString().slice(0, 10)}.json`
+      const blob = new Blob([res.data], { type: 'application/sql' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `tmc-choir-backup-${new Date().toISOString().slice(0, 10)}.sql`
       a.click()
       URL.revokeObjectURL(url)
-      setBackupMsg('Backup exported successfully.')
+      setExportMsg('Backup exported successfully.')
     } catch {
-      setBackupMsg('Export failed. Please try again.')
+      setExportMsg('Export failed. Please try again.')
     } finally {
-      setBackupLoading(false)
+      setExportLoading(false)
     }
   }
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.name.endsWith('.sql')) {
+      setImportResult({ ok: false, message: 'Only .sql backup files are supported.' })
+      return
+    }
+    setImportResult(null)
+    setImportFile(file)
+    setImportConfirmOpen(true)
+    // Reset input so the same file can be re-selected if needed
+    e.target.value = ''
+  }
+
+  async function handleConfirmImport() {
+    if (!importFile) return
+    setImportLoading(true)
+    setImportResult(null)
+    try {
+      const sqlText = await importFile.text()
+      const res = await backupAPI.importBackup(sqlText)
+      setImportResult({ ok: res.status === 'success', message: res.message })
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Import failed. The file may be corrupted or incompatible.'
+      setImportResult({ ok: false, message: msg })
+    } finally {
+      setImportLoading(false)
+      setImportConfirmOpen(false)
+      setImportFile(null)
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -193,13 +209,14 @@ export default function Settings() {
 
   return (
     <div className="page-shell">
-      {/* Header */}
+
+      {/* ── Header + Tabs ────────────────────────────────────────────────── */}
       <div className="card p-6">
         <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600">System setup</p>
         <h2 className="mt-1 text-2xl font-black text-slate-800 tracking-tight">Settings</h2>
-        <p className="mt-1 text-sm font-medium text-slate-500">Manage choir rules, audition rating categories, and data backups.</p>
-
-        {/* Tabs */}
+        <p className="mt-1 text-sm font-medium text-slate-500">
+          Manage choir rules, audition rating categories, and data backups.
+        </p>
         <div className="mt-5 flex items-center gap-1 border-b border-slate-100">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
@@ -231,7 +248,6 @@ export default function Settings() {
               <Plus size={16} /> Add Rule
             </button>
           </div>
-
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             {rules.length > 0 ? rules.map((rule) => (
               <div key={rule.id} className="rounded-2xl border border-slate-100 p-5 bg-white shadow-sm hover:shadow-md transition-shadow">
@@ -248,16 +264,10 @@ export default function Settings() {
                   </span>
                 </div>
                 <div className="mt-4 flex justify-end gap-2 border-t border-slate-50 pt-3">
-                  <button
-                    onClick={() => openRuleModal(rule)}
-                    className="rounded-xl p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                  >
+                  <button onClick={() => openRuleModal(rule)} className="rounded-xl p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                     <Pencil size={14} />
                   </button>
-                  <button
-                    onClick={() => setDeleteRuleConfirm(rule)}
-                    className="rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                  >
+                  <button onClick={() => setDeleteRuleConfirm(rule)} className="rounded-xl p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -285,7 +295,6 @@ export default function Settings() {
               <Plus size={16} /> Add Category
             </button>
           </div>
-
           <div className="mt-5">
             {categories.length > 0 ? (
               <div className="overflow-x-auto">
@@ -300,7 +309,7 @@ export default function Settings() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {categories.map((cat) => (
-                      <tr key={cat.id} className="hover:bg-blue-600/5 transition-colors group">
+                      <tr key={cat.id} className="hover:bg-blue-600/5 transition-colors">
                         <td className="px-5 py-4 font-black text-slate-800">{cat.name}</td>
                         <td className="px-5 py-4 font-medium text-slate-500 max-w-xs">
                           {cat.description || <span className="text-slate-300 italic">—</span>}
@@ -312,16 +321,10 @@ export default function Settings() {
                         </td>
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => openCatModal(cat)}
-                              className="p-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                            >
+                            <button onClick={() => openCatModal(cat)} className="p-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                               <Pencil size={14} />
                             </button>
-                            <button
-                              onClick={() => setDeleteCatConfirm(cat)}
-                              className="p-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                            >
+                            <button onClick={() => setDeleteCatConfirm(cat)} className="p-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors">
                               <Trash2 size={14} />
                             </button>
                           </div>
@@ -347,50 +350,86 @@ export default function Settings() {
           <div className="border-b border-slate-100 pb-4">
             <h3 className="text-[15px] font-black text-slate-800">Backup & Recovery</h3>
             <p className="mt-1 text-[13px] font-medium text-slate-500">
-              Export a full JSON backup of all system data — members, semesters, attendance, auditions, officers, judges, categories, and rules.
+              Export a full <span className="font-bold text-slate-700">.sql</span> backup of all data, or restore the system from a previous backup file.
             </p>
           </div>
 
+          {/* Import result banner */}
+          {importResult && (
+            <div className={`mt-5 rounded-xl px-4 py-3 text-[13px] font-medium border ${
+              importResult.ok
+                ? 'bg-green-50 border-green-200 text-green-700'
+                : 'bg-red-50 border-red-200 text-red-600'
+            }`}>
+              {importResult.message}
+              {importResult.ok && (
+                <span className="ml-2 text-[12px] opacity-70">Reload the page to see restored data.</span>
+              )}
+            </div>
+          )}
+
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {/* Export card */}
-            <div className="rounded-2xl border border-slate-100 p-6 bg-white shadow-sm">
+
+            {/* ── Export card ─────────────────────────────────────────────── */}
+            <div className="rounded-2xl border border-slate-100 p-6 bg-white shadow-sm flex flex-col">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                 <Download size={22} />
               </div>
               <h4 className="text-[14px] font-black text-slate-800">Export Backup</h4>
-              <p className="mt-2 text-[13px] font-medium text-slate-500 leading-relaxed">
-                Downloads a complete <span className="font-bold text-slate-700">.json</span> file of all your data. Store it somewhere safe — you can use it to restore the system if needed.
+              <p className="mt-2 text-[13px] font-medium text-slate-500 leading-relaxed flex-1">
+                Downloads a complete <span className="font-bold text-slate-700">.sql</span> file containing all table data — members, attendance, semesters, auditions, officers, judges, categories, and rules.
               </p>
-              {backupMsg && (
-                <p className={`mt-3 text-[12px] font-semibold ${backupMsg.includes('failed') ? 'text-red-500' : 'text-green-600'}`}>
-                  {backupMsg}
+              {exportMsg && (
+                <p className={`mt-3 text-[12px] font-semibold ${exportMsg.includes('failed') ? 'text-red-500' : 'text-green-600'}`}>
+                  {exportMsg}
                 </p>
               )}
               <button
                 onClick={handleExportBackup}
-                disabled={backupLoading}
+                disabled={exportLoading}
                 className="btn-primary mt-5 w-full justify-center shadow-blue-500/30"
               >
-                {backupLoading
+                {exportLoading
                   ? <><Loader2 className="animate-spin w-4 h-4" /> Exporting...</>
-                  : <><Download size={16} /> Download Backup</>
+                  : <><Download size={16} /> Download .sql Backup</>
                 }
               </button>
             </div>
 
-            {/* Recovery info card */}
-            <div className="rounded-2xl border border-amber-100 p-6 bg-amber-50/40">
+            {/* ── Import card ─────────────────────────────────────────────── */}
+            <div className="rounded-2xl border border-amber-100 p-6 bg-amber-50/40 flex flex-col">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                <HardDrive size={22} />
+                <Upload size={22} />
               </div>
-              <h4 className="text-[14px] font-black text-slate-800">Recovery</h4>
-              <p className="mt-2 text-[13px] font-medium text-slate-500 leading-relaxed">
-                To restore from a backup, contact your system administrator or use the database import tools provided with your deployment. The exported JSON file contains all table data needed for a full restore.
+              <h4 className="text-[14px] font-black text-slate-800">Restore from Backup</h4>
+              <p className="mt-2 text-[13px] font-medium text-slate-500 leading-relaxed flex-1">
+                Select a <span className="font-bold text-slate-700">.sql</span> file previously exported from this system. All current data will be replaced — this cannot be undone.
               </p>
-              <div className="mt-4 rounded-xl bg-amber-100/60 px-4 py-3 text-[12px] font-medium text-amber-700 leading-relaxed">
-                <strong>Tip:</strong> Export a backup regularly — before major updates, at the end of each semester, or whenever you make bulk changes.
+              <div className="mt-4 rounded-xl bg-amber-100/70 px-3 py-2.5 flex items-start gap-2 text-[12px] font-medium text-amber-700">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                Export a fresh backup before restoring to avoid losing recent data.
               </div>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".sql"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                onClick={() => { setImportResult(null); fileInputRef.current?.click() }}
+                disabled={importLoading}
+                className="mt-5 w-full justify-center btn-secondary border-amber-200 hover:bg-amber-100 text-amber-700"
+              >
+                {importLoading
+                  ? <><Loader2 className="animate-spin w-4 h-4" /> Restoring...</>
+                  : <><Upload size={16} /> Select .sql File</>
+                }
+              </button>
             </div>
+
           </div>
         </div>
       )}
@@ -412,18 +451,13 @@ export default function Settings() {
       >
         <div className="space-y-4">
           {ruleError && (
-            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-[13px] font-medium text-red-600">
-              {ruleError}
-            </div>
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-[13px] font-medium text-red-600">{ruleError}</div>
           )}
           <div>
             <label className="label">Rule Title *</label>
-            <input
-              className="input bg-white"
-              value={ruleForm.title}
+            <input className="input bg-white" value={ruleForm.title}
               onChange={e => { setRuleError(''); setRuleForm(p => ({ ...p, title: e.target.value })) }}
-              placeholder="e.g. Attendance Requirement"
-            />
+              placeholder="e.g. Attendance Requirement" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -442,22 +476,15 @@ export default function Settings() {
           </div>
           <div>
             <label className="label">Rule / Regulation Details *</label>
-            <textarea
-              className="input bg-white min-h-32 resize-y"
-              value={ruleForm.description}
+            <textarea className="input bg-white min-h-32 resize-y" value={ruleForm.description}
               onChange={e => { setRuleError(''); setRuleForm(p => ({ ...p, description: e.target.value })) }}
-              placeholder="Write the rule, policy, or regulation here"
-            />
+              placeholder="Write the rule, policy, or regulation here" />
           </div>
         </div>
       </Modal>
 
       {/* ── Rule Delete Modal ─────────────────────────────────────────────── */}
-      <Modal
-        open={!!deleteRuleConfirm}
-        onClose={() => setDeleteRuleConfirm(null)}
-        title="Remove Choir Rule"
-        size="sm"
+      <Modal open={!!deleteRuleConfirm} onClose={() => setDeleteRuleConfirm(null)} title="Remove Choir Rule" size="sm"
         footer={
           <>
             <button onClick={() => setDeleteRuleConfirm(null)} disabled={isSaving} className="btn-secondary">Cancel</button>
@@ -468,7 +495,7 @@ export default function Settings() {
         }
       >
         <p className="text-[13px] font-medium text-slate-600 leading-relaxed">
-          Are you sure you want to remove <strong>{deleteRuleConfirm?.title}</strong>? This action cannot be undone.
+          Are you sure you want to remove <strong>{deleteRuleConfirm?.title}</strong>? This cannot be undone.
         </p>
       </Modal>
 
@@ -489,41 +516,27 @@ export default function Settings() {
       >
         <div className="space-y-4">
           {catError && (
-            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-[13px] font-medium text-red-600">
-              {catError}
-            </div>
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-[13px] font-medium text-red-600">{catError}</div>
           )}
           <div>
             <label className="label">Category Name *</label>
-            <input
-              className="input bg-white"
-              value={catForm.name}
+            <input className="input bg-white" value={catForm.name}
               onChange={e => { setCatError(''); setCatForm(p => ({ ...p, name: e.target.value })) }}
-              placeholder="e.g. Vocal Quality, Pitch Accuracy, Stage Presence"
-            />
+              placeholder="e.g. Vocal Quality, Pitch Accuracy, Stage Presence" />
           </div>
           <div>
             <label className="label">Description</label>
-            <input
-              className="input bg-white"
-              value={catForm.description}
+            <input className="input bg-white" value={catForm.description}
               onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Brief description of what this criterion measures"
-            />
+              placeholder="Brief description of what this criterion measures" />
           </div>
           <div>
             <label className="label">Weight / Percentage</label>
             <div className="relative">
-              <input
-                className="input bg-white pr-8"
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
+              <input className="input bg-white pr-8" type="number" min="0" max="100" step="0.1"
                 value={catForm.percentage}
                 onChange={e => { setCatError(''); setCatForm(p => ({ ...p, percentage: e.target.value })) }}
-                placeholder="e.g. 20"
-              />
+                placeholder="e.g. 20" />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-bold text-slate-400">%</span>
             </div>
             <p className="mt-1 text-[11px] text-slate-400">How much this criterion contributes to the overall score.</p>
@@ -532,11 +545,7 @@ export default function Settings() {
       </Modal>
 
       {/* ── Category Delete Modal ─────────────────────────────────────────── */}
-      <Modal
-        open={!!deleteCatConfirm}
-        onClose={() => setDeleteCatConfirm(null)}
-        title="Remove Rating Category"
-        size="sm"
+      <Modal open={!!deleteCatConfirm} onClose={() => setDeleteCatConfirm(null)} title="Remove Rating Category" size="sm"
         footer={
           <>
             <button onClick={() => setDeleteCatConfirm(null)} disabled={isSaving} className="btn-secondary">Cancel</button>
@@ -551,6 +560,38 @@ export default function Settings() {
           Categories with existing evaluation scores cannot be deleted.
         </p>
       </Modal>
+
+      {/* ── Import Confirm Modal ──────────────────────────────────────────── */}
+      <Modal
+        open={importConfirmOpen}
+        onClose={() => { setImportConfirmOpen(false); setImportFile(null) }}
+        title="Confirm Restore"
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => { setImportConfirmOpen(false); setImportFile(null) }} disabled={importLoading} className="btn-secondary">
+              Cancel
+            </button>
+            <button onClick={handleConfirmImport} disabled={importLoading} className="btn-danger shadow-red-500/30">
+              {importLoading ? <><Loader2 className="animate-spin w-4 h-4" /> Restoring...</> : 'Yes, Restore'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 rounded-xl bg-red-50 border border-red-100 px-4 py-3">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-500" />
+            <p className="text-[13px] font-medium text-red-700 leading-relaxed">
+              This will <strong>replace all current data</strong> with the contents of the backup file. This action cannot be undone.
+            </p>
+          </div>
+          <p className="text-[13px] font-medium text-slate-600 leading-relaxed">
+            Selected file: <strong className="text-slate-800">{importFile?.name}</strong>
+          </p>
+          <p className="text-[13px] font-medium text-slate-500">Are you sure you want to proceed?</p>
+        </div>
+      </Modal>
+
     </div>
   )
 }

@@ -87,7 +87,11 @@ export const categoriesAPI = {
 };
 
 export const backupAPI = {
-  exportBackup: () => api.get('/backup/export', { responseType: 'blob' }),
+  exportBackup: () => api.get('/backup/export', { responseType: 'text' }),
+  importBackup: (sqlText) =>
+    api.post('/backup/import', sqlText, {
+      headers: { 'Content-Type': 'text/plain' },
+    }).then(res => res.data),
 };
 
 export default api;
