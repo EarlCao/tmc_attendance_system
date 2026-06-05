@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { UserPlus, LayoutGrid, List, Pencil, Trash2, Phone, Mail, MapPin, Loader2 } from 'lucide-react'
+import { UserPlus, LayoutGrid, List, Pencil, Trash2, Phone, Mail, MapPin, Loader2, CalendarDays } from 'lucide-react'
+import { useSemesters } from '../hooks/useSemesters'
 import { useMembers } from '../hooks/useMembers'
 import { useOfficers } from '../hooks/useOfficers'
 import { useToast } from '../hooks/useToast'
@@ -105,6 +106,7 @@ function MemberForm({ form, setForm, errors = {} }) {
 export default function Members() {
   const { members: memberList, loading, createMember, updateMember, deleteMember } = useMembers()
   const { officers, loading: officersLoading } = useOfficers()
+  const { activeSemester, loading: semesterLoading } = useSemesters()
   const { toasts, toast, dismiss } = useToast()
   const [searchInput, setSearch]           = useState('')
   const search = useDebounce(searchInput, 300)
@@ -229,6 +231,36 @@ export default function Members() {
 
   return (
     <div className="page-shell">
+      {/* Active Semester Banner */}
+      {!semesterLoading && (
+        <div className="card overflow-hidden">
+          <div className="flex items-center gap-4 px-6 py-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 shrink-0 dark:bg-blue-950/50">
+              <CalendarDays size={20} className="text-blue-600 dark:text-blue-300" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Current Semester</p>
+              <p className="text-[15px] font-bold text-slate-800 tracking-tight truncate dark:text-slate-100">
+                {activeSemester ? activeSemester.name : 'No active semester'}
+              </p>
+            </div>
+            {activeSemester ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/50 bg-emerald-50/50 px-4 py-1.5 text-[12px] font-bold text-emerald-700 shadow-sm backdrop-blur-sm dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/50 bg-slate-50/50 px-4 py-1.5 text-[12px] font-bold text-slate-500 shadow-sm backdrop-blur-sm dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-400">
+                Inactive
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
         {[

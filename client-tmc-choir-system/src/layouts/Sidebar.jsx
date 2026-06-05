@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   CalendarDays,
@@ -34,7 +34,6 @@ const bottomItems = [
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
-  const location = useLocation()
 
   return (
     <aside
@@ -62,15 +61,12 @@ export default function Sidebar() {
         {!collapsed && (
           <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">Main Menu</p>
         )}
-        {navItems.map(({ to, icon: Icon, label }) => {
-          const isActive = to === '/'
-            ? location.pathname === '/'
-            : location.pathname.startsWith(to)
-          return (
+        {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
-              className={cn(
+              end
+              className={({ isActive }) => cn(
                 'sidebar-link',
                 isActive && 'active',
                 collapsed && 'justify-center px-2'
@@ -80,20 +76,18 @@ export default function Sidebar() {
               <Icon size={18} className="shrink-0" />
               {!collapsed && <span className="truncate">{label}</span>}
             </NavLink>
-          )
-        })}
+          ))}
 
         <div className="pt-3">
           {!collapsed && (
             <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">System</p>
           )}
-          {bottomItems.map(({ to, icon: Icon, label }) => {
-            const isActive = location.pathname.startsWith(to)
-            return (
+          {bottomItems.map(({ to, icon: Icon, label }) => (
               <NavLink
                 key={to}
                 to={to}
-                className={cn(
+                end
+                className={({ isActive }) => cn(
                   'sidebar-link',
                   isActive && 'active',
                   collapsed && 'justify-center px-2'
@@ -103,8 +97,7 @@ export default function Sidebar() {
                 <Icon size={18} className="shrink-0" />
                 {!collapsed && <span className="truncate">{label}</span>}
               </NavLink>
-            )
-          })}
+            ))}
         </div>
       </nav>
 

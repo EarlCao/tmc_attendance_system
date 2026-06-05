@@ -4,9 +4,11 @@ import { protect, requireAdmin } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-router.use(protect, requireAdmin);
+// GET is available to all authenticated users (members need to see active semester)
+router.get('/', protect, getSemesters);
 
-router.get('/', getSemesters);
+// Write operations require admin
+router.use(protect, requireAdmin);
 router.post('/', createSemester);
 router.put('/:id', updateSemester);
 router.post('/:id/end', endSemester);

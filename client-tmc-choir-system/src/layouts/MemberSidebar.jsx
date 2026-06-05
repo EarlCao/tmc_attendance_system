@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   ClipboardList,
@@ -17,7 +17,6 @@ const navItems = [
 
 export default function MemberSidebar() {
   const [collapsed, setCollapsed] = useState(false)
-  const location = useLocation()
 
   return (
     <aside
@@ -45,15 +44,12 @@ export default function MemberSidebar() {
         {!collapsed && (
           <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">Menu</p>
         )}
-        {navItems.map(({ to, icon: Icon, label }) => {
-          const isActive = to === '/member'
-            ? location.pathname === '/member' || location.pathname === '/member/'
-            : location.pathname.startsWith(to)
-          return (
+        {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
-              className={cn(
+              end
+              className={({ isActive }) => cn(
                 'sidebar-link',
                 isActive && 'active',
                 collapsed && 'justify-center px-2'
@@ -63,8 +59,7 @@ export default function MemberSidebar() {
               <Icon size={18} className="shrink-0" />
               {!collapsed && <span className="truncate">{label}</span>}
             </NavLink>
-          )
-        })}
+          ))}
       </nav>
 
       {/* Collapse toggle */}
