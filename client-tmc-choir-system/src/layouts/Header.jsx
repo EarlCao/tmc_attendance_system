@@ -18,9 +18,10 @@ const crumbMap = {
   '/accounts':   'Accounts',
   '/settings':   'Settings',
   // Member portal routes
-  '/member':            'Dashboard',
-  '/member/attendance': 'My Attendance',
-  '/member/profile':    'My Profile',
+  '/member':              'Dashboard',
+  '/member/attendance':   'My Attendance',
+  '/member/profile':      'My Profile',
+  '/member/rules':        'Choir Rules',
 }
 
 export default function Header() {
