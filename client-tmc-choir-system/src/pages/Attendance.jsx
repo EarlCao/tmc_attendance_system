@@ -128,7 +128,7 @@ export default function Attendance() {
           : members.filter(m => m.status === 'active').map(m => ({
               memberId: m.id,
               status: 'Present',
-              reason: '',
+              notes: '',
             }))
         setAttendanceCache(prev => ({ ...prev, [session.id]: attendance }))
       } catch (e) {
@@ -154,9 +154,47 @@ export default function Attendance() {
 
   // Current attendance state for the open sheet
   const [currentAttendance, setCurrentAttendance] = useState([])
-  // True only when we don't have cached data yet and must wait for the fetch
   const [isFetchingAttendance, setIsFetchingAttendance] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
+  const [pendingNavAction, setPendingNavAction] = useState(null)
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isDirty])
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (!isDirty) return
+      const link = e.target.closest('a')
+      const logoutBtn = e.target.closest('button[title="Log out"]')
+      if (link || logoutBtn) {
+        if (!window.confirm("You have unsaved attendance changes. Are you sure you want to leave without saving?")) {
+          e.preventDefault()
+          e.stopPropagation()
+        } else {
+          setIsDirty(false)
+        }
+      }
+    }
+    document.addEventListener('click', handleClick, { capture: true })
+    return () => document.removeEventListener('click', handleClick, { capture: true })
+  }, [isDirty])
+
+  function requestInternalNav(action) {
+    if (isDirty) {
+      setPendingNavAction(() => action)
+    } else {
+      action()
+    }
+  }
 
   // When a session is opened, use the cache immediately if available
   useEffect(() => {
@@ -166,6 +204,7 @@ export default function Attendance() {
       // Instant — data already loaded
       setCurrentAttendance(attendanceCache[selectedSessionId])
       setIsFetchingAttendance(false)
+      setIsDirty(false)
     } else {
       // Fallback: cache miss (e.g. session just created), fetch on demand
       setIsFetchingAttendance(true)
@@ -175,10 +214,11 @@ export default function Attendance() {
           : members.filter(m => m.status === 'active').map(m => ({
               memberId: m.id,
               status: 'Present',
-              reason: '',
+              notes: '',
             }))
         setCurrentAttendance(attendance)
         setAttendanceCache(prev => ({ ...prev, [selectedSessionId]: attendance }))
+        setIsDirty(false)
       }).catch(e => {
         console.error(e)
       }).finally(() => {
@@ -361,12 +401,13 @@ export default function Attendance() {
 
   function setStatus(memberId, status) {
     if (!selectedSession || readOnly) return
+    setIsDirty(true)
     setCurrentAttendance(prev => {
       const exists = prev.find(a => a.memberId === memberId)
       if (exists) {
         return prev.map(a => a.memberId === memberId ? { ...a, status } : a)
       } else {
-        return [...prev, { memberId, status, reason: '' }]
+        return [...prev, { memberId, status, notes: '' }]
       }
     })
     setSaved(false)
@@ -374,6 +415,7 @@ export default function Attendance() {
 
   function markAll(status) {
     if (!selectedSession || readOnly) return
+    setIsDirty(true)
     setCurrentAttendance(prev => {
       const updated = [...prev]
       members.filter(m => m.status === 'active').forEach(m => {
@@ -381,7 +423,7 @@ export default function Attendance() {
         if (idx !== -1) {
           updated[idx].status = status
         } else {
-          updated.push({ memberId: m.id, status, reason: '' })
+          updated.push({ memberId: m.id, status, notes: '' })
         }
       })
       return updated
@@ -398,6 +440,7 @@ export default function Attendance() {
       // Update the cache with the freshly saved data
       setAttendanceCache(prev => ({ ...prev, [selectedSession.id]: currentAttendance }))
       setSaved(true)
+      setIsDirty(false)
       setTimeout(() => setSaved(false), 3000)
     } catch (e) {
       console.error(e)
@@ -409,18 +452,19 @@ export default function Attendance() {
   function openNotes(member) {
     if (!selectedSession) return
     const att = currentAttendance.find(a => a.memberId === member.id)
-    setNoteText(att?.reason || '')
+    setNoteText(att?.notes || '')
     setNotesModal(member)
   }
 
   function saveNote() {
     if (!selectedSession || !notesModal || readOnly) return
+    setIsDirty(true)
     setCurrentAttendance(prev => {
       const exists = prev.find(a => a.memberId === notesModal.id)
       if (exists) {
-        return prev.map(a => a.memberId === notesModal.id ? { ...a, reason: noteText } : a)
+        return prev.map(a => a.memberId === notesModal.id ? { ...a, notes: noteText } : a)
       } else {
-        return [...prev, { memberId: notesModal.id, status: 'Present', reason: noteText }]
+        return [...prev, { memberId: notesModal.id, status: 'Present', notes: noteText }]
       }
     })
     setNotesModal(null)
@@ -544,8 +588,11 @@ export default function Attendance() {
               <select
                 value={selectedSemId || ''}
                 onChange={(event) => {
-                  setSelectedSemId(Number(event.target.value))
-                  setSelectedSessionId(null)
+                  const newSemId = Number(event.target.value)
+                  requestInternalNav(() => {
+                    setSelectedSemId(newSemId)
+                    setSelectedSessionId(null)
+                  })
                 }}
                 className="input w-auto text-sm font-semibold"
               >
@@ -621,7 +668,7 @@ export default function Attendance() {
                           </button>
                         )}
                         <button
-                          onClick={() => setSelectedSessionId(session.id)}
+                          onClick={() => requestInternalNav(() => setSelectedSessionId(session.id))}
                           className="btn-primary text-xs py-2 px-6 min-w-[110px]"
                         >
                           {!isCached
@@ -710,6 +757,21 @@ export default function Attendance() {
           </div>
         </Modal>
         {renderEditSessionModal()}
+
+        <Modal
+          open={!!pendingNavAction}
+          onClose={() => setPendingNavAction(null)}
+          title="Unsaved Changes"
+          size="sm"
+          footer={
+            <>
+              <button onClick={() => setPendingNavAction(null)} className="btn-secondary">Cancel</button>
+              <button onClick={() => { setIsDirty(false); pendingNavAction(); setPendingNavAction(null); }} className="btn-primary bg-red-600 hover:bg-red-700 shadow-red-500/30">Discard Changes</button>
+            </>
+          }
+        >
+          <p className="text-slate-600 text-sm">You have unsaved attendance changes. Are you sure you want to discard them and leave?</p>
+        </Modal>
       </div>
     )
   }
@@ -720,7 +782,7 @@ export default function Attendance() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <button
-              onClick={() => setSelectedSessionId(null)}
+              onClick={() => requestInternalNav(() => setSelectedSessionId(null))}
               className="mb-4 inline-flex items-center gap-1 text-[13px] font-bold text-slate-400 hover:text-blue-600 transition-colors"
             >
               <ArrowLeft size={16} /> Back to sessions
@@ -819,7 +881,7 @@ export default function Attendance() {
           {filteredMembers.map((member) => {
             const att = currentAttendance.find(a => a.memberId === member.id)
             const status = att?.status || 'Absent'
-            const hasNote = !!att?.reason
+            const hasNote = !!att?.notes
             const isInactive = member.status === 'inactive'
             return (
               <div key={member.id} className="flex flex-col gap-4 px-6 py-4 transition-colors hover:bg-blue-600/25 sm:flex-row sm:items-center sm:gap-6 group">
@@ -918,6 +980,21 @@ export default function Attendance() {
         />
       </Modal>
       {renderEditSessionModal()}
+
+      <Modal
+        open={!!pendingNavAction}
+        onClose={() => setPendingNavAction(null)}
+        title="Unsaved Changes"
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => setPendingNavAction(null)} className="btn-secondary">Cancel</button>
+            <button onClick={() => { setIsDirty(false); pendingNavAction(); setPendingNavAction(null); }} className="btn-primary bg-red-600 hover:bg-red-700 shadow-red-500/30">Discard Changes</button>
+          </>
+        }
+      >
+        <p className="text-slate-600 text-sm">You have unsaved attendance changes. Are you sure you want to discard them and leave?</p>
+      </Modal>
     </div>
   )
 }

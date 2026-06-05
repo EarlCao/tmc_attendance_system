@@ -2,8 +2,12 @@ import { Outlet } from 'react-router-dom'
 import MemberSidebar from './MemberSidebar'
 import Header from './Header'
 import MemberMobileNav from './MemberMobileNav'
+import WelcomeModal from '../components/common/WelcomeModal'
+import { useAuth } from '../context/AuthContext'
 
 export default function MemberLayout() {
+  const { user, justLoggedIn, clearWelcome } = useAuth()
+
   return (
     <div className="flex h-screen bg-slate-50/50 dark:bg-slate-900 transition-colors duration-300">
       <MemberSidebar />
@@ -15,6 +19,12 @@ export default function MemberLayout() {
         </main>
         <MemberMobileNav />
       </div>
+
+      <WelcomeModal
+        open={justLoggedIn}
+        onClose={clearWelcome}
+        user={user}
+      />
     </div>
   )
 }

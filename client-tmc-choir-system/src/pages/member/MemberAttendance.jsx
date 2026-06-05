@@ -1,12 +1,13 @@
 import { usePortal } from '../../hooks/usePortal'
-import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
+import { Loader2, CalendarDays } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import socket from '../../lib/socket'
 
 export default function MemberAttendance() {
   const { attendanceData, loading, fetchAttendance } = usePortal()
   const [filter, setFilter] = useState('All')
+  const [selectedSemesterId, setSelectedSemesterId] = useState('All')
 
   useEffect(() => {
     fetchAttendance()
@@ -28,26 +29,63 @@ export default function MemberAttendance() {
     }
   }, [fetchAttendance])
 
+  const semesters = useMemo(() => {
+    const map = new Map()
+    attendanceData.forEach(r => {
+      const sem = r.session?.semester
+      if (sem && !map.has(sem.id)) {
+        map.set(sem.id, sem)
+      }
+    })
+    return Array.from(map.values()).sort((a, b) => b.id - a.id)
+  }, [attendanceData])
+
+  useEffect(() => {
+    if (semesters.length > 0 && selectedSemesterId === 'All') {
+      setSelectedSemesterId(semesters[0].id)
+    }
+  }, [semesters, selectedSemesterId])
+
   if (loading) {
     return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
   }
 
-  const filtered = attendanceData.filter(r => filter === 'All' || r.status === filter)
+  const filtered = attendanceData.filter(r => {
+    const statusMatch = filter === 'All' || r.status === filter
+    const semesterMatch = selectedSemesterId === 'All' || r.session?.semesterId === selectedSemesterId || String(r.session?.semesterId) === String(selectedSemesterId)
+    return statusMatch && semesterMatch
+  })
 
   return (
     <div className="page-shell">
       <div className="card p-4">
-        <div className="flex flex-row items-center px-1 gap-4 overflow-x-auto">
-          <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl flex-none">
-            {['All', 'PRESENT', 'ABSENT', 'LATE', 'EXCUSED'].map((s) => (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={cn('px-4 py-2 text-[13px] font-semibold rounded-lg transition-all duration-200',
-                  filter === s ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                )}
-              >{s === 'All' ? 'All Status' : s}</button>
-            ))}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex flex-row items-center px-1 gap-4 overflow-x-auto w-full md:w-auto">
+            <div className="flex gap-1 p-1 bg-slate-100/50 rounded-xl flex-none">
+              {['All', 'PRESENT', 'ABSENT', 'LATE', 'EXCUSED'].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setFilter(s)}
+                  className={cn('px-4 py-2 text-[13px] font-semibold rounded-lg transition-all duration-200',
+                    filter === s ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  )}
+                >{s === 'All' ? 'All Status' : s}</button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 w-full md:w-auto px-1">
+            <CalendarDays size={16} className="text-slate-400" />
+            <select
+              className="input py-2 text-sm max-w-[200px]"
+              value={selectedSemesterId}
+              onChange={(e) => setSelectedSemesterId(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+            >
+              {semesters.map(sem => (
+                <option key={sem.id} value={sem.id}>{sem.name}</option>
+              ))}
+              {semesters.length === 0 && <option value="All">No semesters</option>}
+            </select>
           </div>
         </div>
       </div>
@@ -85,7 +123,7 @@ export default function MemberAttendance() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-slate-500">No attendance records found.</td>
+                  <td colSpan="4" className="px-6 py-8 text-center text-slate-500">No attendance records found for this selection.</td>
                 </tr>
               )}
             </tbody>
