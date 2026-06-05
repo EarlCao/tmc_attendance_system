@@ -1,6 +1,7 @@
 import { usePortal } from '../../hooks/usePortal'
 import { useEffect, useState, useMemo } from 'react'
-import { Loader2, CalendarDays } from 'lucide-react'
+import { Loader2, CalendarDays, FileText } from 'lucide-react'
+import Modal from '../../components/common/Modal'
 import { cn } from '../../lib/utils'
 import socket from '../../lib/socket'
 
@@ -8,6 +9,7 @@ export default function MemberAttendance() {
   const { attendanceData, loading, fetchAttendance } = usePortal()
   const [filter, setFilter] = useState('All')
   const [selectedSemesterId, setSelectedSemesterId] = useState('All')
+  const [selectedNote, setSelectedNote] = useState(null)
 
   useEffect(() => {
     fetchAttendance()
@@ -117,7 +119,16 @@ export default function MemberAttendance() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-slate-500 text-xs">
-                    {r.notes || '-'}
+                    {r.notes ? (
+                      <button 
+                        onClick={() => setSelectedNote(r)}
+                        className="btn-secondary py-1.5 px-3 text-[11px]"
+                      >
+                        <FileText size={12} className="mr-1" /> View
+                      </button>
+                    ) : (
+                      <span className="text-slate-400 italic">No notes</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -130,6 +141,22 @@ export default function MemberAttendance() {
           </table>
         </div>
       </div>
+
+      <Modal
+        open={!!selectedNote}
+        onClose={() => setSelectedNote(null)}
+        title={selectedNote?.session?.sessionDate ? `Attendance Note (${new Date(selectedNote.session.sessionDate).toLocaleDateString()})` : "Attendance Note"}
+        size="sm"
+        footer={
+          <button onClick={() => setSelectedNote(null)} className="btn-primary w-full justify-center">
+            Close
+          </button>
+        }
+      >
+        <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap border border-slate-100 dark:border-slate-800">
+          {selectedNote?.notes}
+        </div>
+      </Modal>
     </div>
   )
 }
