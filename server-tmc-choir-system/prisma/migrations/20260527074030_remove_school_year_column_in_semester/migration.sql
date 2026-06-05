@@ -5,4 +5,5 @@
 
 */
 -- AlterTable
-ALTER TABLE `Semester` DROP COLUMN `schoolYear`;
+ALTER TABLE "Semester" DROP COLUMN "schoolYear";
+

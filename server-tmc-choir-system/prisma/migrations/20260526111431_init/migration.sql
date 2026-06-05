@@ -1,188 +1,207 @@
--- CreateTable
-CREATE TABLE `Semester` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(191) NOT NULL,
-    `schoolYear` VARCHAR(191) NOT NULL,
-    `startDate` DATETIME(3) NULL,
-    `endDate` DATETIME(3) NULL,
-    `notes` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updatedAt` DATETIME(3) NOT NULL,
+-- CreateEnum
+CREATE TYPE "VoiceType" AS ENUM ('SOPRANO', 'ALTO', 'TENOR', 'BASS');
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- CreateEnum
+CREATE TYPE "AttendanceStatus" AS ENUM ('PRESENT', 'ABSENT', 'LATE', 'EXCUSED');
+
+-- CreateEnum
+CREATE TYPE "MemberStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'ALUMNI');
+
+-- CreateEnum
+CREATE TYPE "OfficerStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
 -- CreateTable
-CREATE TABLE `Member` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `fullName` VARCHAR(191) NOT NULL,
-    `voiceType` ENUM('SOPRANO', 'ALTO', 'TENOR', 'BASS') NOT NULL,
-    `contactNo` VARCHAR(191) NULL,
-    `address` VARCHAR(191) NULL,
-    `religion` VARCHAR(191) NULL,
-    `course` VARCHAR(191) NULL,
-    `yearLevel` VARCHAR(191) NULL,
-    `email` VARCHAR(191) NULL,
-    `facebookAccount` VARCHAR(191) NULL,
-    `status` ENUM('ACTIVE', 'INACTIVE', 'ALUMNI') NOT NULL DEFAULT 'ACTIVE',
-    `notes` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updatedAt` DATETIME(3) NOT NULL,
+CREATE TABLE "Semester" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "schoolYear" TEXT NOT NULL,
+    "startDate" TIMESTAMP(3),
+    "endDate" TIMESTAMP(3),
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "Semester_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `Session` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `semesterId` INTEGER NOT NULL,
-    `title` VARCHAR(191) NOT NULL,
-    `sessionDate` DATETIME(3) NOT NULL,
-    `description` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+CREATE TABLE "Member" (
+    "id" SERIAL NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "voiceType" "VoiceType" NOT NULL,
+    "contactNo" TEXT,
+    "address" TEXT,
+    "religion" TEXT,
+    "course" TEXT,
+    "yearLevel" TEXT,
+    "email" TEXT,
+    "facebookAccount" TEXT,
+    "status" "MemberStatus" NOT NULL DEFAULT 'ACTIVE',
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `AttendanceRecord` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `sessionId` INTEGER NOT NULL,
-    `memberId` INTEGER NOT NULL,
-    `status` ENUM('PRESENT', 'ABSENT', 'LATE', 'EXCUSED') NOT NULL,
-    `notes` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-
-    UNIQUE INDEX `AttendanceRecord_sessionId_memberId_key`(`sessionId`, `memberId`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "Member_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `Officer` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `semesterId` INTEGER NOT NULL,
-    `fullName` VARCHAR(191) NOT NULL,
-    `position` VARCHAR(191) NOT NULL,
-    `contactNo` VARCHAR(191) NULL,
-    `email` VARCHAR(191) NULL,
-    `facebookAccount` VARCHAR(191) NULL,
-    `dutiesNotes` TEXT NULL,
-    `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+CREATE TABLE "Session" (
+    "id" SERIAL NOT NULL,
+    "semesterId" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "sessionDate" TIMESTAMP(3) NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `Judge` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `fullName` VARCHAR(191) NOT NULL,
-    `titleRole` VARCHAR(191) NULL,
-    `specialization` VARCHAR(191) NULL,
-    `contactNo` VARCHAR(191) NULL,
-    `email` VARCHAR(191) NULL,
-    `facebookAccount` VARCHAR(191) NULL,
-    `notes` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+CREATE TABLE "AttendanceRecord" (
+    "id" SERIAL NOT NULL,
+    "sessionId" INTEGER NOT NULL,
+    "memberId" INTEGER NOT NULL,
+    "status" "AttendanceStatus" NOT NULL,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "AttendanceRecord_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `Auditionee` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `semesterId` INTEGER NOT NULL,
-    `fullName` VARCHAR(191) NOT NULL,
-    `age` INTEGER NULL,
-    `targetVoiceType` ENUM('SOPRANO', 'ALTO', 'TENOR', 'BASS') NULL,
-    `course` VARCHAR(191) NULL,
-    `yearLevel` VARCHAR(191) NULL,
-    `contactNo` VARCHAR(191) NULL,
-    `religion` VARCHAR(191) NULL,
-    `email` VARCHAR(191) NULL,
-    `facebookAccount` VARCHAR(191) NULL,
-    `address` VARCHAR(191) NULL,
-    `registryNotes` TEXT NULL,
-    `auditionDate` DATETIME(3) NOT NULL,
-    `averageRating` DOUBLE NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+CREATE TABLE "Officer" (
+    "id" SERIAL NOT NULL,
+    "semesterId" INTEGER NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "position" TEXT NOT NULL,
+    "contactNo" TEXT,
+    "email" TEXT,
+    "facebookAccount" TEXT,
+    "dutiesNotes" TEXT,
+    "status" "OfficerStatus" NOT NULL DEFAULT 'ACTIVE',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "Officer_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `EvaluationCategory` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(191) NOT NULL,
-    `description` TEXT NULL,
-    `percentage` DOUBLE NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+CREATE TABLE "Judge" (
+    "id" SERIAL NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "titleRole" TEXT,
+    "specialization" TEXT,
+    "contactNo" TEXT,
+    "email" TEXT,
+    "facebookAccount" TEXT,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateTable
-CREATE TABLE `JudgeEvaluation` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `auditioneeId` INTEGER NOT NULL,
-    `judgeId` INTEGER NOT NULL,
-    `comments` TEXT NULL,
-    `overallNotes` TEXT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-
-    UNIQUE INDEX `JudgeEvaluation_auditioneeId_judgeId_key`(`auditioneeId`, `judgeId`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "Judge_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `EvaluationScore` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `evaluationId` INTEGER NOT NULL,
-    `categoryId` INTEGER NOT NULL,
-    `score` DOUBLE NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+CREATE TABLE "Auditionee" (
+    "id" SERIAL NOT NULL,
+    "semesterId" INTEGER NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "age" INTEGER,
+    "targetVoiceType" "VoiceType",
+    "course" TEXT,
+    "yearLevel" TEXT,
+    "contactNo" TEXT,
+    "religion" TEXT,
+    "email" TEXT,
+    "facebookAccount" TEXT,
+    "address" TEXT,
+    "registryNotes" TEXT,
+    "auditionDate" TIMESTAMP(3) NOT NULL,
+    "averageRating" DOUBLE PRECISION,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    UNIQUE INDEX `EvaluationScore_evaluationId_categoryId_key`(`evaluationId`, `categoryId`),
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "Auditionee_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
-CREATE TABLE `RuleRegulation` (
-    `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `semesterId` INTEGER NULL,
-    `title` VARCHAR(191) NOT NULL,
-    `content` TEXT NOT NULL,
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+CREATE TABLE "EvaluationCategory" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "percentage" DOUBLE PRECISION NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (`id`)
-) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    CONSTRAINT "EvaluationCategory_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "JudgeEvaluation" (
+    "id" SERIAL NOT NULL,
+    "auditioneeId" INTEGER NOT NULL,
+    "judgeId" INTEGER NOT NULL,
+    "comments" TEXT,
+    "overallNotes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "JudgeEvaluation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EvaluationScore" (
+    "id" SERIAL NOT NULL,
+    "evaluationId" INTEGER NOT NULL,
+    "categoryId" INTEGER NOT NULL,
+    "score" DOUBLE PRECISION NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EvaluationScore_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RuleRegulation" (
+    "id" SERIAL NOT NULL,
+    "semesterId" INTEGER,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "RuleRegulation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "AttendanceRecord_sessionId_memberId_key" ON "AttendanceRecord"("sessionId", "memberId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "JudgeEvaluation_auditioneeId_judgeId_key" ON "JudgeEvaluation"("auditioneeId", "judgeId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EvaluationScore_evaluationId_categoryId_key" ON "EvaluationScore"("evaluationId", "categoryId");
 
 -- AddForeignKey
-ALTER TABLE `Session` ADD CONSTRAINT `Session_semesterId_fkey` FOREIGN KEY (`semesterId`) REFERENCES `Semester`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Session" ADD CONSTRAINT "Session_semesterId_fkey" FOREIGN KEY ("semesterId") REFERENCES "Semester"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `AttendanceRecord` ADD CONSTRAINT `AttendanceRecord_sessionId_fkey` FOREIGN KEY (`sessionId`) REFERENCES `Session`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AttendanceRecord" ADD CONSTRAINT "AttendanceRecord_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `AttendanceRecord` ADD CONSTRAINT `AttendanceRecord_memberId_fkey` FOREIGN KEY (`memberId`) REFERENCES `Member`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AttendanceRecord" ADD CONSTRAINT "AttendanceRecord_memberId_fkey" FOREIGN KEY ("memberId") REFERENCES "Member"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Officer` ADD CONSTRAINT `Officer_semesterId_fkey` FOREIGN KEY (`semesterId`) REFERENCES `Semester`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Officer" ADD CONSTRAINT "Officer_semesterId_fkey" FOREIGN KEY ("semesterId") REFERENCES "Semester"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Auditionee` ADD CONSTRAINT `Auditionee_semesterId_fkey` FOREIGN KEY (`semesterId`) REFERENCES `Semester`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Auditionee" ADD CONSTRAINT "Auditionee_semesterId_fkey" FOREIGN KEY ("semesterId") REFERENCES "Semester"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `JudgeEvaluation` ADD CONSTRAINT `JudgeEvaluation_auditioneeId_fkey` FOREIGN KEY (`auditioneeId`) REFERENCES `Auditionee`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "JudgeEvaluation" ADD CONSTRAINT "JudgeEvaluation_auditioneeId_fkey" FOREIGN KEY ("auditioneeId") REFERENCES "Auditionee"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `JudgeEvaluation` ADD CONSTRAINT `JudgeEvaluation_judgeId_fkey` FOREIGN KEY (`judgeId`) REFERENCES `Judge`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "JudgeEvaluation" ADD CONSTRAINT "JudgeEvaluation_judgeId_fkey" FOREIGN KEY ("judgeId") REFERENCES "Judge"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `EvaluationScore` ADD CONSTRAINT `EvaluationScore_evaluationId_fkey` FOREIGN KEY (`evaluationId`) REFERENCES `JudgeEvaluation`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "EvaluationScore" ADD CONSTRAINT "EvaluationScore_evaluationId_fkey" FOREIGN KEY ("evaluationId") REFERENCES "JudgeEvaluation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `EvaluationScore` ADD CONSTRAINT `EvaluationScore_categoryId_fkey` FOREIGN KEY (`categoryId`) REFERENCES `EvaluationCategory`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "EvaluationScore" ADD CONSTRAINT "EvaluationScore_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "EvaluationCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `RuleRegulation` ADD CONSTRAINT `RuleRegulation_semesterId_fkey` FOREIGN KEY (`semesterId`) REFERENCES `Semester`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "RuleRegulation" ADD CONSTRAINT "RuleRegulation_semesterId_fkey" FOREIGN KEY ("semesterId") REFERENCES "Semester"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

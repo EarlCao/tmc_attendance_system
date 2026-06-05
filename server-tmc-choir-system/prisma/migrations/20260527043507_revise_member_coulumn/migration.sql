@@ -7,9 +7,10 @@
 
 */
 -- AlterTable
-ALTER TABLE `Member` DROP COLUMN `email`,
-    DROP COLUMN `facebookAccount`,
-    ADD COLUMN `emailOrFacebook` VARCHAR(191) NULL;
+ALTER TABLE "Member" DROP COLUMN "email",
+    DROP COLUMN "facebookAccount",
+    ADD COLUMN "emailOrFacebook" TEXT;
 
 -- CreateIndex
-CREATE UNIQUE INDEX `EvaluationCategory_name_key` ON `EvaluationCategory`(`name`);
+CREATE UNIQUE INDEX "EvaluationCategory_name_key" ON "EvaluationCategory"("name");
+
