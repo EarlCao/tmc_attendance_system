@@ -79,4 +79,15 @@ export const rulesAPI = {
   deleteRule: (id) => api.delete(`/rules/${id}`).then(res => res.data),
 };
 
+export const categoriesAPI = {
+  getCategories: () => api.get('/categories').then(res => res.data),
+  createCategory: (data) => api.post('/categories', data).then(res => res.data),
+  updateCategory: (id, data) => api.put(`/categories/${id}`, data).then(res => res.data),
+  deleteCategory: (id) => api.delete(`/categories/${id}`).then(res => res.data),
+};
+
+export const backupAPI = {
+  exportBackup: () => api.get('/backup/export', { responseType: 'blob' }),
+};
+
 export default api;

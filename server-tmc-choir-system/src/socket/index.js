@@ -203,6 +203,24 @@ export const createSocketAwarePrisma = (baseClient) => {
         },
       },
 
+      evaluationCategory: {
+        async create({ args, query }) {
+          const result = await query(args);
+          emit('category:created', result);
+          return result;
+        },
+        async update({ args, query }) {
+          const result = await query(args);
+          emit('category:updated', result);
+          return result;
+        },
+        async delete({ args, query }) {
+          const result = await query(args);
+          emit('category:deleted', { id: result.id });
+          return result;
+        },
+      },
+
       attendanceRecord: {
         async upsert({ args, query }) {
           const result = await query(args);
