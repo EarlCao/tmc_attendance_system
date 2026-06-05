@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// In production (Vercel), VITE_API_URL is set to the Render backend URL e.g. https://tmc-choir-backend.onrender.com
+// In development, requests go to '/' and Vite's dev proxy forwards them to localhost
+const BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
 });
 
 // Add a request interceptor to inject the auth token

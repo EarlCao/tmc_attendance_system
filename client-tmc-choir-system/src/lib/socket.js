@@ -1,9 +1,10 @@
 import { io } from 'socket.io-client';
 
-// The socket connects to the same origin as the page.
-// In dev, Vite proxies /socket.io to the backend.
-// In production (Docker), the frontend and backend share the same origin via nginx or Vite preview proxy.
-const socket = io({
+// In production (Vercel), VITE_API_URL is set to the Render backend URL e.g. https://tmc-choir-backend.onrender.com
+// In development, Vite's dev proxy forwards /socket.io to the backend
+const SOCKET_URL = import.meta.env.VITE_API_URL || undefined;
+
+const socket = io(SOCKET_URL, {
   path: '/socket.io',
   transports: ['websocket', 'polling'],
   autoConnect: true,
