@@ -3,6 +3,7 @@ import { UserPlus, Star, Eye, CheckCircle2, XCircle, Clock, Mic2, Pencil, Loader
 import { useAuditions } from '../hooks/useAuditions'
 import { useJudges } from '../hooks/useJudges'
 import { useSemesters } from '../hooks/useSemesters'
+import { useCategories } from '../hooks/useCategories'
 import { useDebounce } from '../hooks/useDebounce'
 import { getStatusColor, getVoicePartColor, formatDateShort, cn } from '../lib/utils'
 import Avatar from '../components/common/Avatar'
@@ -11,8 +12,6 @@ import SearchBar from '../components/common/SearchBar'
 import EmptyState from '../components/common/EmptyState'
 import StatCard from '../components/common/StatCard'
 
-const CATEGORIES = ['vocalQuality','pitchAccuracy','tone','rhythm','confidence','stagePresence']
-const CATEGORY_LABELS = { vocalQuality: 'Vocal Quality', pitchAccuracy: 'Pitch Accuracy', tone: 'Tone', rhythm: 'Rhythm', confidence: 'Confidence', stagePresence: 'Stage Presence' }
 const VOICE_PARTS = ['Soprano','Alto','Tenor','Bass']
 const COURSE_OPTIONS = ['BSIT', 'BSOA', 'BSCRIM', 'BSPOL', 'BSCOM', 'BEED', 'BSED']
 
@@ -26,11 +25,7 @@ function validateAuditioneeForm(form) {
   return errors
 }
 
-function avgRating(ratings) {
-  if (!ratings || !ratings.length) return null
-  const total = ratings.reduce((s, r) => s + CATEGORIES.reduce((cs, c) => cs + Number(r[c] || 0), 0) / CATEGORIES.length, 0)
-  return (total / ratings.length).toFixed(1)
-}
+// Removed avgRating function since we rely on backend's calculated averageRating.
 
 function RatingStars({ value }) {
   return (
@@ -60,12 +55,7 @@ const emptyForm = {
 
 const emptyRatingForm = {
   judgeId: '',
-  vocalQuality: 8,
-  pitchAccuracy: 8,
-  tone: 8,
-  rhythm: 8,
-  confidence: 8,
-  stagePresence: 8,
+  scores: {},
   comments: '',
 }
 
@@ -79,20 +69,25 @@ function findJudgeEvaluation(auditionee, judgeId) {
   return (auditionee.evaluations || []).find((rating) => String(rating.judgeId) === String(judgeId)) || null
 }
 
-function buildRatingForm(judgeId, rating) {
+function buildRatingForm(judgeId, rating, categories) {
+  const scores = {};
+  (categories || []).forEach(cat => {
+    const existingScore = rating?.scores?.find(s => String(s.categoryId) === String(cat.id));
+    scores[cat.id] = existingScore ? existingScore.score : 8;
+  });
   return {
     ...emptyRatingForm,
     judgeId: judgeId ? String(judgeId) : '',
-    ...Object.fromEntries(CATEGORIES.map((cat) => [cat, rating?.[cat] ?? emptyRatingForm[cat]])),
+    scores,
     comments: rating?.comments ?? '',
   }
 }
 
-function buildEvaluationForm(auditioneeId, judgeId, rating) {
+function buildEvaluationForm(auditioneeId, judgeId, rating, categories) {
   return {
     ...emptyEvaluationForm,
     auditioneeId: auditioneeId ? String(auditioneeId) : '',
-    ...buildRatingForm(judgeId, rating),
+    ...buildRatingForm(judgeId, rating, categories),
   }
 }
 
@@ -100,6 +95,7 @@ export default function Auditions() {
   const { auditionees, loading: auditionsLoading, createAuditionee, updateAuditionee, updateStatus, saveEvaluation, fetchAuditionees } = useAuditions()
   const { activeSemester, loading: semestersLoading } = useSemesters()
   const { judges, loading: judgesLoading } = useJudges(activeSemester?.id)
+  const { categories, loading: categoriesLoading } = useCategories()
   
   const [searchInput, setSearch]           = useState('')
   const search = useDebounce(searchInput, 300)
@@ -219,7 +215,7 @@ export default function Auditions() {
   function openRatingForm(rating) {
     if (rating) {
       setEditingRatingId(rating.judgeId)
-      setRatingForm(buildRatingForm(rating.judgeId, rating))
+      setRatingForm(buildRatingForm(rating.judgeId, rating, categories))
       return
     }
 
@@ -227,7 +223,7 @@ export default function Auditions() {
     const nextJudge = judges.find((judge) => !ratedJudgeIds.has(judge.id)) ?? judges[0]
     const existingRating = findJudgeEvaluation(evalModal, nextJudge?.id)
     setEditingRatingId(null)
-    setRatingForm(buildRatingForm(nextJudge?.id, existingRating))
+    setRatingForm(buildRatingForm(nextJudge?.id, existingRating, categories))
   }
 
   function resetRatingForm() {
@@ -243,7 +239,10 @@ export default function Auditions() {
       const payload = {
         auditioneeId: evalModal.id,
         judgeId: judge.id,
-        ...Object.fromEntries(CATEGORIES.map((cat) => [cat, Number(ratingForm[cat]) || 0])),
+        scores: Object.entries(ratingForm.scores).map(([categoryId, score]) => ({
+          categoryId: parseInt(categoryId),
+          score: Number(score) || 0
+        })),
         comments: ratingForm.comments,
       }
       
@@ -264,7 +263,7 @@ export default function Auditions() {
     const nextJudge = judges.find((judge) => !ratedJudgeIds.has(judge.id)) ?? judges[0]
     const existingRating = findJudgeEvaluation(targetAuditionee, nextJudge?.id)
 
-    setEvaluationForm(buildEvaluationForm(targetAuditionee?.id, nextJudge?.id, existingRating))
+    setEvaluationForm(buildEvaluationForm(targetAuditionee?.id, nextJudge?.id, existingRating, categories))
     setEvaluationModal(true)
   }
 
@@ -274,7 +273,10 @@ export default function Auditions() {
       const payload = {
         auditioneeId: Number(evaluationForm.auditioneeId),
         judgeId: Number(evaluationForm.judgeId),
-        ...Object.fromEntries(CATEGORIES.map((cat) => [cat, Number(evaluationForm[cat]) || 0])),
+        scores: Object.entries(evaluationForm.scores).map(([categoryId, score]) => ({
+          categoryId: parseInt(categoryId),
+          score: Number(score) || 0
+        })),
         comments: evaluationForm.comments,
       }
       await saveEvaluation(payload)
@@ -288,7 +290,7 @@ export default function Auditions() {
     }
   }
 
-  if (auditionsLoading || judgesLoading || semestersLoading) {
+  if (auditionsLoading || judgesLoading || semestersLoading || categoriesLoading) {
     return <div className="page-shell flex items-center justify-center h-64"><Loader2 className="animate-spin text-blue-500 w-8 h-8" /></div>
   }
 
@@ -346,7 +348,7 @@ export default function Auditions() {
           </thead>
           <tbody className="divide-y divide-slate-50">
             {filtered.map((a) => {
-              const avg = avgRating(a.evaluations || [])
+              const avg = a.averageRating !== null && a.averageRating !== undefined ? parseFloat(a.averageRating).toFixed(1) : null;
               return (
                 <tr key={a.id} className="hover:bg-blue-600/25 transition-colors group">
                   <td className="px-6 py-4">
@@ -431,7 +433,9 @@ export default function Auditions() {
               </div>
               {(evalModal.evaluations || []).length > 0 && (
                 <div className="text-right p-4 bg-white rounded-xl shadow-sm border border-slate-100">
-                  <p className="text-4xl font-black text-yellow-500 tracking-tighter drop-shadow-sm">{avgRating(evalModal.evaluations || [])}</p>
+                  <p className="text-4xl font-black text-yellow-500 tracking-tighter drop-shadow-sm">
+                    {evalModal.averageRating !== null && evalModal.averageRating !== undefined ? parseFloat(evalModal.averageRating).toFixed(1) : '—'}
+                  </p>
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Avg / 10</p>
                 </div>
               )}
@@ -449,12 +453,21 @@ export default function Auditions() {
               <div>
                 <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider mb-4 px-1">Category Averages</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {CATEGORIES.map((cat) => {
-                    const evals = evalModal.evaluations || []
-                    const avg = (evals.reduce((s, r) => s + (Number(r[cat]) || 0), 0) / evals.length).toFixed(1)
+                  {categories.map((cat) => {
+                    const evals = evalModal.evaluations || [];
+                    let catSum = 0;
+                    let count = 0;
+                    evals.forEach(r => {
+                      const scoreObj = r.scores?.find(s => String(s.categoryId) === String(cat.id));
+                      if (scoreObj) {
+                        catSum += scoreObj.score;
+                        count += 1;
+                      }
+                    });
+                    const avg = count > 0 ? (catSum / count).toFixed(1) : (0).toFixed(1);
                     return (
-                      <div key={cat} className="p-4 bg-white border border-slate-100/80 shadow-sm rounded-2xl">
-                        <p className="text-[12px] font-bold text-slate-500 mb-2">{CATEGORY_LABELS[cat]}</p>
+                      <div key={cat.id} className="p-4 bg-white border border-slate-100/80 shadow-sm rounded-2xl">
+                        <p className="text-[12px] font-bold text-slate-500 mb-2">{cat.name}</p>
                         <div className="flex items-center gap-3">
                           <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
                             <div className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-amber-500" style={{ width: `${(avg / 10) * 100}%` }} />
@@ -487,7 +500,16 @@ export default function Auditions() {
                           <div className="flex items-center gap-3">
                             <span className="text-[15px] font-black text-yellow-600 bg-yellow-50 px-3 py-1 rounded-lg flex items-center gap-1.5 ring-1 ring-yellow-200/50">
                               <Star size={16} fill="currentColor"/>
-                              {(CATEGORIES.reduce((s, c) => s + (Number(r[c]) || 0), 0) / CATEGORIES.length).toFixed(1)}
+                              {(() => {
+                                let totalSum = 0;
+                                let totalWeight = 0;
+                                (r.scores || []).forEach(s => {
+                                  const weight = s.percentage || 0;
+                                  totalSum += s.score * weight;
+                                  totalWeight += weight;
+                                });
+                                return totalWeight > 0 ? (totalSum / totalWeight).toFixed(1) : (r.scores?.reduce((sum, s) => sum + s.score, 0) / (r.scores?.length || 1)).toFixed(1) || '0.0';
+                              })()}
                             </span>
                             <button onClick={() => openRatingForm(r)} className="btn-secondary text-[12px] py-1.5 px-3">
                               <Pencil size={12} /> Edit
@@ -495,10 +517,10 @@ export default function Auditions() {
                           </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-4 mb-4 bg-slate-50/50 p-4 rounded-xl">
-                          {CATEGORIES.map((cat) => (
-                            <div key={cat} className="flex items-center justify-between text-[12px]">
-                              <span className="font-semibold text-slate-500">{CATEGORY_LABELS[cat]}</span>
-                              <span className="font-black text-slate-800">{r[cat]}/10</span>
+                          {(r.scores || []).map((scoreObj) => (
+                            <div key={scoreObj.categoryId} className="flex items-center justify-between text-[12px]">
+                              <span className="font-semibold text-slate-500">{scoreObj.categoryName}</span>
+                              <span className="font-black text-slate-800">{scoreObj.score}/10</span>
                             </div>
                           ))}
                         </div>
@@ -546,16 +568,19 @@ export default function Auditions() {
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                    {CATEGORIES.map((cat) => (
-                      <div key={cat}>
-                        <label className="label">{CATEGORY_LABELS[cat]}</label>
+                    {categories.map((cat) => (
+                      <div key={cat.id}>
+                        <label className="label">{cat.name}</label>
                         <input
                           className="input bg-white font-bold"
                           type="number"
                           min="0"
                           max="10"
-                          value={ratingForm[cat]}
-                          onChange={e => setRatingForm(p => ({ ...p, [cat]: e.target.value }))}
+                          value={ratingForm.scores[cat.id] ?? 8}
+                          onChange={e => setRatingForm(p => ({
+                            ...p,
+                            scores: { ...p.scores, [cat.id]: e.target.value }
+                          }))}
                         />
                       </div>
                     ))}
@@ -621,7 +646,7 @@ export default function Auditions() {
                   const nextJudge = judges.find((judge) => !ratedJudgeIds.has(String(judge.id))) ?? judges[0]
                   const existingRating = findJudgeEvaluation(auditionee, nextJudge?.id)
 
-                  setEvaluationForm(buildEvaluationForm(e.target.value, nextJudge?.id, existingRating))
+                  setEvaluationForm(buildEvaluationForm(e.target.value, nextJudge?.id, existingRating, categories))
                 }}
               >
                 {currentSemesterAuditionees.map((auditionee) => (
@@ -637,7 +662,7 @@ export default function Auditions() {
                 onChange={e => {
                   const auditionee = auditionees.find((item) => String(item.id) === String(evaluationForm.auditioneeId))
                   const selectedRating = findJudgeEvaluation(auditionee, e.target.value)
-                  setEvaluationForm(buildEvaluationForm(evaluationForm.auditioneeId, e.target.value, selectedRating))
+                  setEvaluationForm(buildEvaluationForm(evaluationForm.auditioneeId, e.target.value, selectedRating, categories))
                 }}
               >
                 {judges.map((judge) => (
@@ -649,16 +674,19 @@ export default function Auditions() {
 
           <div className="rounded-2xl bg-slate-50/80 p-5 border border-slate-100/50 dark:bg-slate-950/40 dark:border-slate-700/70">
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              {CATEGORIES.map((cat) => (
-                <div key={cat}>
-                  <label className="label">{CATEGORY_LABELS[cat]}</label>
+              {categories.map((cat) => (
+                <div key={cat.id}>
+                  <label className="label">{cat.name}</label>
                   <input
                     className="input bg-white font-bold dark:bg-slate-950/70 dark:text-slate-100 dark:border-slate-700"
                     type="number"
                     min="0"
                     max="10"
-                    value={evaluationForm[cat]}
-                    onChange={e => setEvaluationForm(p => ({ ...p, [cat]: e.target.value }))}
+                    value={evaluationForm.scores[cat.id] ?? 8}
+                    onChange={e => setEvaluationForm(p => ({
+                      ...p,
+                      scores: { ...p.scores, [cat.id]: e.target.value }
+                    }))}
                   />
                 </div>
               ))}

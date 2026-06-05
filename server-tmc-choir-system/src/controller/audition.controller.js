@@ -1,35 +1,16 @@
 import { prisma } from '../lib/prisma.js';
 
-// Mapping between database category names and frontend camelCase keys
-const categoryNameToKey = (name) => {
-  const normalized = name.toLowerCase().replace(/[^a-z]/g, '');
-  if (normalized === 'vocalquality') return 'vocalQuality';
-  if (normalized === 'pitchaccuracy') return 'pitchAccuracy';
-  if (normalized === 'tone' || normalized === 'tonequality') return 'tone';
-  if (normalized === 'rhythm') return 'rhythm';
-  if (normalized === 'confidence') return 'confidence';
-  if (normalized === 'stagepresence') return 'stagePresence';
-  return name; // fallback
-};
 
-const keyToCategoryName = (key) => {
-  if (key === 'vocalQuality') return 'Vocal Quality';
-  if (key === 'pitchAccuracy') return 'Pitch Accuracy';
-  if (key === 'tone') return 'Tone Quality';
-  if (key === 'rhythm') return 'Rhythm';
-  if (key === 'confidence') return 'Confidence';
-  if (key === 'stagePresence') return 'Stage Presence';
-  return key.charAt(0).toUpperCase() + key.slice(1);
-};
 
-const CATEGORY_KEYS = ['vocalQuality', 'pitchAccuracy', 'tone', 'rhythm', 'confidence', 'stagePresence'];
-
-// Helper to recalculate auditionee average rating
 const recalculateAverageRating = async (auditioneeId) => {
   const evaluations = await prisma.judgeEvaluation.findMany({
     where: { auditioneeId },
     include: {
-      scores: true,
+      scores: {
+        include: {
+          category: true,
+        },
+      },
     },
   });
 
@@ -44,8 +25,15 @@ const recalculateAverageRating = async (auditioneeId) => {
   let totalRatingSum = 0;
   evaluations.forEach((evalItem) => {
     if (evalItem.scores.length === 0) return;
-    const evalSum = evalItem.scores.reduce((s, score) => s + score.score, 0);
-    const evalAvg = evalSum / evalItem.scores.length;
+    let evalSum = 0;
+    let totalWeight = 0;
+    evalItem.scores.forEach(scoreItem => {
+      const weight = scoreItem.category.percentage || 0;
+      evalSum += scoreItem.score * weight;
+      totalWeight += weight;
+    });
+    // If weights aren't set or sum to 0, fallback to simple average
+    const evalAvg = totalWeight > 0 ? (evalSum / totalWeight) : (evalItem.scores.reduce((s, score) => s + score.score, 0) / evalItem.scores.length);
     totalRatingSum += evalAvg;
   });
 
@@ -100,21 +88,17 @@ export const getAuditionees = async (req, res) => {
 
     const formattedAuditionees = auditionees.map((a) => {
       const ratings = a.evaluations.map((evalItem) => {
-        const ratingObj = {
+        return {
           judgeId: evalItem.judgeId,
           judgeName: evalItem.judge.fullName,
           comments: evalItem.comments || '',
+          scores: evalItem.scores.map(s => ({
+            categoryId: s.categoryId,
+            categoryName: s.category.name,
+            score: s.score,
+            percentage: s.category.percentage
+          }))
         };
-
-        // Initialize all keys to 0
-        CATEGORY_KEYS.forEach(k => { ratingObj[k] = 0; });
-
-        evalItem.scores.forEach((scoreItem) => {
-          const key = categoryNameToKey(scoreItem.category.name);
-          ratingObj[key] = scoreItem.score;
-        });
-
-        return ratingObj;
       });
 
       return {
@@ -349,7 +333,7 @@ export const updateAuditioneeStatus = async (req, res) => {
 
 export const saveEvaluation = async (req, res) => {
   try {
-    const { auditioneeId, judgeId, comments, overallNotes } = req.body;
+    const { auditioneeId, judgeId, comments, overallNotes, scores } = req.body;
 
     if (!auditioneeId || !judgeId) {
       return res.status(400).json({
@@ -379,36 +363,23 @@ export const saveEvaluation = async (req, res) => {
     });
 
     // Now upsert scores for each category
-    const scorePromises = CATEGORY_KEYS.map(async (key) => {
-      const val = req.body[key];
-      if (val === undefined) return;
-
-      const categoryName = keyToCategoryName(key);
-
-      // Find or create category
-      const category = await prisma.evaluationCategory.upsert({
-        where: { name: categoryName },
-        update: {},
-        create: {
-          name: categoryName,
-          percentage: 15.0, // default weight
-        },
-      });
+    const scorePromises = (scores || []).map(async (item) => {
+      if (!item.categoryId || item.score === undefined) return;
 
       return prisma.evaluationScore.upsert({
         where: {
           evaluationId_categoryId: {
             evaluationId: evaluation.id,
-            categoryId: category.id,
+            categoryId: parseInt(item.categoryId),
           },
         },
         update: {
-          score: parseFloat(val),
+          score: parseFloat(item.score),
         },
         create: {
           evaluationId: evaluation.id,
-          categoryId: category.id,
-          score: parseFloat(val),
+          categoryId: parseInt(item.categoryId),
+          score: parseFloat(item.score),
         },
       });
     });
