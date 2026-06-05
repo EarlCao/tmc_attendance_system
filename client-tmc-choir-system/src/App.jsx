@@ -1,10 +1,10 @@
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, Route, Routes, Navigate } from 'react-router-dom'
 import { CalendarDays, Lock, UserCheck, Loader2 } from 'lucide-react'
 
 // Layouts and Auth
 import MainLayout from './layouts/MainLayout'
 import Login from './pages/Login'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { SocketProvider } from './context/SocketContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
@@ -18,6 +18,11 @@ import Judges from './pages/Judges'
 import Officers from './pages/Officers'
 import Reports from './pages/Reports'
 import SettingsPage from './pages/Settings'
+import Accounts from './pages/Accounts'
+import MemberLayout from './layouts/MemberLayout'
+import MemberDashboard from './pages/member/MemberDashboard'
+import MemberAttendance from './pages/member/MemberAttendance'
+import MemberProfile from './pages/member/MemberProfile'
 
 // Context
 import { SemesterProvider, useSemesterContext } from './context/SemesterContext'
@@ -94,6 +99,7 @@ function AppRoutes() {
         />
         <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Reports /></RequireActiveSemester>} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/accounts" element={<Accounts />} />
         <Route
           path="*"
           element={
@@ -111,6 +117,37 @@ function AppRoutes() {
   )
 }
 
+function MemberRoutes() {
+  return (
+    <Routes>
+      <Route element={<MemberLayout />}>
+        <Route path="/" element={<MemberDashboard />} />
+        <Route path="/attendance" element={<MemberAttendance />} />
+        <Route path="/profile" element={<MemberProfile />} />
+        <Route path="*" element={<PlaceholderPage icon={UserCheck} title="Page not found" description="Choose a section from the sidebar to continue." />} />
+      </Route>
+    </Routes>
+  )
+}
+
+function MainApp() {
+  const { user } = useAuth()
+  return (
+    <SemesterProvider>
+      {user?.role?.toLowerCase() === 'member' ? (
+        <Routes>
+          <Route path="/member/*" element={<MemberRoutes />} />
+          <Route path="*" element={<Navigate to="/member" replace />} />
+        </Routes>
+      ) : (
+        <Routes>
+          <Route path="/*" element={<AppRoutes />} />
+        </Routes>
+      )}
+    </SemesterProvider>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -122,9 +159,7 @@ export default function App() {
               path="/*"
               element={
                 <ProtectedRoute>
-                  <SemesterProvider>
-                    <AppRoutes />
-                  </SemesterProvider>
+                  <MainApp />
                 </ProtectedRoute>
               }
             />

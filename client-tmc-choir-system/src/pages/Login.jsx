@@ -21,8 +21,13 @@ export default function Login() {
     try {
       const response = await authAPI.login({ username, password })
       if (response.status === 'success') {
-        login(response.token, response.data.user)
-        navigate('/')
+        const userData = response.data.user
+        login(response.token, userData)
+        if (userData.role?.toLowerCase() === 'member') {
+          navigate('/member')
+        } else {
+          navigate('/')
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to sign in. Please check your credentials.')

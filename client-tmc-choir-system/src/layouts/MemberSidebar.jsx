@@ -2,37 +2,20 @@ import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
-  CalendarDays,
   ClipboardList,
-  Users,
-  Mic2,
-  UserCheck,
-  BarChart3,
-  Settings,
+  User,
   ChevronLeft,
   ChevronRight,
-  Award,
-  KeyRound,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const navItems = [
-  { to: '/',           icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/semesters',  icon: CalendarDays,    label: 'Semesters' },
-  { to: '/attendance', icon: ClipboardList,   label: 'Attendance' },
-  { to: '/members',    icon: Users,           label: 'Choir Members' },
-  { to: '/auditions',  icon: Mic2,            label: 'Auditions' },
-  { to: '/judges',     icon: UserCheck,       label: 'Judges' },
-  { to: '/officers',   icon: Award,           label: 'Officers' },
-  { to: '/reports',    icon: BarChart3,       label: 'Reports' },
+  { to: '/member',           icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/member/attendance', icon: ClipboardList,   label: 'My Attendance' },
+  { to: '/member/profile',    icon: User,            label: 'My Profile' },
 ]
 
-const bottomItems = [
-  { to: '/accounts', icon: KeyRound, label: 'Accounts' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-]
-
-export default function Sidebar() {
+export default function MemberSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
 
@@ -52,7 +35,7 @@ export default function Sidebar() {
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-slate-950 text-[18px] leading-tight truncate tracking-tight dark:text-slate-100">TMC Choir</p>
-            <p className="text-[11px] font-medium text-slate-500 leading-tight truncate dark:text-slate-400">Attendance System</p>
+            <p className="text-[11px] font-medium text-slate-500 leading-tight truncate dark:text-slate-400">Member Portal</p>
           </div>
         )}
       </div>
@@ -60,11 +43,11 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto">
         {!collapsed && (
-          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">Main Menu</p>
+          <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">Menu</p>
         )}
         {navItems.map(({ to, icon: Icon, label }) => {
-          const isActive = to === '/'
-            ? location.pathname === '/'
+          const isActive = to === '/member'
+            ? location.pathname === '/member' || location.pathname === '/member/'
             : location.pathname.startsWith(to)
           return (
             <NavLink
@@ -82,30 +65,6 @@ export default function Sidebar() {
             </NavLink>
           )
         })}
-
-        <div className="pt-3">
-          {!collapsed && (
-            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-slate-500">System</p>
-          )}
-          {bottomItems.map(({ to, icon: Icon, label }) => {
-            const isActive = location.pathname.startsWith(to)
-            return (
-              <NavLink
-                key={to}
-                to={to}
-                className={cn(
-                  'sidebar-link',
-                  isActive && 'active',
-                  collapsed && 'justify-center px-2'
-                )}
-                title={collapsed ? label : undefined}
-              >
-                <Icon size={18} className="shrink-0" />
-                {!collapsed && <span className="truncate">{label}</span>}
-              </NavLink>
-            )
-          })}
-        </div>
       </nav>
 
       {/* Collapse toggle */}

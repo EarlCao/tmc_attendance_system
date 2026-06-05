@@ -15,6 +15,7 @@ const crumbMap = {
   '/judges':     'Judge Management',
   '/officers':   'Officers',
   '/reports':    'Reports',
+  '/accounts':   'Accounts',
   '/settings':   'Settings',
 }
 

@@ -98,4 +98,18 @@ export const backupAPI = {
     }).then(res => res.data),
 };
 
+export const accountsAPI = {
+  getAccounts: () => api.get('/accounts').then(res => res.data),
+  createAccount: (data) => api.post('/accounts', data).then(res => res.data),
+  updateAccount: (id, data) => api.put(`/accounts/${id}`, data).then(res => res.data),
+  deleteAccount: (id) => api.delete(`/accounts/${id}`).then(res => res.data),
+};
+
+export const portalAPI = {
+  getDashboard: () => api.get('/portal/dashboard').then(res => res.data),
+  getAttendance: () => api.get('/portal/attendance').then(res => res.data),
+  getProfile: () => api.get('/portal/profile').then(res => res.data),
+  updateProfile: (data) => api.put('/portal/profile', data).then(res => res.data),
+};
+
 export default api;
