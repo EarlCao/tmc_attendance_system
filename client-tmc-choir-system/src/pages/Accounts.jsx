@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react'
-import { UserPlus, Pencil, Trash2, Loader2, UserCheck, Wand2 } from 'lucide-react'
+import { UserPlus, Pencil, Trash2, Loader2, Wand2 } from 'lucide-react'
 import { useAccounts } from '../hooks/useAccounts'
 import { useToast } from '../hooks/useToast'
 import { useDebounce } from '../hooks/useDebounce'
-import { getStatusColor, cn } from '../lib/utils'
+import { cn } from '../lib/utils'
 import SearchBar from '../components/common/SearchBar'
-import Avatar from '../components/common/Avatar'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
 import Toast from '../components/common/Toast'
@@ -52,13 +51,17 @@ export default function Accounts() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
 
-  const visibleAccounts = useMemo(() => accounts.filter(a => !(a.role.toLowerCase() === 'admin' && !a.member)), [accounts])
+  // Show ALL accounts — both those with a real user row and member-only rows
+  // (member-only rows have id === null and represent "No Account" state)
+  const visibleAccounts = useMemo(() => accounts, [accounts])
 
   const filtered = useMemo(() =>
     visibleAccounts.filter((a) => {
-      const matchSearch = (a.username || '').toLowerCase().includes(search.toLowerCase()) ||
+      const displayName = a.username || a.member?.fullName || ''
+      const matchSearch = displayName.toLowerCase().includes(search.toLowerCase()) ||
                           (a.member?.fullName && a.member.fullName.toLowerCase().includes(search.toLowerCase()))
-      const matchRole = roleFilter === 'All' || a.role.toLowerCase() === roleFilter.toLowerCase()
+      const accountRole = (a.role || 'member').toLowerCase()
+      const matchRole = roleFilter === 'All' || accountRole === roleFilter.toLowerCase()
       return matchSearch && matchRole
     }).sort((a, b) => {
       const aKey = (a.username || a.member?.fullName || '').toLowerCase()
@@ -69,10 +72,10 @@ export default function Accounts() {
   )
 
   const stats = {
-    total: visibleAccounts.length,
-    admins: visibleAccounts.filter(a => a.role.toLowerCase() === 'admin').length,
-    members: visibleAccounts.filter(a => a.role.toLowerCase() === 'member').length,
-    active: visibleAccounts.filter(a => a.isActive).length,
+    total: visibleAccounts.filter(a => a.id !== null).length,
+    admins: visibleAccounts.filter(a => a.id !== null && (a.role || '').toLowerCase() === 'admin').length,
+    members: visibleAccounts.filter(a => a.id !== null && (a.role || '').toLowerCase() === 'member').length,
+    active: visibleAccounts.filter(a => a.id !== null && a.isActive).length,
   }
 
   function openAdd() { setForm(emptyForm); setAddModal(true) }
@@ -197,7 +200,7 @@ export default function Accounts() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filtered.map((a) => (
-                <tr key={a.id ?? `no-account-${a.memberId}`} className={cn('hover:bg-blue-600/25 transition-colors group', !a.hasAccount && a.id === null && 'bg-amber-50/40 dark:bg-amber-950/10')}>
+                <tr key={a.id ?? `no-account-${a.memberId}`} className={cn('hover:bg-blue-600/25 transition-colors group', a.id === null && 'bg-amber-50/40 dark:bg-amber-950/10')}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-slate-800 to-slate-700 shadow-md ring-2 ring-white text-white font-bold text-xs">
@@ -213,8 +216,8 @@ export default function Accounts() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${a.role.toLowerCase() === 'admin' ? 'bg-purple-50 text-purple-700 ring-purple-200' : 'bg-blue-50 text-blue-700 ring-blue-200'}`}>
-                      {a.role.charAt(0).toUpperCase() + a.role.slice(1)}
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${(a.role || 'member').toLowerCase() === 'admin' ? 'bg-purple-50 text-purple-700 ring-purple-200' : 'bg-blue-50 text-blue-700 ring-blue-200'}`}>
+                      {(a.role || 'member').charAt(0).toUpperCase() + (a.role || 'member').slice(1)}
                     </span>
                   </td>
                   <td className="px-5 py-4">

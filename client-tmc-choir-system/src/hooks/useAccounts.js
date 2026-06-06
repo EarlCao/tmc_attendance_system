@@ -25,12 +25,8 @@ export function useAccounts() {
     fetchAccounts();
   }, [fetchAccounts]);
 
-  // Real-time
+  // Real-time: refetch on any event that changes the accounts list
   useEffect(() => {
-    // Refetch on create/delete so the member relation is always included.
-    // user:created from member auto-creation doesn't carry the member object;
-    // user.deleteMany (used by deleteMember) doesn't fire user:deleted at all,
-    // so we also listen to member:created / member:deleted and refetch.
     const refetch = () => fetchAccounts();
 
     // Merge socket payload but preserve the existing member relation
@@ -40,9 +36,15 @@ export function useAccounts() {
       );
     };
 
+    // user:created — fires when a new User row is inserted (both from
+    // createMember auto-create AND from createAccountForMember)
     socket.on('user:created', refetch);
     socket.on('user:updated', onUpdated);
+    // user:deleted — fires from deleteAccount; for deleteMember we emit
+    // user:deleted manually in member.controller.js before deleteMany
     socket.on('user:deleted', refetch);
+    // member:created / member:deleted — catch-all safety net so the
+    // "No Account" placeholder rows stay in sync
     socket.on('member:created', refetch);
     socket.on('member:deleted', refetch);
 
@@ -57,11 +59,14 @@ export function useAccounts() {
 
   const createAccountForMember = async (memberId) => {
     const res = await accountsAPI.createAccountForMember(memberId);
+    // Optimistically refetch in case socket is slow
+    await fetchAccounts();
     return res;
   };
 
   const createAccount = async (data) => {
     const res = await accountsAPI.createAccount(data);
+    await fetchAccounts();
     return res;
   };
 
@@ -72,6 +77,7 @@ export function useAccounts() {
 
   const deleteAccount = async (id) => {
     const res = await accountsAPI.deleteAccount(id);
+    await fetchAccounts();
     return res;
   };
 
