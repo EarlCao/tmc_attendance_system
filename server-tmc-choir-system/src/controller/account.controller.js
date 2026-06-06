@@ -4,20 +4,84 @@ import bcrypt from 'bcrypt';
 // Get all accounts
 export const getAccounts = async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
+    // All members (with their user account if they have one)
+    const members = await prisma.member.findMany({
+      include: { user: true },
+      orderBy: { fullName: 'asc' },
+    });
+
+    // Standalone admin/non-member users
+    const standaloneUsers = await prisma.user.findMany({
+      where: { memberId: null },
       include: { member: true },
       orderBy: { createdAt: 'desc' },
     });
-    
-    // Remove passwordHash from response
-    const safeUsers = users.map(u => {
+
+    const memberAccounts = members.map((m) => {
+      const { user, ...memberData } = m;
+      if (user) {
+        const { passwordHash, ...safeUser } = user;
+        return { ...safeUser, member: memberData };
+      }
+      // Member with no linked account yet
+      return {
+        id: null,
+        username: null,
+        role: 'member',
+        isActive: false,
+        memberId: m.id,
+        member: memberData,
+        hasAccount: false,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+      };
+    });
+
+    const adminAccounts = standaloneUsers.map((u) => {
       const { passwordHash, ...rest } = u;
       return rest;
     });
 
-    res.status(200).json({ status: 'success', data: { accounts: safeUsers } });
+    res.status(200).json({
+      status: 'success',
+      data: { accounts: [...adminAccounts, ...memberAccounts] },
+    });
   } catch (error) {
     console.error('Get Accounts Error:', error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+};
+
+// Create an account for an existing member that has none
+export const createAccountForMember = async (req, res) => {
+  try {
+    const { memberId } = req.params;
+    const member = await prisma.member.findUnique({
+      where: { id: parseInt(memberId) },
+      include: { user: true },
+    });
+
+    if (!member) return res.status(404).json({ status: 'fail', message: 'Member not found' });
+    if (member.user) return res.status(400).json({ status: 'fail', message: 'Member already has an account' });
+
+    const baseUsername = member.fullName.toLowerCase().replace(/\s+/g, '.');
+    let username = baseUsername;
+    let counter = 1;
+    while (await prisma.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    const passwordHash = await bcrypt.hash('tmc2026', 10);
+    const newUser = await prisma.user.create({
+      data: { username, passwordHash, role: 'member', memberId: member.id },
+      include: { member: true },
+    });
+
+    const { passwordHash: ph, ...safeUser } = newUser;
+    res.status(201).json({ status: 'success', data: { account: safeUser } });
+  } catch (error) {
+    console.error('Create Account For Member Error:', error);
     res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
