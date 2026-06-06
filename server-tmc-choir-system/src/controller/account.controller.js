@@ -4,26 +4,26 @@ import bcrypt from 'bcrypt';
 // Get all accounts
 export const getAccounts = async (req, res) => {
   try {
-    // All members (with their user account if they have one)
+    // 1. All members with their linked user account (if any)
     const members = await prisma.member.findMany({
       include: { user: true },
       orderBy: { fullName: 'asc' },
     });
 
-    // Standalone admin/non-member users
+    // 2. Standalone users that are NOT linked to any member (e.g. pure admin accounts)
     const standaloneUsers = await prisma.user.findMany({
       where: { memberId: null },
-      include: { member: true },
       orderBy: { createdAt: 'desc' },
     });
 
+    // Build member rows — either a real account or a "No Account" placeholder
     const memberAccounts = members.map((m) => {
       const { user, ...memberData } = m;
       if (user) {
         const { passwordHash, ...safeUser } = user;
         return { ...safeUser, member: memberData };
       }
-      // Member with no linked account yet
+      // Member exists but has no linked user yet
       return {
         id: null,
         username: null,
@@ -37,11 +37,13 @@ export const getAccounts = async (req, res) => {
       };
     });
 
+    // Build standalone admin/non-member rows
     const adminAccounts = standaloneUsers.map((u) => {
       const { passwordHash, ...rest } = u;
       return rest;
     });
 
+    // Standalone admins first, then all member rows (with or without accounts)
     res.status(200).json({
       status: 'success',
       data: { accounts: [...adminAccounts, ...memberAccounts] },
@@ -142,7 +144,6 @@ export const updateAccount = async (req, res) => {
     if (username) data.username = username;
     if (role) data.role = role;
     if (isActive !== undefined) data.isActive = isActive;
-    
     if (password) {
       data.passwordHash = await bcrypt.hash(password, 10);
     }

@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
+import { emit } from '../socket/index.js';
 
 // Normalize DB member record → frontend-friendly shape
 const formatMember = (m) => {
@@ -109,7 +110,7 @@ export const createMember = async (req, res) => {
 
     const newMember = await prisma.member.create({ data: mappedData });
 
-    // Auto-create User account
+    // Auto-create a linked User account for this member
     const baseUsername = newMember.fullName.toLowerCase().replace(/\s+/g, '.');
     let username = baseUsername;
     let counter = 1;
@@ -118,7 +119,7 @@ export const createMember = async (req, res) => {
       counter++;
     }
     const passwordHash = await bcrypt.hash('tmc2026', 10);
-    await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
         username,
         passwordHash,
@@ -126,6 +127,12 @@ export const createMember = async (req, res) => {
         memberId: newMember.id,
       }
     });
+
+    // Explicitly broadcast user:created so the Accounts panel refreshes even
+    // if the socket-aware prisma wrapper already fired it — the hook deduplicates
+    // via a full refetch so double-firing is harmless.
+    const { passwordHash: _ph, ...safeUser } = newUser;
+    emit('user:created', safeUser);
 
     const formatted = formatMember(newMember);
     res.status(201).json({
@@ -166,9 +173,13 @@ export const updateMember = async (req, res) => {
 export const deleteMember = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Delete associated User to avoid FK constraint issues
+
+    // Delete associated User(s) first to avoid FK constraint issues.
+    // deleteMany is used because there could be edge-case orphans.
+    // We manually emit user:deleted for each so the Accounts panel updates.
+    const deletedUsers = await prisma.user.findMany({ where: { memberId: parseInt(id) } });
     await prisma.user.deleteMany({ where: { memberId: parseInt(id) } });
+    deletedUsers.forEach(u => emit('user:deleted', { id: u.id }));
 
     await prisma.member.delete({ where: { id: parseInt(id) } });
     res.status(200).json({ status: 'success', data: null });
