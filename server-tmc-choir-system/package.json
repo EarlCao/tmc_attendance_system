@@ -9,7 +9,9 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "migrate:dev": "prisma migrate dev",
-    "migrate:prod": "dotenv -e ../.env.production -- prisma migrate deploy"
+    "migrate:prod": "dotenv -e ../.env.production -- prisma migrate deploy",
+    "backfill:local": "node prisma/backfill-accounts.js",
+    "backfill:prod": "node prisma/backfill-accounts.js --prod"
   },
   "keywords": [],
   "author": "",
