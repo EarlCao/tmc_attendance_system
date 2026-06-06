@@ -7,14 +7,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:prod": "dotenv -e ../.env.production -- prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
-    "pg": "^8.13.3",
     "@prisma/client": "^7.8.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
@@ -23,9 +24,11 @@
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
+    "pg": "^8.13.3",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "dotenv-cli": "^11.0.0",
     "nodemon": "^3.1.14",
     "prisma": "^7.8.0"
   }
