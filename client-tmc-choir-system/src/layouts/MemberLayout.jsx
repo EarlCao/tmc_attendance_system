@@ -1,12 +1,20 @@
+import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import MemberSidebar from './MemberSidebar'
 import Header from './Header'
 import MemberMobileNav from './MemberMobileNav'
 import WelcomeModal from '../components/common/WelcomeModal'
+import TestingNoticeModal from '../components/common/TestingNoticeModal'
 import { useAuth } from '../context/AuthContext'
 
 export default function MemberLayout() {
   const { user, justLoggedIn, clearWelcome } = useAuth()
+  const [showNotice, setShowNotice] = useState(false)
+
+  const handleWelcomeClose = () => {
+    clearWelcome()
+    setShowNotice(true)
+  }
 
   return (
     <div className="flex h-screen bg-slate-50/50 dark:bg-slate-900 transition-colors duration-300">
@@ -22,8 +30,13 @@ export default function MemberLayout() {
 
       <WelcomeModal
         open={justLoggedIn}
-        onClose={clearWelcome}
+        onClose={handleWelcomeClose}
         user={user}
+      />
+
+      <TestingNoticeModal
+        open={showNotice}
+        onClose={() => setShowNotice(false)}
       />
     </div>
   )
