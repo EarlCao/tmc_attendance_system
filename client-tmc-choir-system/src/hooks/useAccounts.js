@@ -27,31 +27,33 @@ export function useAccounts() {
 
   // Real-time
   useEffect(() => {
-    const onCreated = (account) => {
-      setAccounts((prev) => {
-        if (prev.find((a) => a.id === account.id)) return prev;
-        return [account, ...prev]; // newer first
-      });
-    };
+    // Refetch on create/delete so the member relation is always included.
+    // user:created from member auto-creation doesn't carry the member object;
+    // user.deleteMany (used by deleteMember) doesn't fire user:deleted at all,
+    // so we also listen to member:created / member:deleted and refetch.
+    const refetch = () => fetchAccounts();
 
+    // Merge socket payload but preserve the existing member relation
     const onUpdated = (account) => {
-      setAccounts((prev) => prev.map((a) => (a.id === account.id ? account : a)));
+      setAccounts((prev) =>
+        prev.map((a) => (a.id === account.id ? { ...a, ...account } : a))
+      );
     };
 
-    const onDeleted = ({ id }) => {
-      setAccounts((prev) => prev.filter((a) => a.id !== id));
-    };
-
-    socket.on('user:created', onCreated);
+    socket.on('user:created', refetch);
     socket.on('user:updated', onUpdated);
-    socket.on('user:deleted', onDeleted);
+    socket.on('user:deleted', refetch);
+    socket.on('member:created', refetch);
+    socket.on('member:deleted', refetch);
 
     return () => {
-      socket.off('user:created', onCreated);
+      socket.off('user:created', refetch);
       socket.off('user:updated', onUpdated);
-      socket.off('user:deleted', onDeleted);
+      socket.off('user:deleted', refetch);
+      socket.off('member:created', refetch);
+      socket.off('member:deleted', refetch);
     };
-  }, []);
+  }, [fetchAccounts]);
 
   const createAccountForMember = async (memberId) => {
     const res = await accountsAPI.createAccountForMember(memberId);

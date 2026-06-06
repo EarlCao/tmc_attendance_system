@@ -56,11 +56,15 @@ export default function Accounts() {
 
   const filtered = useMemo(() =>
     visibleAccounts.filter((a) => {
-      const matchSearch = a.username.toLowerCase().includes(search.toLowerCase()) ||
+      const matchSearch = (a.username || '').toLowerCase().includes(search.toLowerCase()) ||
                           (a.member?.fullName && a.member.fullName.toLowerCase().includes(search.toLowerCase()))
       const matchRole = roleFilter === 'All' || a.role.toLowerCase() === roleFilter.toLowerCase()
       return matchSearch && matchRole
-    }).sort((a, b) => a.username.localeCompare(b.username)),
+    }).sort((a, b) => {
+      const aKey = (a.username || a.member?.fullName || '').toLowerCase()
+      const bKey = (b.username || b.member?.fullName || '').toLowerCase()
+      return aKey.localeCompare(bKey)
+    }),
     [visibleAccounts, search, roleFilter]
   )
 
