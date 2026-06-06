@@ -221,6 +221,26 @@ export const createSocketAwarePrisma = (baseClient) => {
         },
       },
 
+      user: {
+        async create({ args, query }) {
+          const result = await query(args);
+          const { passwordHash, ...safeUser } = result;
+          emit('user:created', safeUser);
+          return result;
+        },
+        async update({ args, query }) {
+          const result = await query(args);
+          const { passwordHash, ...safeUser } = result;
+          emit('user:updated', safeUser);
+          return result;
+        },
+        async delete({ args, query }) {
+          const result = await query(args);
+          emit('user:deleted', { id: result.id });
+          return result;
+        },
+      },
+
       attendanceRecord: {
         async upsert({ args, query }) {
           const result = await query(args);
