@@ -101,6 +101,7 @@ export const backupAPI = {
 export const accountsAPI = {
   getAccounts: () => api.get('/accounts').then(res => res.data),
   createAccount: (data) => api.post('/accounts', data).then(res => res.data),
+  createAccountForMember: (memberId) => api.post(`/accounts/member/${memberId}`).then(res => res.data),
   updateAccount: (id, data) => api.put(`/accounts/${id}`, data).then(res => res.data),
   deleteAccount: (id) => api.delete(`/accounts/${id}`).then(res => res.data),
 };

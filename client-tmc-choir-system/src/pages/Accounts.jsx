@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { UserPlus, Pencil, Trash2, KeyRound, Loader2, UserCheck } from 'lucide-react'
+import { UserPlus, Pencil, Trash2, Loader2, UserCheck, Wand2 } from 'lucide-react'
 import { useAccounts } from '../hooks/useAccounts'
 import { useToast } from '../hooks/useToast'
 import { useDebounce } from '../hooks/useDebounce'
@@ -41,7 +41,7 @@ function AccountForm({ form, setForm, isEdit = false }) {
 }
 
 export default function Accounts() {
-  const { accounts, loading, createAccount, updateAccount, deleteAccount } = useAccounts()
+  const { accounts, loading, createAccount, createAccountForMember, updateAccount, deleteAccount } = useAccounts()
   const { toasts, toast, dismiss } = useToast()
   const [searchInput, setSearch] = useState('')
   const search = useDebounce(searchInput, 300)
@@ -73,6 +73,18 @@ export default function Accounts() {
 
   function openAdd() { setForm(emptyForm); setAddModal(true) }
   function openEdit(a) { setForm({ username: a.username, role: a.role, isActive: a.isActive, password: '' }); setEditModal(a) }
+
+  async function handleGenerateAccount(memberId) {
+    setIsSaving(true)
+    try {
+      await createAccountForMember(memberId)
+      toast('Account generated successfully. Default password: tmc2026')
+    } catch (e) {
+      toast(e.response?.data?.message || 'Failed to generate account.', 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   async function handleAdd() {
     if (!form.username || !form.password) {
@@ -181,14 +193,17 @@ export default function Accounts() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filtered.map((a) => (
-                <tr key={a.id} className="hover:bg-blue-600/25 transition-colors group">
+                <tr key={a.id ?? `no-account-${a.memberId}`} className={cn('hover:bg-blue-600/25 transition-colors group', !a.hasAccount && a.id === null && 'bg-amber-50/40 dark:bg-amber-950/10')}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-tr from-slate-800 to-slate-700 shadow-md ring-2 ring-white text-white font-bold text-xs">
-                        {a.username.substring(0, 2).toUpperCase()}
+                        {(a.username || a.member?.fullName || '??').substring(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-800">{a.username}</p>
+                        {a.username
+                          ? <p className="text-sm font-bold text-slate-800">{a.username}</p>
+                          : <p className="text-sm font-bold text-amber-600 italic">No account yet</p>
+                        }
                         {a.member && <p className="text-[12px] text-slate-500">Linked to: {a.member.fullName}</p>}
                       </div>
                     </div>
@@ -199,14 +214,29 @@ export default function Accounts() {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${a.isActive ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-rose-50 text-rose-700 ring-rose-200'}`}>
-                      {a.isActive ? 'Active' : 'Inactive'}
-                    </span>
+                    {a.id === null
+                      ? <span className="text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 bg-amber-50 text-amber-700 ring-amber-200">No Account</span>
+                      : <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ring-1 ${a.isActive ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-rose-50 text-rose-700 ring-rose-200'}`}>
+                          {a.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    }
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => openEdit(a)} className="p-2 rounded-xl text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"><Pencil size={15} /></button>
-                      <button onClick={() => setDeleteConfirm(a)} className="p-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
+                      {a.id === null ? (
+                        <button
+                          onClick={() => handleGenerateAccount(a.memberId)}
+                          disabled={isSaving}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 ring-1 ring-amber-200 transition-colors disabled:opacity-50"
+                        >
+                          <Wand2 size={13} /> Generate Account
+                        </button>
+                      ) : (
+                        <>
+                          <button onClick={() => openEdit(a)} className="p-2 rounded-xl text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"><Pencil size={15} /></button>
+                          <button onClick={() => setDeleteConfirm(a)} className="p-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"><Trash2 size={15} /></button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -53,6 +53,11 @@ export function useAccounts() {
     };
   }, []);
 
+  const createAccountForMember = async (memberId) => {
+    const res = await accountsAPI.createAccountForMember(memberId);
+    return res;
+  };
+
   const createAccount = async (data) => {
     const res = await accountsAPI.createAccount(data);
     return res;
@@ -68,5 +73,5 @@ export function useAccounts() {
     return res;
   };
 
-  return { accounts, loading, error, fetchAccounts, createAccount, updateAccount, deleteAccount };
+  return { accounts, loading, error, fetchAccounts, createAccount, createAccountForMember, updateAccount, deleteAccount };
 }
