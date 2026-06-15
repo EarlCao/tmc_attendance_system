@@ -16,6 +16,7 @@ const crumbMap = {
   '/officers':   'Officers',
   '/reports':    'Reports',
   '/accounts':   'Accounts',
+  '/audit-logs': 'Audit Logs',
   '/settings':   'Settings',
   // Member portal routes
   '/member':              'Dashboard',
