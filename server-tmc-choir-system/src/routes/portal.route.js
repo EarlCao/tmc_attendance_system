@@ -3,7 +3,8 @@ import {
   getDashboard,
   getAttendance,
   getProfile,
-  updateProfile
+  updateProfile,
+  getSemesterSummary
 } from '../controller/portal.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 
@@ -13,6 +14,7 @@ router.use(protect);
 
 router.get('/dashboard', getDashboard);
 router.get('/attendance', getAttendance);
+router.get('/semesters', getSemesterSummary);
 router.route('/profile')
   .get(getProfile)
   .put(updateProfile);

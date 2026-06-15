@@ -1,17 +1,18 @@
 import { NavLink } from 'react-router-dom'
-import { Home, ClipboardList, UserCircle, BookOpen } from 'lucide-react'
+import { Home, ClipboardList, UserCircle, BookOpen, BarChart2 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const mobileItems = [
-  { to: '/member', icon: Home, label: 'Dashboard' },
+  { to: '/member',            icon: Home,         label: 'Dashboard' },
   { to: '/member/attendance', icon: ClipboardList, label: 'Attendance' },
-  { to: '/member/rules', icon: BookOpen, label: 'Rules' },
-  { to: '/member/profile', icon: UserCircle, label: 'Profile' },
+  { to: '/member/semesters',  icon: BarChart2,     label: 'Semesters' },
+  { to: '/member/rules',      icon: BookOpen,      label: 'Rules' },
+  { to: '/member/profile',    icon: UserCircle,    label: 'Profile' },
 ]
 
 export default function MemberMobileNav() {
   return (
-    <nav className="grid h-16 grid-cols-4 border-t border-slate-200/50 bg-white/95 px-1 backdrop-blur md:hidden z-20 shrink-0 dark:border-slate-800/70 dark:bg-slate-950/95">
+    <nav className="grid h-16 grid-cols-5 border-t border-slate-200/50 bg-white/95 px-1 backdrop-blur md:hidden z-20 shrink-0 dark:border-slate-800/70 dark:bg-slate-950/95">
       {mobileItems.map(({ to, icon: Icon, label }) => (
         <NavLink
           key={to}

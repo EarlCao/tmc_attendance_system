@@ -5,6 +5,7 @@ export function usePortal() {
   const [dashboardData, setDashboardData] = useState(null);
   const [attendanceData, setAttendanceData] = useState([]);
   const [profileData, setProfileData] = useState(null);
+  const [semesterSummaryData, setSemesterSummaryData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -34,6 +35,19 @@ export function usePortal() {
     }
   }, []);
 
+  const fetchSemesterSummary = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await portalAPI.getSemesterSummary();
+      setSemesterSummaryData(res.data?.semesters || []);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to fetch semester summary');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
@@ -56,11 +70,13 @@ export function usePortal() {
     dashboardData,
     attendanceData,
     profileData,
+    semesterSummaryData,
     loading,
     error,
     fetchDashboard,
     fetchAttendance,
     fetchProfile,
+    fetchSemesterSummary,
     updateProfile
   };
 }

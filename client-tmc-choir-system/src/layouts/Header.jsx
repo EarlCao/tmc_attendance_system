@@ -21,6 +21,7 @@ const crumbMap = {
   // Member portal routes
   '/member':              'Dashboard',
   '/member/attendance':   'My Attendance',
+  '/member/semesters':        'Sem. Summary',
   '/member/profile':      'My Profile',
   '/member/rules':        'Choir Rules',
 }

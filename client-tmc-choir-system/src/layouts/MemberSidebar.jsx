@@ -7,12 +7,14 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  BarChart2,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const navItems = [
-  { to: '/member',           icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/member',            icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/member/attendance', icon: ClipboardList,   label: 'My Attendance' },
+  { to: '/member/semesters',  icon: BarChart2,       label: 'Semester Summary' },
   { to: '/member/rules',      icon: BookOpen,        label: 'Choir Rules' },
   { to: '/member/profile',    icon: User,            label: 'My Profile' },
 ]

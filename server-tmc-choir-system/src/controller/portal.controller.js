@@ -91,6 +91,60 @@ export const getProfile = async (req, res) => {
   }
 };
 
+// Semester attendance summary
+export const getSemesterSummary = async (req, res) => {
+  try {
+    const { memberId } = req.user;
+    if (!memberId) return res.status(403).json({ status: 'fail', message: 'User is not linked to a member profile' });
+
+    const semesters = await prisma.semester.findMany({
+      include: {
+        sessions: {
+          include: {
+            attendance: {
+              where: { memberId }
+            }
+          }
+        }
+      },
+      orderBy: { id: 'desc' }
+    });
+
+    const summary = semesters
+      .filter(sem => sem.sessions.some(s => s.attendance.length > 0))
+      .map(sem => {
+        const records = sem.sessions.flatMap(s => s.attendance);
+        const totalSessions = sem.sessions.length;
+        const present = records.filter(r => r.status === 'PRESENT').length;
+        const absent  = records.filter(r => r.status === 'ABSENT').length;
+        const late    = records.filter(r => r.status === 'LATE').length;
+        const excused = records.filter(r => r.status === 'EXCUSED').length;
+        const recorded = records.length;
+        const attendanceRate = recorded > 0 ? Math.round((present / recorded) * 100) : 0;
+
+        return {
+          id: sem.id,
+          name: sem.name,
+          startDate: sem.startDate,
+          endDate: sem.endDate,
+          notes: sem.notes,
+          totalSessions,
+          recorded,
+          present,
+          absent,
+          late,
+          excused,
+          attendanceRate
+        };
+      });
+
+    res.status(200).json({ status: 'success', data: { semesters: summary } });
+  } catch (error) {
+    console.error('Portal Semester Summary Error:', error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+};
+
 // Update profile credentials
 export const updateProfile = async (req, res) => {
   try {

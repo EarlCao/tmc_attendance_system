@@ -110,6 +110,7 @@ export const accountsAPI = {
 export const portalAPI = {
   getDashboard: () => api.get('/portal/dashboard').then(res => res.data),
   getAttendance: () => api.get('/portal/attendance').then(res => res.data),
+  getSemesterSummary: () => api.get('/portal/semesters').then(res => res.data),
   getProfile: () => api.get('/portal/profile').then(res => res.data),
   updateProfile: (data) => api.put('/portal/profile', data).then(res => res.data),
 };
