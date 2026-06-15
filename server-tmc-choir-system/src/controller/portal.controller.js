@@ -122,6 +122,20 @@ export const getSemesterSummary = async (req, res) => {
         const recorded = records.length;
         const attendanceRate = recorded > 0 ? Math.round((present / recorded) * 100) : 0;
 
+        const sessionsList = sem.sessions.map(s => {
+          const record = s.attendance[0];
+          return {
+            id: s.id,
+            title: s.title,
+            date: s.sessionDate,
+            type: s.type,
+            status: record?.status || 'UNRECORDED',
+            notes: record?.notes || null,
+            excuseReason: record?.excuseReason || null,
+            excuseStatus: record?.excuseStatus || null
+          };
+        });
+
         return {
           id: sem.id,
           name: sem.name,
@@ -134,7 +148,8 @@ export const getSemesterSummary = async (req, res) => {
           absent,
           late,
           excused,
-          attendanceRate
+          attendanceRate,
+          sessions: sessionsList
         };
       });
 
