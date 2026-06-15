@@ -29,7 +29,7 @@ export default function MemberRules() {
         </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          {rules.length > 0 ? rules.map((rule) => (
+          {rules.filter(rule => rule.status?.toLowerCase() === 'active').length > 0 ? rules.filter(rule => rule.status?.toLowerCase() === 'active').map((rule) => (
             <div key={rule.id} className="rounded-2xl border border-slate-100 p-5 bg-white shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">

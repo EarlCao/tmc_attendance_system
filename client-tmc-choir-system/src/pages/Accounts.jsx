@@ -53,7 +53,8 @@ export default function Accounts() {
 
   // Show ALL accounts — both those with a real user row and member-only rows
   // (member-only rows have id === null and represent "No Account" state)
-  const visibleAccounts = useMemo(() => accounts, [accounts])
+  // Hide system admins (admins without a member profile) from this list
+  const visibleAccounts = useMemo(() => accounts.filter(a => !(a.role?.toLowerCase() === 'admin' && !a.member)), [accounts])
 
   const filtered = useMemo(() =>
     visibleAccounts.filter((a) => {
