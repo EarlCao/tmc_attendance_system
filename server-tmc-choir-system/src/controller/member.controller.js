@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import { emit } from '../socket/index.js';
+import { createAuditLog } from '../lib/auditLogger.js';
 
 // Normalize DB member record → frontend-friendly shape
 const formatMember = (m) => {
@@ -128,11 +129,19 @@ export const createMember = async (req, res) => {
       }
     });
 
-    // Explicitly broadcast user:created so the Accounts panel refreshes even
-    // if the socket-aware prisma wrapper already fired it — the hook deduplicates
-    // via a full refetch so double-firing is harmless.
+    // Explicitly broadcast user:created so the Accounts panel refreshes
     const { passwordHash: _ph, ...safeUser } = newUser;
     emit('user:created', safeUser);
+
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'CREATE_MEMBER',
+      category: 'MEMBER',
+      target: `member:${newMember.fullName}`,
+      details: { memberId: newMember.id, voiceType: newMember.voiceType, autoAccount: username },
+      ipAddress: req.ip,
+    });
 
     const formatted = formatMember(newMember);
     res.status(201).json({
@@ -159,6 +168,17 @@ export const updateMember = async (req, res) => {
       where: { id: parseInt(id) },
       data: mappedData,
     });
+
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'UPDATE_MEMBER',
+      category: 'MEMBER',
+      target: `member:${updatedMember.fullName}`,
+      details: { memberId: updatedMember.id, changes: Object.keys(mappedData) },
+      ipAddress: req.ip,
+    });
+
     const formatted = formatMember(updatedMember);
     res.status(200).json({
       status: 'success',
@@ -174,14 +194,26 @@ export const deleteMember = async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Find the member name before deleting for the audit log
+    const member = await prisma.member.findUnique({ where: { id: parseInt(id) } });
+
     // Delete associated User(s) first to avoid FK constraint issues.
-    // deleteMany is used because there could be edge-case orphans.
-    // We manually emit user:deleted for each so the Accounts panel updates.
     const deletedUsers = await prisma.user.findMany({ where: { memberId: parseInt(id) } });
     await prisma.user.deleteMany({ where: { memberId: parseInt(id) } });
     deletedUsers.forEach(u => emit('user:deleted', { id: u.id }));
 
     await prisma.member.delete({ where: { id: parseInt(id) } });
+
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'DELETE_MEMBER',
+      category: 'MEMBER',
+      target: `member:${member?.fullName || id}`,
+      details: { memberId: parseInt(id), linkedAccounts: deletedUsers.map(u => u.username) },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({ status: 'success', data: null });
   } catch (err) {
     console.error('Delete Member Error:', err);

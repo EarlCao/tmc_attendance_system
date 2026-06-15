@@ -38,7 +38,15 @@ export const AuthProvider = ({ children }) => {
     setJustLoggedIn(true);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Notify the server so it can create an audit log entry
+    try {
+      if (localStorage.getItem('token')) {
+        await authAPI.logout();
+      }
+    } catch (_) {
+      // Swallow — we still clear the session locally
+    }
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);

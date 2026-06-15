@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { createAuditLog } from '../lib/auditLogger.js';
 
 export const getSemesters = async (req, res) => {
   try {
@@ -47,6 +48,16 @@ export const createSemester = async (req, res) => {
       },
     });
 
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'CREATE_SEMESTER',
+      category: 'SEMESTER',
+      target: `semester:${name}`,
+      details: { semesterId: newSemester.id, startDate, endDate: endDate || null },
+      ipAddress: req.ip,
+    });
+
     res.status(201).json({
       status: 'success',
       data: { semester: newSemester },
@@ -72,6 +83,16 @@ export const updateSemester = async (req, res) => {
       data: updateData,
     });
 
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'UPDATE_SEMESTER',
+      category: 'SEMESTER',
+      target: `semester:${updatedSemester.name}`,
+      details: { semesterId: updatedSemester.id, changes: Object.keys(updateData) },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: 'success',
       data: { semester: updatedSemester },
@@ -91,6 +112,16 @@ export const endSemester = async (req, res) => {
       data: { endDate: new Date() },
     });
 
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'END_SEMESTER',
+      category: 'SEMESTER',
+      target: `semester:${updatedSemester.name}`,
+      details: { semesterId: updatedSemester.id, endedAt: new Date().toISOString() },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: 'success',
       data: { semester: updatedSemester },
@@ -105,7 +136,19 @@ export const deleteSemester = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const semester = await prisma.semester.findUnique({ where: { id: parseInt(id) } });
+
     await prisma.semester.delete({ where: { id: parseInt(id) } });
+
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'DELETE_SEMESTER',
+      category: 'SEMESTER',
+      target: `semester:${semester?.name || id}`,
+      details: { semesterId: parseInt(id) },
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: 'success',

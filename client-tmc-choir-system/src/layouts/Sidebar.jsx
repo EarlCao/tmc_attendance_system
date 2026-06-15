@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Award,
   KeyRound,
+  ShieldAlert,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
@@ -28,8 +29,9 @@ const navItems = [
 ]
 
 const bottomItems = [
-  { to: '/accounts', icon: KeyRound, label: 'Accounts' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/audit-logs', icon: ShieldAlert, label: 'Audit Logs' },
+  { to: '/accounts',   icon: KeyRound,    label: 'Accounts' },
+  { to: '/settings',   icon: Settings,    label: 'Settings' },
 ]
 
 export default function Sidebar() {

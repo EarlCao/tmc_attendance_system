@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
+import { createAuditLog } from '../lib/auditLogger.js';
 
 // Get all accounts
 export const getAccounts = async (req, res) => {
@@ -80,6 +81,16 @@ export const createAccountForMember = async (req, res) => {
       include: { member: true },
     });
 
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'CREATE_ACCOUNT',
+      category: 'ACCOUNT',
+      target: `user:${username}`,
+      details: { role: 'member', linkedMember: member.fullName, generatedFor: member.id },
+      ipAddress: req.ip,
+    });
+
     const { passwordHash: ph, ...safeUser } = newUser;
     res.status(201).json({ status: 'success', data: { account: safeUser } });
   } catch (error) {
@@ -114,6 +125,16 @@ export const createAccount = async (req, res) => {
       include: { member: true }
     });
 
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'CREATE_ACCOUNT',
+      category: 'ACCOUNT',
+      target: `user:${username}`,
+      details: { role: role || 'admin', isActive: isActive !== undefined ? isActive : true },
+      ipAddress: req.ip,
+    });
+
     const { passwordHash: ph, ...safeUser } = newUser;
     res.status(201).json({ status: 'success', data: { account: safeUser } });
   } catch (error) {
@@ -141,11 +162,23 @@ export const updateAccount = async (req, res) => {
     }
 
     const data = {};
-    if (username) data.username = username;
-    if (role) data.role = role;
-    if (isActive !== undefined) data.isActive = isActive;
+    const changes = [];
+
+    if (username && username !== existingUser.username) {
+      data.username = username;
+      changes.push({ field: 'username', from: existingUser.username, to: username });
+    }
+    if (role && role !== existingUser.role) {
+      data.role = role;
+      changes.push({ field: 'role', from: existingUser.role, to: role });
+    }
+    if (isActive !== undefined && isActive !== existingUser.isActive) {
+      data.isActive = isActive;
+      changes.push({ field: 'isActive', from: existingUser.isActive, to: isActive });
+    }
     if (password) {
       data.passwordHash = await bcrypt.hash(password, 10);
+      changes.push({ field: 'password', note: 'Password was changed' });
     }
 
     const updatedUser = await prisma.user.update({
@@ -153,6 +186,24 @@ export const updateAccount = async (req, res) => {
       data,
       include: { member: true }
     });
+
+    // Determine the most specific action label
+    let action = 'UPDATE_ACCOUNT';
+    if (changes.length === 1 && changes[0].field === 'username') action = 'CHANGE_USERNAME';
+    else if (changes.length === 1 && changes[0].field === 'password') action = 'CHANGE_PASSWORD';
+    else if (changes.some(c => c.field === 'password') && changes.some(c => c.field === 'username')) action = 'CHANGE_CREDENTIALS';
+
+    if (changes.length > 0) {
+      await createAuditLog({
+        userId: req.user?.id,
+        username: req.user?.username,
+        action,
+        category: 'ACCOUNT',
+        target: `user:${existingUser.username}`,
+        details: { changes, targetUserId: existingUser.id },
+        ipAddress: req.ip,
+      });
+    }
 
     const { passwordHash: ph, ...safeUser } = updatedUser;
     res.status(200).json({ status: 'success', data: { account: safeUser } });
@@ -166,7 +217,23 @@ export const updateAccount = async (req, res) => {
 export const deleteAccount = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const existingUser = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+
     await prisma.user.delete({ where: { id: parseInt(id) } });
+
+    if (existingUser) {
+      await createAuditLog({
+        userId: req.user?.id,
+        username: req.user?.username,
+        action: 'DELETE_ACCOUNT',
+        category: 'ACCOUNT',
+        target: `user:${existingUser.username}`,
+        details: { deletedUserId: existingUser.id, deletedUsername: existingUser.username, role: existingUser.role },
+        ipAddress: req.ip,
+      });
+    }
+
     res.status(200).json({ status: 'success', data: null });
   } catch (error) {
     console.error('Delete Account Error:', error);

@@ -20,6 +20,7 @@ api.interceptors.request.use((config) => {
 // API Services
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials).then(res => res.data),
+  logout: () => api.post('/auth/logout').then(res => res.data),
   getMe: () => api.get('/auth/me').then(res => res.data),
 };
 
@@ -111,6 +112,11 @@ export const portalAPI = {
   getAttendance: () => api.get('/portal/attendance').then(res => res.data),
   getProfile: () => api.get('/portal/profile').then(res => res.data),
   updateProfile: (data) => api.put('/portal/profile', data).then(res => res.data),
+};
+
+export const auditLogsAPI = {
+  getLogs: (params) => api.get('/audit-logs', { params }).then(res => res.data),
+  clearLogs: () => api.delete('/audit-logs').then(res => res.data),
 };
 
 export default api;

@@ -19,6 +19,7 @@ import Officers from './pages/Officers'
 import Reports from './pages/Reports'
 import SettingsPage from './pages/Settings'
 import Accounts from './pages/Accounts'
+import AuditLogs from './pages/AuditLogs'
 import MemberLayout from './layouts/MemberLayout'
 import MemberDashboard from './pages/member/MemberDashboard'
 import MemberAttendance from './pages/member/MemberAttendance'
@@ -99,6 +100,7 @@ function AppRoutes() {
           }
         />
         <Route path="/reports" element={<RequireActiveSemester currentSemester={currentSemester} semesterLoading={semesterLoading}><Reports /></RequireActiveSemester>} />
+        <Route path="/audit-logs" element={<AuditLogs />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/accounts" element={<Accounts />} />
         <Route

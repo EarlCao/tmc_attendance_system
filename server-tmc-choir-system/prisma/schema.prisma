@@ -326,3 +326,19 @@ model User {
   // Relations
   member Member? @relation(fields: [memberId], references: [id])
 }
+
+//////////////////////////////////////////////////////
+// AUDIT LOGS
+//////////////////////////////////////////////////////
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  username  String?
+  action    String
+  category  String   @default("AUTH")
+  target    String?
+  details   String?  @db.Text
+  ipAddress String?
+  createdAt DateTime @default(now())
+}

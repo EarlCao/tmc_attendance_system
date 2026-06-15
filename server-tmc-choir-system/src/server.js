@@ -19,6 +19,7 @@ import categoryRoutes from "./routes/category.route.js";
 import backupRoutes from "./routes/backup.route.js";
 import accountRoutes from "./routes/account.route.js";
 import portalRoutes from "./routes/portal.route.js";
+import auditLogRoutes from "./routes/auditLog.route.js";
 import { globalLimiter } from "./middleware/rateLimit.middleware.js";
 
 const BACKEND_PORT = process.env.BACKEND_PORT || 3002;
@@ -49,6 +50,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/accounts", accountRoutes);
 app.use("/api/portal", portalRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });

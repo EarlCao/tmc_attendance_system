@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { ClipboardList, Home, Mic2, MoreHorizontal, Users, CalendarDays, UserCheck, Award, BarChart3, KeyRound, Settings, X } from 'lucide-react'
+import { ClipboardList, Home, Mic2, MoreHorizontal, Users, CalendarDays, UserCheck, Award, BarChart3, KeyRound, Settings, X, ShieldAlert } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const mobileItems = [
@@ -11,12 +11,13 @@ const mobileItems = [
 ]
 
 const moreItems = [
-  { to: '/semesters', icon: CalendarDays, label: 'Semesters' },
-  { to: '/judges', icon: UserCheck, label: 'Judges' },
-  { to: '/officers', icon: Award, label: 'Officers' },
-  { to: '/reports', icon: BarChart3, label: 'Reports' },
-  { to: '/accounts', icon: KeyRound, label: 'Accounts' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/semesters',  icon: CalendarDays, label: 'Semesters' },
+  { to: '/judges',     icon: UserCheck,    label: 'Judges' },
+  { to: '/officers',   icon: Award,        label: 'Officers' },
+  { to: '/reports',    icon: BarChart3,    label: 'Reports' },
+  { to: '/audit-logs', icon: ShieldAlert,  label: 'Audit Logs' },
+  { to: '/accounts',   icon: KeyRound,     label: 'Accounts' },
+  { to: '/settings',   icon: Settings,     label: 'Settings' },
 ]
 
 export default function MobileNav() {
