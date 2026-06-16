@@ -142,6 +142,10 @@ export const portalAPI = {
   updateProfile: (data) => api.put('/portal/profile', data).then(res => res.data),
 };
 
+export const reportsAPI = {
+  getSemesterAttendanceSummary: (params) => api.get('/reports/semesters', { params }).then(res => res.data),
+};
+
 export const auditLogsAPI = {
   getLogs: (params) => api.get('/audit-logs', { params }).then(res => res.data),
   clearLogs: () => api.delete('/audit-logs').then(res => res.data),

@@ -20,6 +20,7 @@ import backupRoutes from "./routes/backup.route.js";
 import accountRoutes from "./routes/account.route.js";
 import portalRoutes from "./routes/portal.route.js";
 import auditLogRoutes from "./routes/auditLog.route.js";
+import reportRoutes from "./routes/report.route.js";
 import { globalLimiter, backupLimiter } from "./middleware/rateLimit.middleware.js";
 
 // Fail fast if required configuration is missing — prevents deploying with an
@@ -98,6 +99,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/accounts", accountRoutes);
 app.use("/api/portal", portalRoutes);
+app.use("/api/reports", reportRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 
 app.get("/health", async (req, res) => {
