@@ -254,9 +254,29 @@ export const importBackup = async (req, res) => {
       { timeout: 120000, maxWait: 10000 }
     );
 
+    // Build a restore summary: per-table row counts after the restore.
+    const allTables = [...CORE_TABLE_ORDER, AUDIT_LOG_TABLE];
+    const counts = await Promise.all(
+      allTables.map((table) => {
+        const model = table.charAt(0).toLowerCase() + table.slice(1);
+        return prisma[model].count().then(
+          (n) => ({ table, rows: n }),
+          () => ({ table, rows: null }) // table not present / not counted
+        );
+      })
+    );
+    const tableCounts = counts.filter((c) => c.rows !== null);
+    const totalRows = tableCounts.reduce((sum, c) => sum + c.rows, 0);
+
     res.status(200).json({
       status: 'success',
       message: `Backup restored successfully. ${statements.length} statements executed.`,
+      summary: {
+        statements: statements.length,
+        tables: tableCounts.length,
+        totalRows,
+        tableCounts,
+      },
     });
   } catch (err) {
     console.error('Import Backup Error:', err);

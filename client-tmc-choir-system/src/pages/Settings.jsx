@@ -60,7 +60,7 @@ export default function Settings() {
   const [importFile, setImportFile]                 = useState(null)        // File object
   const [importConfirmOpen, setImportConfirmOpen]   = useState(false)
   const [importLoading, setImportLoading]           = useState(false)
-  const [importResult, setImportResult]             = useState(null)        // { ok, message }
+  const [importResult, setImportResult]             = useState(null)        // { ok, message, summary }
   const fileInputRef                                = useRef(null)
 
   const [isSaving, setIsSaving] = useState(false)
@@ -250,7 +250,7 @@ export default function Settings() {
       const sqlText = await importFile.text()
       const res = await backupAPI.importBackup(sqlText)
       const ok = res.status === 'success'
-      setImportResult({ ok, message: res.message })
+      setImportResult({ ok, message: res.message, summary: res.summary })
       if (ok) {
         // Refresh in-page data so the restored records appear immediately.
         await Promise.all([fetchRules(), fetchCategories(), fetchAccounts()])
@@ -486,6 +486,28 @@ export default function Settings() {
               {importResult.message}
               {importResult.ok && (
                 <span className="ml-2 text-[12px] opacity-70">Restored data has been refreshed.</span>
+              )}
+              {importResult.ok && importResult.summary && (
+                <div className="mt-3 border-t border-green-200/70 pt-3">
+                  <p className="text-[12px] font-bold uppercase tracking-wide text-green-700/80">
+                    Restore summary
+                  </p>
+                  <p className="mt-1 text-[12px] font-semibold text-green-700">
+                    {importResult.summary.statements} statements executed ·{' '}
+                    {importResult.summary.tables} tables ·{' '}
+                    {importResult.summary.totalRows} rows restored
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {importResult.summary.tableCounts?.map((tc) => (
+                      <span
+                        key={tc.table}
+                        className="rounded-full bg-green-100 px-2.5 py-0.5 text-[11px] font-semibold text-green-700 ring-1 ring-green-200"
+                      >
+                        {tc.table}: {tc.rows}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           )}

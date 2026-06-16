@@ -35,6 +35,40 @@ const TABLES = [
   'auditLog',
 ];
 
+// ── Safety guard ─────────────────────────────────────────────────────────────
+// This test TRUNCATEs and re-inserts data on the connected database. Refuse to
+// run against anything that doesn't clearly look like a dev/test DB, unless the
+// operator explicitly opts in with ALLOW_BACKUP_TEST=true.
+function assertSafeDatabase() {
+  if (String(process.env.ALLOW_BACKUP_TEST).toLowerCase() === 'true') {
+    console.warn('⚠  ALLOW_BACKUP_TEST=true — skipping DB safety guard.\n');
+    return;
+  }
+
+  const url = process.env.DATABASE_URL || '';
+  if (!url) {
+    throw new Error(
+      'DATABASE_URL is not set. Refusing to run the round-trip test.'
+    );
+  }
+
+  const lower = url.toLowerCase();
+  const looksSafe =
+    /localhost|127\.0\.0\.1|::1/.test(lower) ||
+    /(^|[/_-])(test|dev|local|staging)([/_?-]|$)/.test(lower);
+
+  const looksProd = /(prod|production|live)/.test(lower);
+
+  if (looksProd || !looksSafe) {
+    throw new Error(
+      'Refusing to run: DATABASE_URL does not look like a dev/test database ' +
+      '(it must contain localhost/127.0.0.1 or test/dev/local/staging, and ' +
+      'must not look like production). This test truncates and re-inserts all ' +
+      'data. Set ALLOW_BACKUP_TEST=true to override deliberately.'
+    );
+  }
+}
+
 // Minimal Express response stub that captures status + body.
 function makeRes() {
   const res = {
@@ -59,6 +93,8 @@ async function countAll() {
 
 async function main() {
   console.log('— Backup round-trip test —\n');
+
+  assertSafeDatabase();
 
   const before = await countAll();
   console.log('Row counts BEFORE:', before);
@@ -85,6 +121,10 @@ async function main() {
     throw new Error(`Import failed (status ${importRes.statusCode}): ${JSON.stringify(importRes.body)}`);
   }
   console.log('Import result:', importRes.body.message);
+  if (importRes.body.summary) {
+    const { statements: s, tables, totalRows } = importRes.body.summary;
+    console.log(`Restore summary: ${s} statements, ${tables} tables, ${totalRows} rows.`);
+  }
 
   // 3) Re-count and compare.
   const after = await countAll();
