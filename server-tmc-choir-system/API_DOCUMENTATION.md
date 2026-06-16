@@ -114,9 +114,14 @@ Authenticate a user and receive a JWT token.
 ```json
 {
   "username": "admin",
-  "password": "admin123"
+  "password": "<your-password>"
 }
 ```
+
+> The seed admin password is set via the `SEED_ADMIN_PASSWORD` environment
+> variable. Auto-generated member accounts receive a unique one-time temporary
+> password returned once in the create-account response (see the Accounts
+> endpoints) — there is no shared default password.
 
 **Success Response (200):**
 ```json

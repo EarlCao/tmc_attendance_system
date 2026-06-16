@@ -85,8 +85,16 @@ export default function Accounts() {
   async function handleGenerateAccount(memberId) {
     setIsSaving(true)
     try {
-      await createAccountForMember(memberId)
-      toast('Account generated successfully. Default password: tmc2026')
+      const res = await createAccountForMember(memberId)
+      // The backend returns a unique, one-time temporary password that is never
+      // stored in plaintext. Surface it here so the admin can relay it to the
+      // member — it cannot be retrieved again later.
+      const account = res?.data?.data?.account
+      if (account?.tempPassword) {
+        toast(`Account "${account.username}" created. Temporary password: ${account.tempPassword} (shown once — copy it now)`)
+      } else {
+        toast('Account generated successfully.')
+      }
     } catch (e) {
       toast(e.response?.data?.message || 'Failed to generate account.', 'error')
     } finally {
