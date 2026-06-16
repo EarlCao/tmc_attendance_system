@@ -1,8 +1,8 @@
-import express from 'express';
+import { Router } from 'express';
 import { getAuditLogs, clearAuditLogs } from '../controller/auditLog.controller.js';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
 
-const router = express.Router();
+const router = Router();
 
 router.use(protect);
 router.use(restrictTo('admin'));

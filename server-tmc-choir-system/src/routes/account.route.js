@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import {
   getAccounts,
   createAccount,
@@ -8,7 +8,7 @@ import {
 } from '../controller/account.controller.js';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
 
-const router = express.Router();
+const router = Router();
 
 router.use(protect);
 router.use(restrictTo('admin'));

@@ -4,11 +4,25 @@ import { emit } from '../socket/index.js';
 import { createAuditLog } from '../lib/auditLogger.js';
 import { BCRYPT_COST, generateTempPassword, parseId } from '../lib/security.js';
 
+// Common multi-word surname prefixes so names like "Dela Cruz" or "Van Der Berg"
+// keep their full surname instead of only the final token (L-8).
+const SURNAME_PREFIXES = new Set(['de', 'dela', 'del', 'della', 'di', 'van', 'von', 'der', 'den', 'da', 'dos', 'las', 'los', 'san', 'santa', 'st', 'mac', 'mc', 'la', 'le']);
+
 // Normalize DB member record → frontend-friendly shape
 const formatMember = (m) => {
-  const nameParts = (m.fullName || '').trim().split(/\s+/);
-  const lastName  = nameParts.length > 1 ? nameParts.pop() : '';
-  const firstName = nameParts.join(' ') || m.fullName || '';
+  const nameParts = (m.fullName || '').trim().split(/\s+/).filter(Boolean);
+  let firstName = m.fullName || '';
+  let lastName = '';
+  if (nameParts.length > 1) {
+    // Walk from the end, absorbing recognized surname prefixes so compound
+    // surnames are captured rather than truncated to a single token.
+    let splitIndex = nameParts.length - 1;
+    while (splitIndex > 1 && SURNAME_PREFIXES.has(nameParts[splitIndex - 1].toLowerCase())) {
+      splitIndex--;
+    }
+    firstName = nameParts.slice(0, splitIndex).join(' ');
+    lastName = nameParts.slice(splitIndex).join(' ');
+  }
   const voicePart = m.voiceType
     ? m.voiceType.charAt(0).toUpperCase() + m.voiceType.slice(1).toLowerCase()
     : '';

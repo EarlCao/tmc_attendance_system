@@ -249,3 +249,81 @@
 - Low-priority issues from `PRE_DEPLOY_REVIEW.md` remain open and were intentionally not addressed in this pass.
 
 *End of medium-level summary.*
+
+---
+
+# LOW-LEVEL FIXES
+
+**Date:** 2026-06-16
+**Scope:** This pass addresses **Low-severity issues only** (L-1 through L-9 from `PRE_DEPLOY_REVIEW.md`). All Critical / High / Medium fixes above remain unchanged.
+**Validation:** All modified backend files pass `node --check` (syntax), `npx prisma validate` reports the schema is valid, and the changes were reviewed by an automated code review with no blocking issues. The new Prisma migration is additive and nullable, so it is safe to apply to existing databases. No existing API response shapes changed (the `reviewedAt` field already existed in the excuses payload; it is now backed by a real column instead of a wrong fallback).
+
+> `PRE_DEPLOY_REVIEW.md`, `CRITICAL_FIXES.md`, and the Critical / High / Medium sections above were **not** modified.
+
+---
+
+## Low Issues Found & Fixed
+
+### L-1 — Dead code (commented-out `globalLimiter`, `setPrisma` indirection)
+**Was:** `globalLimiter` was imported but commented out; `setPrisma` was flagged as added complexity.
+**Resolution:** The commented-out `globalLimiter` was **already re-enabled** in the High pass (H-1), so the dead code no longer exists. `setPrisma` is **intentional, not dead code** — it is the seam that lets `server.js` swap in the socket-aware Prisma client (`createSocketAwarePrisma`) at startup while controllers import a stable `prisma` binding. It is kept as-is; no change needed.
+
+### L-2 — Excessive `console.log` in Socket.IO
+**Was:** `socket/index.js` logged every connect / join / leave / disconnect, which is noisy and leaks socket IDs in production.
+**Fixed:** Added a small leveled `socketLog(...)` helper that only logs when `NODE_ENV !== 'production'`. All connection/room/disconnect logs (and the "Initialized" line) now route through it, silencing them in production while keeping them for local debugging.
+
+### L-3 — Incorrect `reviewedAt` on excuses
+**Was:** `getExcuses` used `session.createdAt` as the excuse review timestamp — semantically wrong (it's the session's creation time, not when the excuse was reviewed).
+**Fixed:** Added a dedicated nullable **`reviewedAt DateTime?`** column to `AttendanceRecord` (additive migration `20260616010000_add_attendance_reviewed_at`). `updateExcuseStatus` now stamps `reviewedAt = new Date()` whenever an excuse transitions out of `Pending`, and `getExcuses` reports the real `reviewedAt` (null until actually reviewed).
+
+### L-4 — Magic strings for statuses
+**Was:** Status values (`'PRESENT'`, `'EXCUSED'`, `'Approved'`, `'Pending'`, etc.) were duplicated as inline string literals.
+**Fixed (conservatively scoped):** Added a shared **`src/lib/constants.js`** exposing frozen `ATTENDANCE_STATUS` and `EXCUSE_STATUS` maps, and applied them throughout `attendance.controller.js` (status mapping, excuse filtering, rate calculation, excuse review). Per the "avoid unnecessary refactoring" guidance, the constants were applied only to the controller that concentrates these strings; other controllers were left untouched and can adopt the same module incrementally.
+
+### L-5 — `TestingNoticeModal` says the app is "not yet ready"
+**Decision:** Intentionally **left as-is** per user direction — the testing notice remains a deliberate UX choice and was not removed in this pass.
+
+### L-6 — `getMe` redundancy
+**Was:** Noted that `getMe` re-fetches the user even though `protect` already loaded it.
+**Resolution:** No real redundancy exists server-side — `getMe` simply returns the already-loaded (and `passwordHash`-stripped, per C-2) `req.user` without an extra query. Documented as a non-issue; no change made.
+
+### L-7 — Mixed router import styles / inconsistent file naming
+**Was:** Most route files used `import { Router } from 'express'` while `account.route.js`, `auditLog.route.js`, and `portal.route.js` used `express.Router()`; file naming also mixes `auth.routes.js` with `*.route.js`.
+**Fixed:** Standardized those three files on the majority **`import { Router } from 'express'`** style for consistency. File **renaming** (`auth.routes.js` → `auth.route.js`) was intentionally **deferred** to avoid churn on the corresponding import in `server.js` for a purely cosmetic gain (documented as a follow-up).
+
+### L-8 — Naive last-name parsing in `formatMember`
+**Was:** `formatMember` split `fullName` on whitespace and treated only the final token as the surname, mislabeling compound surnames (e.g. "Juan Dela Cruz" → last name "Cruz").
+**Fixed:** Improved the in-place parser to recognize common multi-word surname prefixes (`dela`, `del`, `van`, `von`, `de`, `san`, `mac`, `mc`, etc.) so compound surnames are captured ("Juan Dela Cruz" → first "Juan", last "Dela Cruz"). This stays display-only; a true fix (separate `firstName`/`lastName` columns with backfill + frontend changes) was deferred as a larger change.
+
+### L-9 — Shallow `/health` check
+**Was:** `/health` returned a static `{ status: 'ok' }` without verifying the app could actually serve requests.
+**Fixed:** `/health` now runs a lightweight `SELECT 1` against Postgres via Prisma. It returns `200 { status: 'ok', db: 'up' }` on success and `503 { status: 'error', db: 'down' }` when the DB is unreachable, so load balancers / uptime checks reflect real readiness.
+
+---
+
+## Files Modified (Low pass)
+
+| File | Low issue(s) | Change |
+|------|--------------|--------|
+| `server-tmc-choir-system/src/socket/index.js` | L-2 | `socketLog` helper gates connection/room logs to non-production |
+| `server-tmc-choir-system/prisma/schema.prisma` | L-3 | Add `reviewedAt DateTime?` to `AttendanceRecord` |
+| `server-tmc-choir-system/prisma/migrations/20260616010000_add_attendance_reviewed_at/migration.sql` *(new)* | L-3 | Additive nullable `reviewedAt` column |
+| `server-tmc-choir-system/src/controller/attendance.controller.js` | L-3, L-4 | Stamp/read real `reviewedAt`; use `ATTENDANCE_STATUS` / `EXCUSE_STATUS` constants |
+| `server-tmc-choir-system/src/lib/constants.js` *(new)* | L-4 | Shared `ATTENDANCE_STATUS` / `EXCUSE_STATUS` constants |
+| `server-tmc-choir-system/src/controller/member.controller.js` | L-8 | Multi-word surname-aware `formatMember` parsing |
+| `server-tmc-choir-system/src/server.js` | L-9 | `/health` now pings the DB (`SELECT 1`), 503 on failure |
+| `server-tmc-choir-system/src/routes/account.route.js` | L-7 | `express.Router()` → `import { Router }` |
+| `server-tmc-choir-system/src/routes/auditLog.route.js` | L-7 | `express.Router()` → `import { Router }` |
+| `server-tmc-choir-system/src/routes/portal.route.js` | L-7 | `express.Router()` → `import { Router }` |
+
+---
+
+## Follow-up Notes (not done in this Low-only pass)
+
+- **L-3:** Run `npx prisma migrate deploy` (or `prisma generate`) so the Prisma client picks up the new `reviewedAt` field before deploying. Pre-existing excuses reviewed before this change will report `reviewedAt: null` (the previous value was incorrect anyway).
+- **L-4:** Magic-string constants were applied only in `attendance.controller.js`; other controllers (`portal`, `member`, `audition`, etc.) can adopt `src/lib/constants.js` incrementally.
+- **L-5:** No change — `TestingNoticeModal` retained per user direction.
+- **L-7:** File renaming (`auth.routes.js` → `auth.route.js`) deferred to avoid import churn for a cosmetic gain.
+- **L-8:** A robust fix is to store `firstName`/`lastName` as separate columns (with a backfill + frontend updates) instead of parsing `fullName`; deferred as a larger change.
+
+*End of low-level summary.*

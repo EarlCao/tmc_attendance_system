@@ -100,8 +100,16 @@ app.use("/api/accounts", accountRoutes);
 app.use("/api/portal", portalRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
+app.get("/health", async (req, res) => {
+  // Deep health check: verify DB connectivity so the endpoint reflects whether
+  // the service can actually serve requests, not just that the process is up.
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ status: "ok", db: "up" });
+  } catch (err) {
+    console.error("Health check DB error:", err);
+    res.status(503).json({ status: "error", db: "down" });
+  }
 });
 
 // 404 handler for unknown routes.

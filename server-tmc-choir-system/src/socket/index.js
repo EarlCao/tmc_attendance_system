@@ -3,6 +3,13 @@ import jwt from 'jsonwebtoken';
 
 let io;
 
+// Lightweight leveled logging: connection/room churn is noisy and leaks socket
+// IDs in production, so only emit these debug lines outside of production.
+const isProd = process.env.NODE_ENV === 'production';
+const socketLog = (...args) => {
+  if (!isProd) console.log(...args);
+};
+
 export const initSocket = (httpServer, allowedOrigins) => {
   io = new Server(httpServer, {
     cors: {
@@ -32,25 +39,25 @@ export const initSocket = (httpServer, allowedOrigins) => {
   });
 
   io.on('connection', (socket) => {
-    console.log(`[Socket.IO] Client connected: ${socket.id}`);
+    socketLog(`[Socket.IO] Client connected: ${socket.id}`);
 
     // Allow clients to subscribe to named rooms for scoped updates
     socket.on('join:room', (room) => {
       socket.join(room);
-      console.log(`[Socket.IO] ${socket.id} joined room: ${room}`);
+      socketLog(`[Socket.IO] ${socket.id} joined room: ${room}`);
     });
 
     socket.on('leave:room', (room) => {
       socket.leave(room);
-      console.log(`[Socket.IO] ${socket.id} left room: ${room}`);
+      socketLog(`[Socket.IO] ${socket.id} left room: ${room}`);
     });
 
     socket.on('disconnect', (reason) => {
-      console.log(`[Socket.IO] Client disconnected: ${socket.id} (${reason})`);
+      socketLog(`[Socket.IO] Client disconnected: ${socket.id} (${reason})`);
     });
   });
 
-  console.log('[Socket.IO] Initialized');
+  socketLog('[Socket.IO] Initialized');
   return io;
 };
 

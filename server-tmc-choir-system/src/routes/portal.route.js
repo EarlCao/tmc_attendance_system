@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import {
   getDashboard,
   getAttendance,
@@ -8,7 +8,7 @@ import {
 } from '../controller/portal.controller.js';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
 
-const router = express.Router();
+const router = Router();
 
 // Portal routes serve a logged-in member's own data. Require an authenticated
 // MEMBER explicitly (rather than relying only on the presence of a memberId).

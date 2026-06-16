@@ -125,6 +125,10 @@ model AttendanceRecord {
   notes  String?          @db.Text
   excuseStatus String?    @default("Pending")
   excuseReason String?    @db.Text
+  // Timestamp of when an excuse was approved/rejected. Nullable: only set once
+  // an excuse has actually been reviewed (replaces the previous incorrect reuse
+  // of session.createdAt as the review time — L-3).
+  reviewedAt   DateTime?
 
   createdAt DateTime @default(now())
 
