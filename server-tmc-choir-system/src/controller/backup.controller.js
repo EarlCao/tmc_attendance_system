@@ -100,8 +100,10 @@ function escapeValue(val) {
   if (val === null || val === undefined) return 'NULL';
   if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
   if (val instanceof Date) {
-    // 'YYYY-MM-DD HH:MM:SS.mmm' — valid for timestamp columns
-    return `'${val.toISOString().replace('T', ' ').replace('Z', '')}'`;
+    // 'YYYY-MM-DD HH:MM:SS.mmm+00' — keep the explicit UTC offset so the value is
+    // unambiguous on import regardless of the server/session timezone (a naive
+    // 'Z'-stripped value could shift when restored under a different TZ).
+    return `'${val.toISOString().replace('T', ' ').replace('Z', '+00')}'`;
   }
   if (typeof val === 'number') {
     return Number.isFinite(val) ? String(val) : 'NULL';

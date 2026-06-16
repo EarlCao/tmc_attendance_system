@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import { emit } from '../socket/index.js';
 import { createAuditLog } from '../lib/auditLogger.js';
-import { BCRYPT_COST, generateTempPassword } from '../lib/security.js';
+import { BCRYPT_COST, generateTempPassword, parseId } from '../lib/security.js';
 
 // Normalize DB member record → frontend-friendly shape
 const formatMember = (m) => {
@@ -79,6 +79,29 @@ const mapFrontendToDb = (body) => {
 
 export const getMembers = async (req, res) => {
   try {
+    // Opt-in, backward-compatible pagination: only applied when ?page or
+    // ?pageSize is provided. Without them the full array is returned as before.
+    const { page, pageSize } = req.query;
+    if (page !== undefined || pageSize !== undefined) {
+      const pageNum = parseId(page) || 1;
+      const size = Math.min(parseId(pageSize) || 25, 200);
+      const [members, total] = await Promise.all([
+        prisma.member.findMany({
+          orderBy: { fullName: 'asc' },
+          skip: (pageNum - 1) * size,
+          take: size,
+        }),
+        prisma.member.count(),
+      ]);
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          members: members.map(formatMember),
+          pagination: { page: pageNum, pageSize: size, total, totalPages: Math.ceil(total / size) },
+        },
+      });
+    }
+
     const members = await prisma.member.findMany({
       orderBy: { fullName: 'asc' },
     });
@@ -132,9 +155,8 @@ export const createMember = async (req, res) => {
       }
     });
 
-    // Explicitly broadcast user:created so the Accounts panel refreshes
-    const { passwordHash: _ph, ...safeUser } = newUser;
-    emit('user:created', safeUser);
+    // The socket-aware Prisma extension already emits `user:created` on
+    // prisma.user.create, so no manual emit is needed here (avoids duplicates).
 
     await createAuditLog({
       userId: req.user?.id,
@@ -161,7 +183,8 @@ export const createMember = async (req, res) => {
 
 export const updateMember = async (req, res) => {
   try {
-    const { id } = req.params;
+    const memberId = parseId(req.params.id);
+    if (!memberId) return res.status(400).json({ status: 'fail', message: 'Invalid member id.' });
     const mappedData = mapFrontendToDb(req.body);
 
     // Remove undefined fields
@@ -170,7 +193,7 @@ export const updateMember = async (req, res) => {
     });
 
     const updatedMember = await prisma.member.update({
-      where: { id: parseInt(id) },
+      where: { id: memberId },
       data: mappedData,
     });
 
@@ -197,9 +220,8 @@ export const updateMember = async (req, res) => {
 
 export const deleteMember = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const memberId = parseInt(id);
+    const memberId = parseId(req.params.id);
+    if (!memberId) return res.status(400).json({ status: 'fail', message: 'Invalid member id.' });
 
     // Find the member name before deleting for the audit log
     const member = await prisma.member.findUnique({ where: { id: memberId } });
@@ -224,8 +246,8 @@ export const deleteMember = async (req, res) => {
       username: req.user?.username,
       action: 'DELETE_MEMBER',
       category: 'MEMBER',
-      target: `member:${member?.fullName || id}`,
-      details: { memberId: parseInt(id), linkedAccounts: deletedUsers.map(u => u.username) },
+      target: `member:${member?.fullName || memberId}`,
+      details: { memberId, linkedAccounts: deletedUsers.map(u => u.username) },
       ipAddress: req.ip,
     });
 
@@ -243,7 +265,7 @@ export const searchMembers = async (req, res) => {
       return res.status(400).json({ status: 'fail', message: 'Please provide a search query' });
     }
     const members = await prisma.member.findMany({
-      where: { fullName: { contains: query } },
+      where: { fullName: { contains: query, mode: 'insensitive' } },
       orderBy: { fullName: 'asc' },
     });
     res.status(200).json({

@@ -135,12 +135,18 @@ export const deleteJudge = async (req, res) => {
 
     const evaluations = await prisma.judgeEvaluation.findMany({ where: { judgeId } });
     const evalIds = evaluations.map(e => e.id);
-    if (evalIds.length > 0) {
-      await prisma.evaluationScore.deleteMany({ where: { evaluationId: { in: evalIds } } });
-      await prisma.judgeEvaluation.deleteMany({ where: { judgeId } });
-    }
 
-    await prisma.judge.delete({ where: { id: judgeId } });
+    // Delete dependent scores/evaluations then the judge atomically (no
+    // schema-level cascade), so a partial failure can't orphan rows.
+    await prisma.$transaction([
+      ...(evalIds.length > 0
+        ? [
+            prisma.evaluationScore.deleteMany({ where: { evaluationId: { in: evalIds } } }),
+            prisma.judgeEvaluation.deleteMany({ where: { judgeId } }),
+          ]
+        : []),
+      prisma.judge.delete({ where: { id: judgeId } }),
+    ]);
 
     res.status(200).json({
       status: 'success',

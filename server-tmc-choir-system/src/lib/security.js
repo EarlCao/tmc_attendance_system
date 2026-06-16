@@ -6,6 +6,19 @@ export const BCRYPT_COST = 12;
 // Minimum acceptable password length for account creation / password changes.
 export const MIN_PASSWORD_LENGTH = 8;
 
+/**
+ * Parse a route/query parameter into a positive integer id, returning null if
+ * it is not a valid integer. Prevents `parseInt(NaN)` from reaching Prisma and
+ * producing confusing 500s on malformed input (lightweight input hardening).
+ * @param {unknown} value
+ * @returns {number|null}
+ */
+export const parseId = (value) => {
+  if (value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+};
+
 // Canonical role values stored in the database. The middleware compares
 // case-insensitively, but we always persist these exact strings.
 export const ROLES = ['ADMIN', 'MEMBER'];

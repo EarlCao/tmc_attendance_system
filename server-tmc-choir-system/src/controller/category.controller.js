@@ -5,7 +5,15 @@ export const getCategories = async (req, res) => {
     const categories = await prisma.evaluationCategory.findMany({
       orderBy: { name: 'asc' },
     });
-    res.status(200).json({ status: 'success', data: { categories } });
+    // Surface a non-blocking warning when the weights don't sum to 100% — the
+    // weighted-average computation divides by the total weight, so a sum other
+    // than 100 produces misleading "averages".
+    const totalPercentage = categories.reduce((sum, c) => sum + (c.percentage || 0), 0);
+    const percentageWarning =
+      categories.length > 0 && Math.round(totalPercentage) !== 100
+        ? `Category percentages sum to ${totalPercentage}%, not 100%. Weighted averages may be misleading.`
+        : null;
+    res.status(200).json({ status: 'success', data: { categories, totalPercentage, percentageWarning } });
   } catch (err) {
     console.error('Get Categories Error:', err);
     res.status(500).json({ status: 'error', message: 'Internal server error' });
@@ -17,6 +25,12 @@ export const createCategory = async (req, res) => {
     const { name, description, percentage } = req.body;
     if (!name?.trim()) {
       return res.status(400).json({ status: 'fail', message: 'Category name is required.' });
+    }
+    if (percentage !== undefined && percentage !== null && percentage !== '') {
+      const pct = parseFloat(percentage);
+      if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+        return res.status(400).json({ status: 'fail', message: 'Percentage must be a number between 0 and 100.' });
+      }
     }
     const category = await prisma.evaluationCategory.create({
       data: {
@@ -42,7 +56,13 @@ export const updateCategory = async (req, res) => {
     const data = {};
     if (name !== undefined) data.name = name.trim();
     if (description !== undefined) data.description = description?.trim() || null;
-    if (percentage !== undefined) data.percentage = parseFloat(percentage);
+    if (percentage !== undefined) {
+      const pct = parseFloat(percentage);
+      if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+        return res.status(400).json({ status: 'fail', message: 'Percentage must be a number between 0 and 100.' });
+      }
+      data.percentage = pct;
+    }
     const category = await prisma.evaluationCategory.update({
       where: { id: parseInt(id) },
       data,

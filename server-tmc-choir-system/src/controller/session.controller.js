@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { parseId } from '../lib/security.js';
 
 // Normalize a session for frontend consumption
 const formatSession = (session, counts = {}) => ({
@@ -16,24 +17,37 @@ const formatSession = (session, counts = {}) => ({
 
 export const getSessions = async (req, res) => {
   try {
-    const { semesterId, type, search } = req.query;
+    const { semesterId, type, search, page, pageSize } = req.query;
 
     const whereClause = {};
     if (semesterId) whereClause.semesterId = parseInt(semesterId);
     if (type && type !== 'All') whereClause.type = type;
     if (search) {
       whereClause.OR = [
-        { title: { contains: search } },
-        { location: { contains: search } },
-        { description: { contains: search } },
+        { title: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const sessions = await prisma.session.findMany({
+    // Opt-in pagination: only when ?page/?pageSize is supplied.
+    const usePagination = page !== undefined || pageSize !== undefined;
+    const findArgs = {
       where: whereClause,
       include: { attendance: true },
       orderBy: { sessionDate: 'desc' },
-    });
+    };
+    let pagination;
+    if (usePagination) {
+      const pageNum = parseId(page) || 1;
+      const size = Math.min(parseId(pageSize) || 25, 200);
+      findArgs.skip = (pageNum - 1) * size;
+      findArgs.take = size;
+      const total = await prisma.session.count({ where: whereClause });
+      pagination = { page: pageNum, pageSize: size, total, totalPages: Math.ceil(total / size) };
+    }
+
+    const sessions = await prisma.session.findMany(findArgs);
 
     const formatted = sessions.map((session) => {
       const counts = { Present: 0, Late: 0, Absent: 0, Excused: 0 };
@@ -49,7 +63,7 @@ export const getSessions = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: { sessions: formatted },
+      data: pagination ? { sessions: formatted, pagination } : { sessions: formatted },
     });
   } catch (err) {
     console.error('Get Sessions Error:', err);
@@ -59,9 +73,10 @@ export const getSessions = async (req, res) => {
 
 export const getSession = async (req, res) => {
   try {
-    const { id } = req.params;
+    const sessionId = parseId(req.params.id);
+    if (!sessionId) return res.status(400).json({ status: 'fail', message: 'Invalid session id.' });
     const session = await prisma.session.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: sessionId },
       include: { attendance: { include: { member: true } } },
     });
     if (!session) {

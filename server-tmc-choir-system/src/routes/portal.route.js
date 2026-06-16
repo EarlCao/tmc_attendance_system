@@ -6,11 +6,14 @@ import {
   updateProfile,
   getSemesterSummary
 } from '../controller/portal.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { protect, restrictTo } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
+// Portal routes serve a logged-in member's own data. Require an authenticated
+// MEMBER explicitly (rather than relying only on the presence of a memberId).
 router.use(protect);
+router.use(restrictTo('MEMBER'));
 
 router.get('/dashboard', getDashboard);
 router.get('/attendance', getAttendance);

@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import { createAuditLog } from '../lib/auditLogger.js';
-import { BCRYPT_COST, canonicalizeRole, generateTempPassword, MIN_PASSWORD_LENGTH } from '../lib/security.js';
+import { BCRYPT_COST, canonicalizeRole, generateTempPassword, MIN_PASSWORD_LENGTH, parseId } from '../lib/security.js';
 
 // Get all accounts
 export const getAccounts = async (req, res) => {
@@ -46,9 +46,27 @@ export const getAccounts = async (req, res) => {
     });
 
     // Standalone admins first, then all member rows (with or without accounts)
+    const accounts = [...adminAccounts, ...memberAccounts];
+
+    // Opt-in pagination over the assembled list (only when ?page/?pageSize is
+    // supplied); otherwise return the full array as before.
+    const { page, pageSize } = req.query;
+    if (page !== undefined || pageSize !== undefined) {
+      const pageNum = parseId(page) || 1;
+      const size = parseId(pageSize) || 25;
+      const start = (pageNum - 1) * size;
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          accounts: accounts.slice(start, start + size),
+          pagination: { page: pageNum, pageSize: size, total: accounts.length, totalPages: Math.ceil(accounts.length / size) },
+        },
+      });
+    }
+
     res.status(200).json({
       status: 'success',
-      data: { accounts: [...adminAccounts, ...memberAccounts] },
+      data: { accounts },
     });
   } catch (error) {
     console.error('Get Accounts Error:', error);
@@ -159,10 +177,11 @@ export const createAccount = async (req, res) => {
 // Update an account
 export const updateAccount = async (req, res) => {
   try {
-    const { id } = req.params;
+    const targetId = parseId(req.params.id);
+    if (!targetId) return res.status(400).json({ status: 'fail', message: 'Invalid account id.' });
     const { username, password, currentPassword, role, isActive } = req.body;
 
-    const existingUser = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+    const existingUser = await prisma.user.findUnique({ where: { id: targetId } });
     if (!existingUser) {
       return res.status(404).json({ status: 'fail', message: 'Account not found' });
     }
@@ -204,7 +223,7 @@ export const updateAccount = async (req, res) => {
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: parseInt(id) },
+      where: { id: targetId },
       data,
       include: { member: true }
     });
@@ -238,8 +257,8 @@ export const updateAccount = async (req, res) => {
 // Delete an account
 export const deleteAccount = async (req, res) => {
   try {
-    const { id } = req.params;
-    const targetId = parseInt(id);
+    const targetId = parseId(req.params.id);
+    if (!targetId) return res.status(400).json({ status: 'fail', message: 'Invalid account id.' });
 
     const existingUser = await prisma.user.findUnique({ where: { id: targetId } });
     if (!existingUser) {

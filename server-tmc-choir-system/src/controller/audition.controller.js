@@ -1,6 +1,5 @@
 import { prisma } from '../lib/prisma.js';
-
-
+import { parseId } from '../lib/security.js';
 
 const recalculateAverageRating = async (auditioneeId) => {
   const evaluations = await prisma.judgeEvaluation.findMany({
@@ -49,7 +48,7 @@ const recalculateAverageRating = async (auditioneeId) => {
 
 export const getAuditionees = async (req, res) => {
   try {
-    const { semesterId, status, targetPart, search } = req.query;
+    const { semesterId, status, targetPart, search, page, pageSize } = req.query;
 
     const whereClause = {};
     if (semesterId) {
@@ -63,13 +62,15 @@ export const getAuditionees = async (req, res) => {
     }
     if (search) {
       whereClause.OR = [
-        { fullName: { contains: search } },
-        { email: { contains: search } },
-        { course: { contains: search } },
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { course: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    const auditionees = await prisma.auditionee.findMany({
+    // Opt-in pagination: only when ?page/?pageSize is supplied.
+    const usePagination = page !== undefined || pageSize !== undefined;
+    const findArgs = {
       where: whereClause,
       include: {
         evaluations: {
@@ -84,7 +85,18 @@ export const getAuditionees = async (req, res) => {
         },
       },
       orderBy: { fullName: 'asc' },
-    });
+    };
+    let pagination;
+    if (usePagination) {
+      const pageNum = parseId(page) || 1;
+      const size = parseId(pageSize) || 25;
+      findArgs.skip = (pageNum - 1) * size;
+      findArgs.take = size;
+      const total = await prisma.auditionee.count({ where: whereClause });
+      pagination = { page: pageNum, pageSize: size, total, totalPages: Math.ceil(total / size) };
+    }
+
+    const auditionees = await prisma.auditionee.findMany(findArgs);
 
     const formattedAuditionees = auditionees.map((a) => {
       const ratings = a.evaluations.map((evalItem) => {
@@ -123,9 +135,9 @@ export const getAuditionees = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: {
-        auditionees: formattedAuditionees,
-      },
+      data: pagination
+        ? { auditionees: formattedAuditionees, pagination }
+        : { auditionees: formattedAuditionees },
     });
   } catch (err) {
     console.error('Get Auditionees Error:', err);
@@ -265,25 +277,25 @@ export const updateAuditionee = async (req, res) => {
 
 export const deleteAuditionee = async (req, res) => {
   try {
-    const { id } = req.params;
-    const auditioneeId = parseInt(id);
+    const auditioneeId = parseId(req.params.id);
+    if (!auditioneeId) return res.status(400).json({ status: 'fail', message: 'Invalid auditionee id.' });
 
-    // Delete scores and evaluations first due to foreign keys
+    // Delete scores and evaluations first (no schema-level cascade), then the
+    // auditionee — atomically so a partial failure never leaves orphaned rows.
     const evaluations = await prisma.judgeEvaluation.findMany({
       where: { auditioneeId },
     });
-
     const evalIds = evaluations.map(e => e.id);
-    if (evalIds.length > 0) {
-      await prisma.evaluationScore.deleteMany({
-        where: { evaluationId: { in: evalIds } },
-      });
-      await prisma.judgeEvaluation.deleteMany({
-        where: { auditioneeId },
-      });
-    }
 
-    await prisma.auditionee.delete({ where: { id: auditioneeId } });
+    await prisma.$transaction([
+      ...(evalIds.length > 0
+        ? [
+            prisma.evaluationScore.deleteMany({ where: { evaluationId: { in: evalIds } } }),
+            prisma.judgeEvaluation.deleteMany({ where: { auditioneeId } }),
+          ]
+        : []),
+      prisma.auditionee.delete({ where: { id: auditioneeId } }),
+    ]);
 
     res.status(200).json({
       status: 'success',

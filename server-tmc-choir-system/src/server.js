@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET.length < 32)
   process.exit(1);
 }
 
-const BACKEND_PORT = process.env.BACKEND_PORT || 3002;
+const BACKEND_PORT = process.env.BACKEND_PORT || 3302;
 // FRONTEND_URL may contain a comma-separated allow-list of origins (e.g. a
 // Vercel preview + production URL). Build an array so CORS and Socket.IO only
 // accept known origins.
