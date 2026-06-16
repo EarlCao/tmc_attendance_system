@@ -160,6 +160,7 @@ export default function Reports() {
   const [selectedSemesterId, setSelectedSemesterId] = useState(null)
   const [reportLoading, setReportLoading] = useState(false)
   const [memberSearch, setMemberSearch] = useState('')
+  const [memberFilter, setMemberFilter] = useState('all')
 
   const loading = sLoading || mLoading || sessLoading || aLoading || oLoading || eLoading
 
@@ -206,11 +207,20 @@ export default function Reports() {
     fetchData()
   }, [])
 
+  const officerMemberIds = new Set(officers.map(o => Number(o.memberId)))
+
   const selectedSemester = semesterData.find(s => s.id === selectedSemesterId)
   const filteredMembers = selectedSemester
     ? selectedSemester.members.filter(m => {
         const name = `${m.firstName} ${m.lastName}`.toLowerCase()
-        return name.includes(memberSearch.toLowerCase())
+        if (!name.includes(memberSearch.toLowerCase())) return false
+
+        if (memberFilter === 'all') return m.status !== 'graduated'
+        if (memberFilter === 'all-graduated') return true
+        if (memberFilter === 'inactive') return m.status === 'inactive'
+        if (memberFilter === 'officers') return officerMemberIds.has(m.memberId)
+
+        return true
       })
     : []
 
@@ -357,33 +367,31 @@ export default function Reports() {
           </div>
         ) : (
           <>
-            {/* Semester Tabs */}
-            <div className="mt-5 flex flex-wrap gap-2">
-              {semesterData.map((sem) => (
-                <button
-                  key={sem.id}
-                  onClick={() => setSelectedSemesterId(sem.id)}
-                  className={cn(
-                    'px-4 py-2.5 rounded-xl text-[13px] font-bold transition-all',
-                    sem.id === selectedSemesterId
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600 shadow-sm'
-                  )}
+            {/* Semester Selector — dropdown */}
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <label className="text-[13px] font-bold text-slate-600 shrink-0">Semester:</label>
+              <div className="relative">
+                <select
+                  value={selectedSemesterId || ''}
+                  onChange={(e) => setSelectedSemesterId(Number(e.target.value))}
+                  className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-[13px] font-bold text-slate-800 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-2">
-                    {(!sem.endDate || new Date(sem.endDate) > new Date()) && sem.startDate && (
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    )}
-                    <span>{sem.name}</span>
-                    <span className={cn(
-                      'text-[10px] font-bold px-1.5 py-0.5 rounded',
-                      sem.id === selectedSemesterId
-                        ? 'bg-white/20 text-white'
-                        : 'bg-slate-100 text-slate-500'
-                    )}>{sem.totalSessions} sessions</span>
-                  </div>
-                </button>
-              ))}
+                  {semesterData.map((sem) => (
+                    <option key={sem.id} value={sem.id}>
+                      {sem.name} ({sem.totalSessions} sessions)
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+              {selectedSemester && (
+                <span className="flex items-center gap-1.5 text-[12px] font-medium text-slate-400">
+                  {selectedSemester.isActive && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  )}
+                  {selectedSemester.isActive ? 'Active' : 'Past'} semester
+                </span>
+              )}
             </div>
 
             {/* Selected Semester Summary */}
@@ -441,9 +449,33 @@ export default function Reports() {
                       className="w-full pl-9 pr-4 py-2.5 text-[13px] font-medium bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                     />
                   </div>
-                  <p className="text-[12px] font-medium text-slate-400">
+                </div>
+
+                {/* Filter chips */}
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Filter:</span>
+                  {[
+                    { key: 'all', label: 'All' },
+                    { key: 'all-graduated', label: 'All (include graduated)' },
+                    { key: 'inactive', label: 'Inactive' },
+                    { key: 'officers', label: 'Officers' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setMemberFilter(opt.key)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all',
+                        memberFilter === opt.key
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-white text-slate-500 border border-slate-200 hover:border-blue-300 hover:text-blue-600'
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                  <span className="ml-auto text-[12px] font-medium text-slate-400">
                     {filteredMembers.length} member{filteredMembers.length !== 1 ? 's' : ''}
-                  </p>
+                  </span>
                 </div>
 
                 {/* Members Table */}
