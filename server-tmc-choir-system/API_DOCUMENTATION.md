@@ -14,13 +14,18 @@
   - [Auth](#auth)
   - [Semesters](#semesters)
   - [Members](#members)
+  - [Accounts](#accounts)
   - [Sessions](#sessions)
   - [Attendance](#attendance)
   - [Excuses](#excuses)
   - [Officers](#officers)
   - [Judges](#judges)
   - [Auditions](#auditions)
+  - [Evaluation Categories](#evaluation-categories)
   - [Rules & Regulations](#rules--regulations)
+  - [Backup & Recovery](#backup--recovery)
+  - [Member Portal](#member-portal)
+  - [Audit Logs](#audit-logs)
 
 ---
 
@@ -90,12 +95,21 @@ All responses follow this structure:
 
 > **Auth required:** No
 
-Check if the server is running.
+Deep health check — verifies the server process **and** database connectivity (`SELECT 1`).
 
-**Response:**
+**Success Response (200):**
 ```json
 {
-  "status": "ok"
+  "status": "ok",
+  "db": "up"
+}
+```
+
+**Failure Response (503):** Returned when the database is unreachable.
+```json
+{
+  "status": "error",
+  "db": "down"
 }
 ```
 
@@ -404,6 +418,161 @@ Filter members by voice type and/or status.
 | `status` | string | ❌ | `ACTIVE` or `INACTIVE` |
 
 **Success Response (200):** Filtered array of members.
+
+---
+
+### Accounts
+
+> **Auth required:** Yes (Admin only)  
+> **Base path:** `/api/accounts`
+
+Manages login accounts (`User` records). Password hashes are **never** returned.
+
+#### `GET /api/accounts`
+
+Get all accounts. Returns standalone admin accounts plus every member — members without a linked login appear as placeholders with `hasAccount: false`.
+
+**Query Params (optional pagination):**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `page` | integer | ❌ | Page number (default `1`) |
+| `pageSize` | integer | ❌ | Items per page (default `25`, max `200`) |
+
+**Success Response (200):**
+```json
+{
+  "status": "success",
+  "data": {
+    "accounts": [
+      {
+        "id": 1,
+        "username": "admin",
+        "role": "ADMIN",
+        "isActive": true,
+        "memberId": null,
+        "createdAt": "2026-05-27T00:00:00.000Z",
+        "updatedAt": "2026-05-27T00:00:00.000Z"
+      },
+      {
+        "id": null,
+        "username": null,
+        "role": "member",
+        "isActive": false,
+        "memberId": 5,
+        "hasAccount": false,
+        "member": { "id": 5, "fullName": "Maria Santos", "...": "..." }
+      }
+    ]
+  }
+}
+```
+
+> When pagination params are supplied, the response also includes a `pagination` object: `{ page, pageSize, total, totalPages }`.
+
+---
+
+#### `POST /api/accounts`
+
+Create an account manually.
+
+**Request Body:**
+```json
+{
+  "username": "jane.doe",
+  "password": "a-strong-password",
+  "role": "ADMIN",
+  "isActive": true,
+  "memberId": null
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `username` | string | ✅ | Unique username |
+| `password` | string | ✅ | Min length enforced (`MIN_PASSWORD_LENGTH`) |
+| `role` | string | ❌ | `ADMIN` or `MEMBER` (default `ADMIN`, case-insensitive) |
+| `isActive` | boolean | ❌ | Default `true` |
+| `memberId` | integer | ❌ | Link to an existing member |
+
+**Success Response (201):** Created account (without `passwordHash`).
+
+**Error Responses:** `400` — missing fields, password too short, username taken, or invalid role.
+
+---
+
+#### `POST /api/accounts/member/:memberId`
+
+Auto-generate a login account for an existing member that has none. The username is derived from the member's name (`firstname.lastname`) and a **unique one-time temporary password** is generated and returned **once**.
+
+**URL Params:** `memberId` — Member ID (integer)
+
+**Success Response (201):**
+```json
+{
+  "status": "success",
+  "data": {
+    "account": {
+      "id": 12,
+      "username": "maria.santos",
+      "role": "MEMBER",
+      "isActive": true,
+      "memberId": 5,
+      "tempPassword": "X7t2-Kd9p"
+    }
+  }
+}
+```
+
+> ⚠️ `tempPassword` is shown **only in this response** — relay it to the member immediately; it cannot be retrieved again.
+
+**Error Responses:** `404` — member not found; `400` — member already has an account.
+
+---
+
+#### `PUT /api/accounts/:id`
+
+Update an account (username, role, active status, and/or password).
+
+**URL Params:** `id` — Account ID (integer)
+
+**Request Body:**
+```json
+{
+  "username": "new.username",
+  "role": "MEMBER",
+  "isActive": false,
+  "password": "new-password",
+  "currentPassword": "old-password"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `username` | string | ❌ | New username |
+| `role` | string | ❌ | `ADMIN` or `MEMBER` |
+| `isActive` | boolean | ❌ | Enable/disable the account |
+| `password` | string | ❌ | New password (min length enforced) |
+| `currentPassword` | string | ❌ | Required to verify when changing `password` |
+
+**Success Response (200):** Updated account (without `passwordHash`).
+
+---
+
+#### `DELETE /api/accounts/:id`
+
+Delete an account.
+
+**URL Params:** `id` — Account ID (integer)
+
+**Success Response (200):**
+```json
+{ "status": "success", "data": null }
+```
+
+**Error Responses:**
+- `400` — cannot delete your own account (self-lockout) or the **last active admin**
+- `404` — account not found
 
 ---
 
@@ -1062,6 +1231,87 @@ Add or update a judge's evaluation for an auditionee. Automatically recalculates
 
 ---
 
+### Evaluation Categories
+
+> **Auth required:** Yes (Admin only)  
+> **Base path:** `/api/categories`
+
+Weighted criteria used to compute auditionee scores. Percentages are expected to sum to 100%.
+
+#### `GET /api/categories`
+
+Get all evaluation categories (ordered by name) plus a percentage sanity check.
+
+**Success Response (200):**
+```json
+{
+  "status": "success",
+  "data": {
+    "categories": [
+      { "id": 1, "name": "Vocal Quality", "description": "Tone and timbre", "percentage": 30 }
+    ],
+    "totalPercentage": 100,
+    "percentageWarning": null
+  }
+}
+```
+
+> `percentageWarning` is a non-blocking string when the percentages don't sum to 100%, otherwise `null`.
+
+---
+
+#### `POST /api/categories`
+
+Create a category.
+
+**Request Body:**
+```json
+{
+  "name": "Pitch Accuracy",
+  "description": "Intonation and tuning",
+  "percentage": 25
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | ✅ | Unique category name |
+| `description` | string | ❌ | Optional description |
+| `percentage` | number (0–100) | ❌ | Weight (default `0`) |
+
+**Success Response (201):** Created category object.
+
+**Error Responses:** `400` — missing name, percentage out of range, or duplicate name.
+
+---
+
+#### `PUT /api/categories/:id`
+
+Update a category.
+
+**URL Params:** `id` — Category ID (integer)
+
+**Request Body:** Same fields as `POST` (all optional).
+
+**Success Response (200):** Updated category object.
+
+---
+
+#### `DELETE /api/categories/:id`
+
+Delete a category.
+
+**URL Params:** `id` — Category ID (integer)
+
+**Success Response (200):**
+```json
+{ "status": "success", "message": "Category deleted.", "data": null }
+```
+
+**Error Response:** `400` — the category still has audition scores tied to it.
+
+---
+
 ### Rules & Regulations
 
 > **Auth required:** Yes (Admin only)
@@ -1151,6 +1401,229 @@ Delete a rule by ID.
   "message": "Rule deleted successfully",
   "data": null
 }
+```
+
+---
+
+### Backup & Recovery
+
+> **Auth required:** Yes (Admin only)  
+> **Base path:** `/api/backup`
+
+Export/import the entire database as a PostgreSQL `.sql` file. Imports are **destructive** (the file truncates all tables before restoring) and run inside a transaction.
+
+#### `GET /api/backup/export`
+
+Export a full database backup as a downloadable `.sql` file.
+
+**Query Params:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `includeAuditLogs` | boolean | ❌ | When `true`, the `AuditLog` table is included in the backup (default `false`) |
+
+**Success Response (200):** `application/sql` file download (`Content-Disposition: attachment`). The body is the SQL backup text.
+
+---
+
+#### `POST /api/backup/import`
+
+Restore the database from a `.sql` file previously exported by this system.
+
+> **Rate limited:** strict per-IP limiter (this endpoint is expensive and destructive).  
+> **Body:** raw SQL text (`Content-Type` is ignored; max size **5 MB**).
+
+**Security:** every statement is validated against an allow-list — only the exporter-generated `TRUNCATE` / `INSERT` / `setval` shapes referencing known tables are permitted. Any other statement causes the whole file to be rejected. The restore is atomic.
+
+**Success Response (200):**
+```json
+{
+  "status": "success",
+  "message": "Backup restored successfully. 42 statements executed.",
+  "summary": {
+    "statements": 42,
+    "tables": 13,
+    "totalRows": 1530,
+    "tableCounts": [ { "table": "Member", "rows": 40 } ]
+  }
+}
+```
+
+**Error Responses:**
+- `400` — no content, not a valid backup from this system, or contains a disallowed statement
+- `500` — restore failed (e.g. an older incompatible MySQL-format export)
+
+---
+
+### Member Portal
+
+> **Auth required:** Yes (**MEMBER** only)  
+> **Base path:** `/api/portal`
+
+Serves the logged-in member's **own** data. The member is resolved from the JWT — there are no member-ID params.
+
+#### `GET /api/portal/dashboard`
+
+Member dashboard: attendance stats, profile summary, and recent attendance.
+
+**Success Response (200):**
+```json
+{
+  "status": "success",
+  "data": {
+    "stats": { "present": 10, "absent": 1, "late": 2, "excused": 0 },
+    "member": {
+      "id": 5,
+      "fullName": "Maria Santos",
+      "voiceType": "SOPRANO",
+      "status": "ACTIVE",
+      "officer": null
+    },
+    "recentAttendance": [ { "...": "..." } ]
+  }
+}
+```
+
+**Error Response:** `403` — the user isn't linked to a member profile.
+
+---
+
+#### `GET /api/portal/attendance`
+
+Get the member's full attendance history (with session + semester details).
+
+**Success Response (200):**
+```json
+{
+  "status": "success",
+  "data": { "attendance": [ { "...": "..." } ] }
+}
+```
+
+---
+
+#### `GET /api/portal/semesters`
+
+Per-semester attendance summary for the member (only semesters where they have records).
+
+**Success Response (200):**
+```json
+{
+  "status": "success",
+  "data": {
+    "semesters": [
+      {
+        "id": 1,
+        "name": "1st Semester",
+        "totalSessions": 8,
+        "recorded": 8,
+        "present": 7,
+        "absent": 1,
+        "late": 0,
+        "excused": 0,
+        "attendanceRate": 88,
+        "sessions": [ { "id": 1, "title": "Practice", "status": "PRESENT" } ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### `GET /api/portal/profile`
+
+Get the member's own profile (with active officer role and linked username).
+
+**Success Response (200):**
+```json
+{
+  "status": "success",
+  "data": { "profile": { "id": 5, "fullName": "Maria Santos", "...": "..." } }
+}
+```
+
+---
+
+#### `PUT /api/portal/profile`
+
+Update the member's **own** login credentials (username and/or password).
+
+**Request Body:**
+```json
+{
+  "username": "maria.s",
+  "password": "new-password",
+  "currentPassword": "old-password"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `username` | string | ❌ | New username (must be unique) |
+| `password` | string | ❌ | New password (min length enforced) |
+| `currentPassword` | string | ❌ | **Required** when changing the password |
+
+**Success Response (200):**
+```json
+{ "status": "success", "message": "Profile updated" }
+```
+
+**Error Responses:** `400` — password too short / missing current password / username taken; `401` — incorrect current password.
+
+---
+
+### Audit Logs
+
+> **Auth required:** Yes (Admin only)  
+> **Base path:** `/api/audit-logs`
+
+Security and activity trail (logins, account changes, system events, etc.).
+
+#### `GET /api/audit-logs`
+
+Get audit log entries (newest first).
+
+**Query Params:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `limit` | integer | ❌ | Max records (default `200`, max `500`) |
+| `category` | string | ❌ | Filter by category: `AUTH`, `ACCOUNT`, `MEMBER`, `SEMESTER`, `SYSTEM` (or `ALL`) |
+| `action` | string | ❌ | Filter by a specific action |
+| `search` | string | ❌ | Case-insensitive search across `username`, `target`, and `action` |
+
+**Success Response (200):**
+```json
+{
+  "status": "success",
+  "data": {
+    "logs": [
+      {
+        "id": 1,
+        "userId": 1,
+        "username": "admin",
+        "action": "LOGIN",
+        "category": "AUTH",
+        "target": "user:admin",
+        "details": {},
+        "ipAddress": "127.0.0.1",
+        "createdAt": "2026-06-16T00:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### `DELETE /api/audit-logs`
+
+Clear **all** audit log entries. The clear action is itself recorded as a new `CLEAR_AUDIT_LOGS` entry.
+
+**Success Response (200):**
+```json
+{ "status": "success", "message": "Audit logs cleared." }
 ```
 
 ---
