@@ -293,6 +293,8 @@ export default function Attendance() {
   const filteredMembers = useMemo(() =>
     members
       .filter((member) => {
+        // Graduated members are no longer part of the choir — exclude them entirely.
+        if (member.status === 'graduated') return false
         const matchSearch = getMemberDisplayName(member).toLowerCase().includes(search.toLowerCase())
         const matchVoice = voiceFilter === 'All' || member.voicePart === voiceFilter
         return matchSearch && matchVoice
