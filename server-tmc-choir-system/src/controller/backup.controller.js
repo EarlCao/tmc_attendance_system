@@ -1,54 +1,107 @@
 import { prisma } from '../lib/prisma.js';
 
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+// Marker line written at the top of every backup so we can validate on import.
+const BACKUP_MARKER = '-- TMC Choir Attendance System — PostgreSQL Backup';
+
+// Tables in FK-dependency order (parents first). Inserting in this order keeps
+// foreign-key constraints satisfied without disabling them.
+const TABLE_ORDER = [
+  'EvaluationCategory',
+  'Semester',
+  'Member',
+  'User',
+  'Session',
+  'Officer',
+  'Judge',
+  'Auditionee',
+  'RuleRegulation',
+  'AttendanceRecord',
+  'JudgeEvaluation',
+  'EvaluationScore',
+  'AuditLog',
+];
+
+// MySQL-only / non-Postgres statements that may appear in older backup files.
+// These are silently skipped on import so legacy exports don't hard-fail.
+function isUnsupportedStatement(stmt) {
+  return /^SET\s+FOREIGN_KEY_CHECKS/i.test(stmt) || /^\/\*!/.test(stmt);
+}
+
 // ─── SQL helpers ──────────────────────────────────────────────────────────────
 
+// Quote a Postgres identifier (table / column name) with double quotes.
+function quoteIdent(name) {
+  return `"${String(name).replace(/"/g, '""')}"`;
+}
+
+// Render a JS value as a Postgres SQL literal.
 function escapeValue(val) {
   if (val === null || val === undefined) return 'NULL';
-  if (typeof val === 'boolean') return val ? '1' : '0';
+  if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
   if (val instanceof Date) {
-    // 'YYYY-MM-DD HH:MM:SS'
-    return `'${val.toISOString().replace('T', ' ').slice(0, 19)}'`;
+    // 'YYYY-MM-DD HH:MM:SS.mmm' — valid for timestamp columns
+    return `'${val.toISOString().replace('T', ' ').replace('Z', '')}'`;
   }
-  if (typeof val === 'number') return String(val);
-  // String — escape backslash, single quote, NUL, newline, carriage return
-  const escaped = String(val)
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
-    .replace(/\x00/g, '\\0')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r');
-  return `'${escaped}'`;
+  if (typeof val === 'number') {
+    return Number.isFinite(val) ? String(val) : 'NULL';
+  }
+  if (typeof val === 'object') {
+    // JSON-ish values — store as escaped JSON text
+    return escapeValue(JSON.stringify(val));
+  }
+  // String — Postgres escapes a single quote by doubling it.
+  return `'${String(val).replace(/'/g, "''")}'`;
 }
 
 function toInserts(tableName, rows) {
-  if (!rows || rows.length === 0) return `-- (no rows in \`${tableName}\`)\n`;
-  const cols = Object.keys(rows[0]).map(c => `\`${c}\``).join(', ');
+  if (!rows || rows.length === 0) {
+    return `-- (no rows in ${quoteIdent(tableName)})\n`;
+  }
+  const cols = Object.keys(rows[0]).map(quoteIdent).join(', ');
   const values = rows
     .map(row => `  (${Object.values(row).map(escapeValue).join(', ')})`)
     .join(',\n');
-  return `INSERT INTO \`${tableName}\` (${cols}) VALUES\n${values};\n`;
+  return `INSERT INTO ${quoteIdent(tableName)} (${cols}) VALUES\n${values};\n`;
 }
 
-// State-machine SQL splitter: correctly handles quoted strings
+// Reset the id sequence so future auto-increment inserts don't collide with
+// the explicit IDs we just restored.
+function resetSequence(tableName) {
+  return (
+    `SELECT setval(` +
+    `pg_get_serial_sequence('${quoteIdent(tableName)}', 'id'), ` +
+    `COALESCE((SELECT MAX("id") FROM ${quoteIdent(tableName)}), 1), ` +
+    `(SELECT COUNT(*) FROM ${quoteIdent(tableName)}) > 0` +
+    `);`
+  );
+}
+
+// State-machine SQL splitter: correctly handles quoted strings and comments.
 function splitStatements(sql) {
   const out = [];
   let cur = '';
   let inStr = false;
-  let strChar = '';
 
   for (let i = 0; i < sql.length; i++) {
     const ch = sql[i];
-    const prev = i > 0 ? sql[i - 1] : '';
 
     if (inStr) {
       cur += ch;
-      if (ch === strChar && prev !== '\\') inStr = false;
-    } else if (ch === "'" || ch === '"' || ch === '`') {
+      if (ch === "'") {
+        // A doubled '' is an escaped quote, not the end of the string.
+        if (sql[i + 1] === "'") {
+          cur += sql[++i];
+        } else {
+          inStr = false;
+        }
+      }
+    } else if (ch === "'") {
       inStr = true;
-      strChar = ch;
       cur += ch;
     } else if (ch === '-' && sql[i + 1] === '-') {
-      // Line comment — skip to end of line
+      // Line comment — skip to end of line.
       while (i < sql.length && sql[i] !== '\n') i++;
     } else if (ch === ';') {
       const stmt = cur.trim();
@@ -67,7 +120,6 @@ function splitStatements(sql) {
 
 export const exportBackup = async (req, res) => {
   try {
-    // Fetch all tables (insertion order respects FK dependencies)
     const [
       evaluationCategories,
       users,
@@ -81,6 +133,7 @@ export const exportBackup = async (req, res) => {
       attendanceRecords,
       judgeEvaluations,
       evaluationScores,
+      auditLogs,
     ] = await Promise.all([
       prisma.evaluationCategory.findMany({ orderBy: { id: 'asc' } }),
       prisma.user.findMany({ orderBy: { id: 'asc' } }),
@@ -94,51 +147,51 @@ export const exportBackup = async (req, res) => {
       prisma.attendanceRecord.findMany({ orderBy: { id: 'asc' } }),
       prisma.judgeEvaluation.findMany({ orderBy: { id: 'asc' } }),
       prisma.evaluationScore.findMany({ orderBy: { id: 'asc' } }),
+      prisma.auditLog.findMany({ orderBy: { id: 'asc' } }),
     ]);
+
+    const datasets = {
+      EvaluationCategory: evaluationCategories,
+      User: users,
+      Semester: semesters,
+      Member: members,
+      Session: sessions,
+      Officer: officers,
+      Judge: judges,
+      Auditionee: auditionees,
+      RuleRegulation: rules,
+      AttendanceRecord: attendanceRecords,
+      JudgeEvaluation: judgeEvaluations,
+      EvaluationScore: evaluationScores,
+      AuditLog: auditLogs,
+    };
 
     const now = new Date().toISOString();
     const lines = [];
 
-    lines.push(`-- TMC Choir Attendance System — SQL Backup`);
+    lines.push(BACKUP_MARKER);
     lines.push(`-- Exported at: ${now}`);
     lines.push(`-- Restore: import this file via Settings > Backup & Recovery`);
     lines.push(`--`);
     lines.push(``);
-    lines.push(`SET FOREIGN_KEY_CHECKS = 0;`);
+
+    // Truncate every table in one statement. CASCADE clears dependents and
+    // RESTART IDENTITY resets the auto-increment sequences.
+    const truncList = TABLE_ORDER.map(quoteIdent).join(', ');
+    lines.push(`-- ── Clear all tables ───────────────────────────────────────────────────────`);
+    lines.push(`TRUNCATE TABLE ${truncList} RESTART IDENTITY CASCADE;`);
     lines.push(``);
 
-    // Truncate in reverse FK order
-    const truncateOrder = [
-      'EvaluationScore', 'JudgeEvaluation', 'AttendanceRecord',
-      'RuleRegulation', 'Auditionee', 'Judge', 'Officer',
-      'Session', 'Member', 'Semester', 'User', 'EvaluationCategory',
-    ];
-    lines.push(`-- ── Truncate all tables ────────────────────────────────────────────────────`);
-    for (const t of truncateOrder) lines.push(`TRUNCATE TABLE \`${t}\`;`);
-    lines.push(``);
-
-    // Insert in FK order
-    const datasets = [
-      ['EvaluationCategory', evaluationCategories],
-      ['User', users],
-      ['Semester', semesters],
-      ['Member', members],
-      ['Session', sessions],
-      ['Officer', officers],
-      ['Judge', judges],
-      ['Auditionee', auditionees],
-      ['RuleRegulation', rules],
-      ['AttendanceRecord', attendanceRecords],
-      ['JudgeEvaluation', judgeEvaluations],
-      ['EvaluationScore', evaluationScores],
-    ];
-
-    for (const [table, rows] of datasets) {
-      lines.push(`-- ── ${table} (${rows.length} rows) ${'─'.repeat(Math.max(0, 60 - table.length - String(rows.length).length - 12))}`);
+    // Insert in FK-dependency order.
+    for (const table of TABLE_ORDER) {
+      const rows = datasets[table];
+      lines.push(`-- ── ${table} (${rows.length} rows) ──`);
       lines.push(toInserts(table, rows));
     }
 
-    lines.push(`SET FOREIGN_KEY_CHECKS = 1;`);
+    // Re-sync sequences to the max id we just inserted.
+    lines.push(`-- ── Reset sequences ────────────────────────────────────────────────────────`);
+    for (const table of TABLE_ORDER) lines.push(resetSequence(table));
     lines.push(``);
     lines.push(`-- End of backup`);
 
@@ -164,42 +217,52 @@ export const importBackup = async (req, res) => {
       return res.status(400).json({ status: 'fail', message: 'No SQL content received.' });
     }
 
-    // Basic sanity check — must look like our backup
-    if (!sql.includes('SET FOREIGN_KEY_CHECKS')) {
+    // Sanity check — must look like a backup from this system.
+    if (!sql.includes('TMC Choir Attendance System') || !/TRUNCATE\s+TABLE/i.test(sql)) {
       return res.status(400).json({
         status: 'fail',
         message: 'Invalid backup file. Only .sql files exported from this system are supported.',
       });
     }
 
-    const statements = splitStatements(sql);
-    let executed = 0;
-    const errors = [];
+    const statements = splitStatements(sql).filter(
+      (stmt) => stmt && !stmt.startsWith('--') && !isUnsupportedStatement(stmt)
+    );
 
-    for (const stmt of statements) {
-      if (!stmt || stmt.startsWith('--')) continue;
-      try {
-        await prisma.$executeRawUnsafe(stmt);
-        executed++;
-      } catch (err) {
-        errors.push({ stmt: stmt.slice(0, 120), error: err.message });
-      }
+    if (statements.length === 0) {
+      return res.status(400).json({ status: 'fail', message: 'Backup file contains no executable statements.' });
     }
 
-    if (errors.length > 0) {
-      return res.status(207).json({
-        status: 'partial',
-        message: `Imported with ${errors.length} error(s). ${executed} statements succeeded.`,
-        errors: errors.slice(0, 10), // cap to first 10
-      });
-    }
+    // Run the whole restore atomically: if anything fails, nothing is changed.
+    await prisma.$transaction(
+      async (tx) => {
+        for (const stmt of statements) {
+          await tx.$executeRawUnsafe(stmt);
+        }
+      },
+      { timeout: 120000, maxWait: 10000 }
+    );
 
     res.status(200).json({
       status: 'success',
-      message: `Backup restored successfully. ${executed} statements executed.`,
+      message: `Backup restored successfully. ${statements.length} statements executed.`,
     });
   } catch (err) {
     console.error('Import Backup Error:', err);
-    res.status(500).json({ status: 'error', message: 'Failed to import backup.' });
+
+    // Older MySQL-format exports (backtick identifiers, FOREIGN_KEY_CHECKS, etc.)
+    // are not compatible with PostgreSQL. Detect the typical failure codes and
+    // guide the user to export a fresh backup.
+    const legacyCodes = ['42704', '42601', '42P01'];
+    const haystack = `${err.message || ''} ${err.meta?.code || ''} ${err.code || ''}`;
+    const isLegacy =
+      legacyCodes.some((c) => haystack.includes(c)) || /foreign_key_checks/i.test(haystack);
+
+    res.status(500).json({
+      status: 'error',
+      message: isLegacy
+        ? 'This backup file is from an older, incompatible format. Please export a fresh backup with the current version, then import that file.'
+        : `Failed to import backup: ${err.message}`,
+    });
   }
 };

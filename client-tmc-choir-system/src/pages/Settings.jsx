@@ -22,9 +22,9 @@ const TABS = [
 const RULE_CATEGORIES = ['General', 'Attendance', 'Conduct', 'Membership', 'Auditions', 'Performances', 'Officers']
 
 export default function Settings() {
-  const { rules, loading: rulesLoading, createRule, updateRule, deleteRule } = useRules()
-  const { categories, loading: catsLoading, createCategory, updateCategory, deleteCategory } = useCategories()
-  const { accounts, loading: accountsLoading, createAccount, updateAccount, deleteAccount } = useAccounts()
+  const { rules, loading: rulesLoading, createRule, updateRule, deleteRule, fetchRules } = useRules()
+  const { categories, loading: catsLoading, createCategory, updateCategory, deleteCategory, fetchCategories } = useCategories()
+  const { accounts, loading: accountsLoading, createAccount, updateAccount, deleteAccount, fetchAccounts } = useAccounts()
 
   const [activeTab, setActiveTab] = useState('rules')
 
@@ -243,7 +243,12 @@ export default function Settings() {
     try {
       const sqlText = await importFile.text()
       const res = await backupAPI.importBackup(sqlText)
-      setImportResult({ ok: res.status === 'success', message: res.message })
+      const ok = res.status === 'success'
+      setImportResult({ ok, message: res.message })
+      if (ok) {
+        // Refresh in-page data so the restored records appear immediately.
+        await Promise.all([fetchRules(), fetchCategories(), fetchAccounts()])
+      }
     } catch (err) {
       const msg = err?.response?.data?.message || 'Import failed. The file may be corrupted or incompatible.'
       setImportResult({ ok: false, message: msg })
@@ -470,7 +475,7 @@ export default function Settings() {
             }`}>
               {importResult.message}
               {importResult.ok && (
-                <span className="ml-2 text-[12px] opacity-70">Reload the page to see restored data.</span>
+                <span className="ml-2 text-[12px] opacity-70">Restored data has been refreshed.</span>
               )}
             </div>
           )}
