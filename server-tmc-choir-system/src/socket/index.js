@@ -3,10 +3,11 @@ import jwt from 'jsonwebtoken';
 
 let io;
 
-export const initSocket = (httpServer, frontendUrl) => {
+export const initSocket = (httpServer, allowedOrigins) => {
   io = new Server(httpServer, {
     cors: {
-      origin: frontendUrl,
+      // Accept the same allow-list of origins used by the REST CORS config.
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
     },
@@ -87,9 +88,9 @@ export const createSocketAwarePrisma = (baseClient) => {
         },
         async update({ args, query }) {
           const result = await query(args);
-          // Skip internal attendance-rate note updates (only `notes` field touched)
+          // Skip internal attendance-rate updates (only `attendanceRate` touched)
           const keys = Object.keys(args.data || {});
-          if (!(keys.length === 1 && keys[0] === 'notes')) {
+          if (!(keys.length === 1 && keys[0] === 'attendanceRate')) {
             emit('member:updated', result);
           }
           return result;

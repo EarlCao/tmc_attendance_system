@@ -20,7 +20,7 @@ import backupRoutes from "./routes/backup.route.js";
 import accountRoutes from "./routes/account.route.js";
 import portalRoutes from "./routes/portal.route.js";
 import auditLogRoutes from "./routes/auditLog.route.js";
-import { globalLimiter } from "./middleware/rateLimit.middleware.js";
+import { globalLimiter, backupLimiter } from "./middleware/rateLimit.middleware.js";
 
 // Fail fast if required configuration is missing — prevents deploying with an
 // undefined JWT_SECRET (auth bypass risk) or undefined FRONTEND_URL (CORS open).
@@ -36,19 +36,54 @@ if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET.length < 32)
 }
 
 const BACKEND_PORT = process.env.BACKEND_PORT || 3002;
-const FRONTEND_URL = process.env.FRONTEND_URL;
+// FRONTEND_URL may contain a comma-separated allow-list of origins (e.g. a
+// Vercel preview + production URL). Build an array so CORS and Socket.IO only
+// accept known origins.
+const ALLOWED_ORIGINS = process.env.FRONTEND_URL.split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 const app = express();
 const httpServer = createServer(app);
 
+// Trust the reverse proxy (Render/Vercel terminate TLS) so req.ip reflects the
+// real client address — required for accurate audit logs and per-IP rate
+// limiting. Only enabled in production to avoid trusting spoofed headers locally.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Initialize Socket.IO on the same HTTP server
-const io = initSocket(httpServer, FRONTEND_URL);
+const io = initSocket(httpServer, ALLOWED_ORIGINS);
 // Wrap prisma with socket-aware extension so all mutations auto-broadcast
 setPrisma(createSocketAwarePrisma(prisma));
 
-app.use(cors({ origin: FRONTEND_URL, credentials: true }));
-app.use(helmet());
+app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
+// Helmet hardening: enable HSTS and a Content-Security-Policy to reduce XSS
+// impact (the JWT lives in localStorage, so limiting script sources matters).
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'", ...ALLOWED_ORIGINS, 'ws:', 'wss:'],
+        fontSrc: ["'self'", 'data:'],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    hsts: {
+      maxAge: 15552000, // 180 days
+      includeSubDomains: true,
+      preload: true,
+    },
+  })
+);
 app.use(express.json());
-// app.use("/api", globalLimiter);
+// Global rate limiter protects every API route from abuse / scraping / DoS.
+app.use("/api", globalLimiter);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/semesters", semesterRoutes);
@@ -67,6 +102,24 @@ app.use("/api/audit-logs", auditLogRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
+});
+
+// 404 handler for unknown routes.
+app.use((req, res) => {
+  res.status(404).json({ status: 'fail', message: `Cannot ${req.method} ${req.originalUrl}` });
+});
+
+// Centralized error handler. Express 5 forwards async errors here automatically.
+// Never leak raw error details to clients in production.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('Unhandled Error:', err);
+  const status = err.status || err.statusCode || 500;
+  const isProd = process.env.NODE_ENV === 'production';
+  res.status(status).json({
+    status: status >= 500 ? 'error' : 'fail',
+    message: isProd && status >= 500 ? 'Internal server error' : (err.message || 'Internal server error'),
+  });
 });
 
 process.on('SIGTERM', async () => await prisma.$disconnect());

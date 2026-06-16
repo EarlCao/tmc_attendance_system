@@ -12,6 +12,19 @@ export const globalLimiter = rateLimit({
   legacyHeaders: false, // Disable legacy X-RateLimit headers
 });
 
+// Strict limiter for the backup import endpoint: large, expensive, destructive
+// operation that should only ever be run occasionally by an admin.
+export const backupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 5, // At most 5 import attempts per hour per IP
+  message: {
+    status: 'fail',
+    message: 'Too many backup import attempts. Please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Stricter rate limiting specifically for auth endpoints (e.g. login) to prevent brute-force attacks
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

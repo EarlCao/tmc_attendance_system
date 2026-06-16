@@ -103,9 +103,11 @@ export const saveAttendanceForSession = async (req, res) => {
         const excusedCount = memberRecords.filter(r => r.status === 'EXCUSED' && r.excuseStatus === 'Approved').length;
         const attended = presentCount + (lateCount * 0.5) + excusedCount;
         const attendanceRate = Math.round((attended / total) * 100);
+        // Store the computed rate in its own column — never overwrite the
+        // admin-authored `notes` field.
         await prisma.member.update({
           where: { id: memberId },
-          data: { notes: `Attendance Rate: ${attendanceRate}%` },
+          data: { attendanceRate },
         });
       }
     }

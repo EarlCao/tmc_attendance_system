@@ -82,6 +82,7 @@ model Member {
   emailOrFacebook   String?
   status            MemberStatus       @default(ACTIVE)
   notes             String?            @db.Text
+  attendanceRate    Float?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   // Relations

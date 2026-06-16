@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { createAuditLog } from '../lib/auditLogger.js';
 
 /**
  * GET /api/audit-logs
@@ -47,7 +48,18 @@ export const getAuditLogs = async (req, res) => {
  */
 export const clearAuditLogs = async (req, res) => {
   try {
-    await prisma.auditLog.deleteMany({});
+    const { count } = await prisma.auditLog.deleteMany({});
+    // Clearing the trail is itself a security-relevant event — record who did it
+    // and how many entries were removed so the action is never silent.
+    await createAuditLog({
+      userId: req.user?.id,
+      username: req.user?.username,
+      action: 'CLEAR_AUDIT_LOGS',
+      category: 'SYSTEM',
+      target: 'audit-logs',
+      details: { clearedCount: count },
+      ipAddress: req.ip,
+    });
     res.status(200).json({ status: 'success', message: 'Audit logs cleared.' });
   } catch (err) {
     console.error('Clear Audit Logs Error:', err);

@@ -359,11 +359,13 @@ export const importBackup = async (req, res) => {
     const isLegacy =
       legacyCodes.some((c) => haystack.includes(c)) || /foreign_key_checks/i.test(haystack);
 
+    // Never echo the raw database error to the client (info disclosure); the
+    // full error is logged server-side above.
     res.status(500).json({
       status: 'error',
       message: isLegacy
         ? 'This backup file is from an older, incompatible format. Please export a fresh backup with the current version, then import that file.'
-        : `Failed to import backup: ${err.message}`,
+        : 'Failed to import backup. The file could not be restored.',
     });
   }
 };

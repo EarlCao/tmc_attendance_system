@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
+import { BCRYPT_COST, MIN_PASSWORD_LENGTH } from '../lib/security.js';
 
 // Dashboard: stats for the member
 export const getDashboard = async (req, res) => {
@@ -170,6 +171,9 @@ export const updateProfile = async (req, res) => {
     if (!user) return res.status(404).json({ status: 'fail', message: 'User not found' });
 
     if (password) {
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ status: 'fail', message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+      }
       if (!currentPassword) {
         return res.status(400).json({ status: 'fail', message: 'Current password required to set new password' });
       }
@@ -189,7 +193,7 @@ export const updateProfile = async (req, res) => {
       data.username = username;
     }
     if (password) {
-      data.passwordHash = await bcrypt.hash(password, 10);
+      data.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
     }
 
     const updatedUser = await prisma.user.update({

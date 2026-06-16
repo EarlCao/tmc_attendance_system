@@ -74,3 +74,90 @@
 - High / Medium / Low issues from `PRE_DEPLOY_REVIEW.md` remain open and were intentionally not addressed in this pass.
 
 *End of summary.*
+
+---
+
+# HIGH-LEVEL FIXES
+
+**Date:** 2026-06-16
+**Scope:** This pass addresses **High-severity issues only** (H-1 through H-11 from `PRE_DEPLOY_REVIEW.md`). Medium / Low issues were intentionally left untouched, and all Critical fixes above remain unchanged.
+**Validation:** All modified backend files pass `node --check` (syntax), and the changes were reviewed by an automated code review with no blocking issues. The new Prisma migration is additive and nullable, so it is safe to apply to existing databases.
+
+> `PRE_DEPLOY_REVIEW.md`, `CRITICAL_FIXES.md`, and the Critical section above were **not** modified.
+
+---
+
+## High Issues Found & Fixed
+
+### H-1 — Global rate limiting was disabled
+**Was:** `app.use("/api", globalLimiter)` was commented out, leaving every API route open to brute-force / scraping / DoS.
+**Fixed:** Re-enabled the global limiter on `/api`. Works correctly behind the proxy because of the `trust proxy` change (H-8).
+
+### H-2 — CORS / Socket.IO accepted a single (or undefined) origin
+**Was:** CORS and Socket.IO used a single `FRONTEND_URL` string; a misconfiguration could open the API to any origin.
+**Fixed:** `FRONTEND_URL` is now parsed into a trimmed, comma-separated **allow-list** (`ALLOWED_ORIGINS`) and passed to both `cors({ origin })` and the Socket.IO `cors.origin`. Combined with the Critical-pass startup guard, the origin can never be `undefined`.
+
+### H-3 — JWT stored in `localStorage` (XSS token theft risk)
+**Was:** The access token lives in `localStorage`, readable by any injected script.
+**Fixed (mitigation):** Configured Helmet with a strict **Content-Security-Policy** (locks `scriptSrc`/`objectSrc`/`frameAncestors`) and explicit **HSTS** to materially reduce XSS impact. A full migration to `httpOnly` cookies (which would touch login/logout, `protect`, axios, and the socket handshake) is documented as a deliberate follow-up rather than performed here, to keep this pass minimal and safe.
+
+### H-4 — Attendance-rate hack overwrote `Member.notes` (data loss)
+**Was:** Saving attendance wrote `data: { notes: 'Attendance Rate: X%' }`, destroying any real admin notes; the socket layer even special-cased `notes`-only updates to hide the hack.
+**Fixed:** Added a dedicated nullable `attendanceRate Float?` column to `Member` (additive migration `20260616000000_add_member_attendance_rate`). `saveAttendanceForSession` now writes `{ attendanceRate }` instead of repurposing `notes`. The socket extension's broadcast-suppression special-case was updated from `notes`-only to `attendanceRate`-only. `portal.controller` already computes the rate on read, so no change was needed there.
+
+### H-5 — No global error handler / 404; raw error messages leaked
+**Was:** Unknown routes and unhandled errors fell through to default Express behavior; the backup import echoed raw `err.message` to clients (info disclosure).
+**Fixed:** Added a **404 handler** and a **centralized error-handling middleware** at the end of `server.js` that returns a generic message for 5xx in production and logs details server-side. The backup import `catch` no longer returns raw `err.message`.
+
+### H-6 — Docker images run dev servers in production
+**Decision:** Intentionally **skipped** per user direction — production is deployed via **Render** (backend) + **Vercel** (frontend) per `render.yaml`, and the Docker/compose setup is the local-dev workflow. Converting it would break local dev without improving the real production path.
+
+### H-7 — Large import body enabled DoS
+**Was:** Backup import accepted very large bodies with no dedicated throttle.
+**Fixed:** Body limit was already reduced to 5 MB (Critical pass); added a dedicated stricter **`backupLimiter`** to `POST /api/backup/import` to cap import frequency on top of the global limiter.
+
+### H-8 — Proxy not trusted (wrong client IP)
+**Was:** Behind Render/Vercel, `req.ip` reflected the proxy, not the client — breaking per-IP rate limiting and producing inaccurate audit logs.
+**Fixed:** `app.set('trust proxy', 1)` in **production only** (avoids trusting spoofed headers in local dev). Explicit **HSTS** configured via Helmet. This also improves audit-log IP accuracy.
+
+### H-9 — Irreversible / lockout-prone admin actions
+**Was:** An admin could delete their own account or the last admin (full lockout); clearing the audit log left no trace of who did it.
+**Fixed:** `deleteAccount` now blocks **self-deletion** and blocks deleting the **last active `ADMIN`** (counts active admins first → `400`). `clearAuditLogs` now writes a fresh `CLEAR_AUDIT_LOGS` audit entry (who + how many cleared) so the action is never silent.
+
+### H-10 — No password-strength enforcement
+**Was:** Accounts could be created/updated with arbitrarily weak passwords.
+**Fixed:** Added a shared **`MIN_PASSWORD_LENGTH`** (8) constant and enforced it in `createAccount`, `updateAccount`, and the member portal's `updateProfile` (rejects short passwords with a `400`).
+
+### H-11 — Inconsistent bcrypt cost in the portal
+**Was:** `portal.controller` still hashed with the hardcoded cost `10` while the rest of the app used `BCRYPT_COST` (12).
+**Fixed:** Replaced the literal `10` with the shared **`BCRYPT_COST`** constant so all password hashing is consistent.
+
+---
+
+## Files Modified (High pass)
+
+| File | High issue(s) | Change |
+|------|---------------|--------|
+| `server-tmc-choir-system/src/server.js` | H-1, H-2, H-3, H-5, H-8 | Re-enable global limiter; CORS/Socket origin allow-list; Helmet CSP + HSTS; `trust proxy` (prod); 404 + centralized error handler |
+| `server-tmc-choir-system/src/middleware/rateLimit.middleware.js` | H-7 | New stricter `backupLimiter` |
+| `server-tmc-choir-system/src/routes/backup.route.js` | H-7 | Apply `backupLimiter` to `POST /import` |
+| `server-tmc-choir-system/src/socket/index.js` | H-2, H-4 | Accept origins array; suppress `attendanceRate`-only broadcasts (was `notes`-only) |
+| `server-tmc-choir-system/prisma/schema.prisma` | H-4 | Add `attendanceRate Float?` to `Member` |
+| `server-tmc-choir-system/prisma/migrations/20260616000000_add_member_attendance_rate/migration.sql` *(new)* | H-4 | Additive nullable `attendanceRate` column |
+| `server-tmc-choir-system/src/controller/attendance.controller.js` | H-4 | Write rate to `attendanceRate` instead of `notes` |
+| `server-tmc-choir-system/src/controller/backup.controller.js` | H-5 | Stop echoing raw `err.message` to clients |
+| `server-tmc-choir-system/src/controller/account.controller.js` | H-9, H-10 | Block self-delete & last-admin delete; enforce min password length |
+| `server-tmc-choir-system/src/controller/auditLog.controller.js` | H-9 | Log `CLEAR_AUDIT_LOGS` after clearing |
+| `server-tmc-choir-system/src/controller/portal.controller.js` | H-10, H-11 | Enforce min password length; use `BCRYPT_COST` |
+| `server-tmc-choir-system/src/lib/security.js` | H-10 | New `MIN_PASSWORD_LENGTH` constant |
+
+---
+
+## Follow-up Notes (not done in this High-only pass)
+
+- **H-3 cookie migration:** Moving the JWT to an `httpOnly`, `Secure`, `SameSite` cookie remains the recommended long-term fix; it was deferred as a larger refactor (auth flow + socket handshake).
+- **H-4 migration:** Run `npx prisma migrate deploy` (or `prisma generate`) so the Prisma client picks up the new `attendanceRate` field before deploying.
+- **H-6:** No code change — production uses Render/Vercel; Docker remains the dev-only workflow per user direction.
+- Medium / Low issues from `PRE_DEPLOY_REVIEW.md` remain open and were intentionally not addressed in this pass.
+
+*End of high-level summary.*

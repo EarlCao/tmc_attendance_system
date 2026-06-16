@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import { createAuditLog } from '../lib/auditLogger.js';
-import { BCRYPT_COST, canonicalizeRole, generateTempPassword } from '../lib/security.js';
+import { BCRYPT_COST, canonicalizeRole, generateTempPassword, MIN_PASSWORD_LENGTH } from '../lib/security.js';
 
 // Get all accounts
 export const getAccounts = async (req, res) => {
@@ -111,6 +111,10 @@ export const createAccount = async (req, res) => {
       return res.status(400).json({ status: 'fail', message: 'Username and password are required' });
     }
 
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({ status: 'fail', message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+    }
+
     // Canonicalize and validate the role so only known values are ever stored.
     const canonicalRole = canonicalizeRole(role || 'ADMIN');
     if (!canonicalRole) {
@@ -192,6 +196,9 @@ export const updateAccount = async (req, res) => {
       changes.push({ field: 'isActive', from: existingUser.isActive, to: isActive });
     }
     if (password) {
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ status: 'fail', message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+      }
       data.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
       changes.push({ field: 'password', note: 'Password was changed' });
     }
@@ -232,10 +239,27 @@ export const updateAccount = async (req, res) => {
 export const deleteAccount = async (req, res) => {
   try {
     const { id } = req.params;
+    const targetId = parseInt(id);
 
-    const existingUser = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+    const existingUser = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!existingUser) {
+      return res.status(404).json({ status: 'fail', message: 'Account not found' });
+    }
 
-    await prisma.user.delete({ where: { id: parseInt(id) } });
+    // Prevent an admin from deleting their own account (self-lockout).
+    if (req.user?.id === targetId) {
+      return res.status(400).json({ status: 'fail', message: 'You cannot delete your own account.' });
+    }
+
+    // Prevent removing the last remaining active admin (would lock everyone out).
+    if (existingUser.role === 'ADMIN' && existingUser.isActive) {
+      const activeAdmins = await prisma.user.count({ where: { role: 'ADMIN', isActive: true } });
+      if (activeAdmins <= 1) {
+        return res.status(400).json({ status: 'fail', message: 'Cannot delete the last active admin account.' });
+      }
+    }
+
+    await prisma.user.delete({ where: { id: targetId } });
 
     if (existingUser) {
       await createAuditLog({

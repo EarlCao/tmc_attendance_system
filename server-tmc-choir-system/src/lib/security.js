@@ -3,6 +3,9 @@ import crypto from 'node:crypto';
 // Centralized bcrypt cost factor (raised from the previous hardcoded 10).
 export const BCRYPT_COST = 12;
 
+// Minimum acceptable password length for account creation / password changes.
+export const MIN_PASSWORD_LENGTH = 8;
+
 // Canonical role values stored in the database. The middleware compares
 // case-insensitively, but we always persist these exact strings.
 export const ROLES = ['ADMIN', 'MEMBER'];
