@@ -1,12 +1,49 @@
 import { prisma } from "../src/lib/prisma.js";
 import bcrypt from "bcrypt";
+import { BCRYPT_COST } from "../src/lib/security.js";
+
+/**
+ * ADMIN-ONLY SEED
+ * ---------------
+ * Resets the database to a clean state containing ONLY the admin account.
+ * Every other table (members, sessions, auditionees, judges, rules, categories,
+ * semesters, audit logs, etc.) is wiped first.
+ *
+ * Usage:
+ *   SEED_ADMIN_PASSWORD=<your-password> npm run db:seed
+ *
+ * Admin login after seeding:
+ *   username: admin
+ *   password: <value of SEED_ADMIN_PASSWORD>
+ *
+ * For a fully populated demo dataset instead, run `npm run db:seed:demo`.
+ */
+
+// Delete in foreign-key-safe order: children before parents.
+async function wipeDatabase() {
+  console.log("🧹 Wiping all existing data...");
+  // Order matters — rows that reference other rows must be removed first.
+  await prisma.evaluationScore.deleteMany();
+  await prisma.judgeEvaluation.deleteMany();
+  await prisma.attendanceRecord.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.officer.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.member.deleteMany();
+  await prisma.auditionee.deleteMany();
+  await prisma.judge.deleteMany();
+  await prisma.ruleRegulation.deleteMany();
+  await prisma.evaluationCategory.deleteMany();
+  await prisma.semester.deleteMany();
+  await prisma.auditLog.deleteMany();
+  console.log("✅ Database wiped clean.");
+}
 
 async function main() {
-  console.log("🌱 Seeding database...");
+  console.log("🌱 Seeding database (ADMIN ONLY)...");
 
-  // =========================
-  // 1. CREATE ADMIN USER
-  // =========================
+  await wipeDatabase();
+
   // The admin password must be supplied via env so no credential lives in source.
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
   if (!adminPassword) {
@@ -15,12 +52,10 @@ async function main() {
       "Set it in your environment before running the seed."
     );
   }
-  const hashedPassword = await bcrypt.hash(adminPassword, 12);
+  const hashedPassword = await bcrypt.hash(adminPassword, BCRYPT_COST);
 
-  const admin = await prisma.user.upsert({
-    where: { username: "admin" },
-    update: {},
-    create: {
+  const admin = await prisma.user.create({
+    data: {
       username: "admin",
       email: "admin@tmc.com",
       passwordHash: hashedPassword,
@@ -29,72 +64,9 @@ async function main() {
   });
 
   console.log("✅ Admin created:", admin.username);
-
-  // =========================
-  // 2. DEFAULT EVALUATION CATEGORIES
-  // =========================
-  const categories = [
-    { name: "Pitch Accuracy", percentage: 30 },
-    { name: "Tone Quality", percentage: 25 },
-    { name: "Rhythm", percentage: 20 },
-    { name: "Stage Presence", percentage: 25 },
-  ];
-
-  for (const cat of categories) {
-    await prisma.evaluationCategory.upsert({
-      where: { name: cat.name },
-      update: {},
-      create: cat,
-    });
-  }
-
-  console.log("✅ Evaluation categories seeded");
-
-  // =========================
-  // 3. SAMPLE SEMESTER
-  // =========================
-  const semester = await prisma.semester.upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
-      name: "1st Semester",
-      notes: "Initial semester setup",
-    },
-  });
-
-  console.log("✅ Semester seeded:", semester.name);
-
-  // =========================
-  // 4. SAMPLE SESSION
-  // =========================
-  await prisma.session.create({
-    data: {
-      title: "First Rehearsal",
-      sessionDate: new Date(),
-      semesterId: semester.id,
-      description: "Opening choir session",
-    },
-  });
-
-  console.log("✅ Sample session created");
-
-  // =========================
-  // 5. SAMPLE RULES
-  // =========================
-  await prisma.ruleRegulation.create({
-    data: {
-      title: "Attendance Policy",
-      content: "Members must attend at least 80% of rehearsals.",
-      semesterId: semester.id,
-    },
-  });
-
-  console.log("✅ Rules seeded");
-
-  console.log("🎉 Seeding completed successfully!");
+  console.log("🎉 Admin-only seed completed. The database contains only the admin account.");
 }
 
-// Run the main function and handle errors
 main()
   .catch((e) => {
     console.error("❌ Seed error:", e);
