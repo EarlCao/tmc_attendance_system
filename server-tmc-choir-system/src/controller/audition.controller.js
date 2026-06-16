@@ -89,7 +89,7 @@ export const getAuditionees = async (req, res) => {
     let pagination;
     if (usePagination) {
       const pageNum = parseId(page) || 1;
-      const size = parseId(pageSize) || 25;
+      const size = Math.min(parseId(pageSize) || 25, 200);
       findArgs.skip = (pageNum - 1) * size;
       findArgs.take = size;
       const total = await prisma.auditionee.count({ where: whereClause });

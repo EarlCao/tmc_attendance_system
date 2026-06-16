@@ -53,7 +53,7 @@ export const getAccounts = async (req, res) => {
     const { page, pageSize } = req.query;
     if (page !== undefined || pageSize !== undefined) {
       const pageNum = parseId(page) || 1;
-      const size = parseId(pageSize) || 25;
+      const size = Math.min(parseId(pageSize) || 25, 200);
       const start = (pageNum - 1) * size;
       return res.status(200).json({
         status: 'success',

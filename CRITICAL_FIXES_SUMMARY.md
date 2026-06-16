@@ -161,3 +161,91 @@
 - Medium / Low issues from `PRE_DEPLOY_REVIEW.md` remain open and were intentionally not addressed in this pass.
 
 *End of high-level summary.*
+
+---
+
+# MEDIUM-LEVEL FIXES
+
+**Date:** 2026-06-16
+**Scope:** This pass addresses **Medium-severity issues only** (M-1 through M-12 from `PRE_DEPLOY_REVIEW.md`). Low-priority issues were intentionally left untouched, and all Critical / High fixes above remain unchanged.
+**Validation:** All modified backend files pass `node --check` (syntax) and were reviewed by an automated code review. All changes are backward-compatible — no API response shapes change unless new opt-in query params are supplied, so the existing frontend continues to work unmodified.
+
+> `PRE_DEPLOY_REVIEW.md`, `CRITICAL_FIXES.md`, and the Critical / High sections above were **not** modified.
+
+---
+
+## Medium Issues Found & Fixed
+
+### M-1 — No input validation framework
+**Was:** Controllers used inconsistent ad-hoc `if (!x)` checks; `parseInt(id)` on malformed input produced `NaN`, reaching Prisma and surfacing confusing 500s.
+**Fixed (lightweight hardening, no framework):** Added a shared **`parseId(value)`** helper in `security.js` that returns a positive integer or `null`. Applied it to id parsing in `member` (update/delete), `session` (getSession), `audition` (delete), and `account` (update/delete) controllers — invalid ids now return a clean `400`. A full Zod/Joi layer was deliberately **not** adopted to keep this pass minimal and safe (documented as a follow-up).
+
+### M-2 — Case-sensitive search
+**Was:** `contains` filters in `member` (`searchMembers`), `session` (`getSessions`), and `audition` (`getAuditionees`) lacked `mode: 'insensitive'`, making searches case-sensitive and inconsistent with the audit-log search.
+**Fixed:** Added `mode: 'insensitive'` to every text `contains` filter in those three controllers.
+
+### M-3 — Manual, non-atomic cascade deletes
+**Was:** `deleteJudge` and `deleteAuditionee` walked `evaluationScore` → `judgeEvaluation` → parent with sequential awaits; a partial failure could orphan rows.
+**Fixed:** Wrapped each multi-step delete in a single **`prisma.$transaction([...])`** (conditionally including the dependent-row deletes), so the whole cascade is atomic. (Schema-level `onDelete: Cascade` remains a deferred, migration-requiring follow-up.)
+
+### M-4 — Incomplete `.env.example`
+**Already fixed in the Critical pass** (added `FRONTEND_URL`, `NODE_ENV`, `SEED_ADMIN_PASSWORD`, `VITE_API_URL`; removed the stray `[TEMPLATE]` header). No change needed here.
+
+### M-5 — Stale README (said MySQL / wrong ports)
+**Already fixed in the Critical pass** (rewritten for PostgreSQL, corrected secret guidance). No change needed here.
+
+### M-6 — Port inconsistency across configs
+**Was:** `server.js` defaulted to `3002` while `render.yaml` and the Dockerfile use `3302`.
+**Fixed:** Changed the `server.js` default `BACKEND_PORT` to **`3302`** so all configs agree (the env var still overrides).
+
+### M-7 — Category percentages not validated to sum to 100
+**Was:** Weighted-average computation divided by the total weight, so percentages that didn't sum to 100 produced misleading "averages," and individual percentages were unbounded.
+**Fixed:** `createCategory` / `updateCategory` now reject a `percentage` outside **0–100** with a `400`. `getCategories` additionally returns **`totalPercentage`** and a non-blocking **`percentageWarning`** (additive fields only) so the UI can surface a warning when weights don't sum to 100%.
+
+### M-8 — Double socket emit on member creation
+**Was:** `createMember` manually emitted `user:created` while the socket-aware Prisma extension also emits it on `prisma.user.create` — duplicate client events.
+**Fixed:** Removed the manual `emit('user:created', ...)` from `createMember` (the extension already broadcasts it). The `user:deleted` emits in `deleteMember` were **kept** because that path uses `deleteMany`, which the extension does not intercept.
+
+### M-9 — `req.ip` unreliable behind proxy
+**Already fixed in the High pass** via `app.set('trust proxy', 1)` in production. No change needed here.
+
+### M-10 — Backup date format omitted explicit timezone
+**Was:** `escapeValue` stripped the trailing `Z`, serializing dates as a naive UTC wall-clock.
+**Fixed:** Now appends an explicit **`+00`** offset instead of stripping `Z`, documenting the values as UTC. *Note:* the `DateTime` columns are `timestamp without time zone`, so Postgres discards the offset on insert — stored values are identical to before and the round-trip test (which compares row counts) is unaffected. This change is clarifying/intent-preserving rather than a behavioral fix; a true timezone fix would require migrating to `timestamptz`.
+
+### M-11 — No pagination on list endpoints
+**Was:** `getMembers`, `getSessions`, `getAuditionees`, and `getAccounts` always returned full tables with deep includes.
+**Fixed (opt-in, backward-compatible):** Each endpoint now applies `skip`/`take` and returns a `pagination` metadata object **only when `?page` or `?pageSize` is supplied**; otherwise it returns the full array under the existing key, so the current frontend is unaffected. `pageSize` is capped at **200** to preserve DoS protection. *Note:* `getAccounts` paginates the assembled admin+member list in memory (it reduces payload size, not DB load) because that list is merged from two queries.
+
+### M-12 — Portal routes not explicitly role-guarded
+**Was:** `portal.route.js` used only `protect`, conflating "has a memberId" with "is a member."
+**Fixed:** Added **`restrictTo('MEMBER')`** after `protect` so portal routes explicitly require an authenticated member.
+
+---
+
+## Files Modified (Medium pass)
+
+| File | Medium issue(s) | Change |
+|------|-----------------|--------|
+| `server-tmc-choir-system/src/lib/security.js` | M-1 | New `parseId` helper |
+| `server-tmc-choir-system/src/controller/member.controller.js` | M-1, M-2, M-8, M-11 | `parseId` on update/delete; insensitive search; removed duplicate emit; opt-in pagination |
+| `server-tmc-choir-system/src/controller/session.controller.js` | M-1, M-2, M-11 | `parseId` on getSession; insensitive search; opt-in pagination |
+| `server-tmc-choir-system/src/controller/audition.controller.js` | M-1, M-2, M-3, M-11 | `parseId` on delete; insensitive search; transactional delete; opt-in pagination |
+| `server-tmc-choir-system/src/controller/judge.controller.js` | M-3 | Transactional cascade delete |
+| `server-tmc-choir-system/src/controller/category.controller.js` | M-7 | Percentage 0–100 validation; `totalPercentage` + `percentageWarning` |
+| `server-tmc-choir-system/src/controller/account.controller.js` | M-1, M-11 | `parseId` on update/delete; opt-in pagination |
+| `server-tmc-choir-system/src/controller/backup.controller.js` | M-10 | Explicit `+00` UTC offset in date serialization |
+| `server-tmc-choir-system/src/server.js` | M-6 | Default port `3002` → `3302` |
+| `server-tmc-choir-system/src/routes/portal.route.js` | M-12 | `restrictTo('MEMBER')` guard |
+
+---
+
+## Follow-up Notes (not done in this Medium-only pass)
+
+- **M-1:** A full schema-based validation layer (Zod/Joi) per route remains a recommended follow-up; this pass only added lightweight id hardening per the chosen scope.
+- **M-3:** Schema-level `onDelete: Cascade` (with a migration) would be cleaner than the transactional manual deletes, but was deferred to avoid a migration in this pass.
+- **M-10:** A real timezone fix requires migrating `DateTime` columns to `timestamptz`; the current change only makes the UTC intent explicit.
+- **M-11:** Pagination is opt-in; wiring the frontend list views to use `?page`/`?pageSize` (and projecting fewer fields via `select`) is a follow-up enhancement.
+- Low-priority issues from `PRE_DEPLOY_REVIEW.md` remain open and were intentionally not addressed in this pass.
+
+*End of medium-level summary.*
