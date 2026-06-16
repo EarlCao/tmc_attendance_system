@@ -6,10 +6,12 @@ import {
 import { useAccounts } from '../hooks/useAccounts'
 import { useRules } from '../hooks/useRules'
 import { useCategories } from '../hooks/useCategories'
+import { useToast } from '../hooks/useToast'
 import { getStatusColor } from '../lib/utils'
 import { backupAPI } from '../lib/api'
 import Modal from '../components/common/Modal'
 import EmptyState from '../components/common/EmptyState'
+import Toast from '../components/common/Toast'
 
 // ─── Section tabs ─────────────────────────────────────────────────────────────
 const TABS = [
@@ -25,6 +27,7 @@ export default function Settings() {
   const { rules, loading: rulesLoading, createRule, updateRule, deleteRule, fetchRules } = useRules()
   const { categories, loading: catsLoading, createCategory, updateCategory, deleteCategory, fetchCategories } = useCategories()
   const { accounts, loading: accountsLoading, createAccount, updateAccount, deleteAccount, fetchAccounts } = useAccounts()
+  const { toasts, toast, dismiss } = useToast()
 
   const [activeTab, setActiveTab] = useState('rules')
 
@@ -53,6 +56,7 @@ export default function Settings() {
   // ── Backup state ──────────────────────────────────────────────────────────
   const [exportLoading, setExportLoading]           = useState(false)
   const [exportMsg, setExportMsg]                   = useState('')
+  const [includeAuditLogs, setIncludeAuditLogs]     = useState(false)
   const [importFile, setImportFile]                 = useState(null)        // File object
   const [importConfirmOpen, setImportConfirmOpen]   = useState(false)
   const [importLoading, setImportLoading]           = useState(false)
@@ -206,7 +210,7 @@ export default function Settings() {
     setExportLoading(true)
     setExportMsg('')
     try {
-      const res = await backupAPI.exportBackup()
+      const res = await backupAPI.exportBackup({ includeAuditLogs })
       const blob = new Blob([res.data], { type: 'application/sql' })
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a')
@@ -215,8 +219,10 @@ export default function Settings() {
       a.click()
       URL.revokeObjectURL(url)
       setExportMsg('Backup exported successfully.')
+      toast('Backup exported successfully.')
     } catch {
       setExportMsg('Export failed. Please try again.')
+      toast('Export failed. Please try again.', 'error')
     } finally {
       setExportLoading(false)
     }
@@ -248,10 +254,14 @@ export default function Settings() {
       if (ok) {
         // Refresh in-page data so the restored records appear immediately.
         await Promise.all([fetchRules(), fetchCategories(), fetchAccounts()])
+        toast('Backup restored successfully.')
+      } else {
+        toast(res.message || 'Restore completed with issues.', 'error')
       }
     } catch (err) {
       const msg = err?.response?.data?.message || 'Import failed. The file may be corrupted or incompatible.'
       setImportResult({ ok: false, message: msg })
+      toast(msg, 'error')
     } finally {
       setImportLoading(false)
       setImportConfirmOpen(false)
@@ -496,6 +506,15 @@ export default function Settings() {
                   {exportMsg}
                 </p>
               )}
+              <label className="mt-4 flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={includeAuditLogs}
+                  onChange={e => setIncludeAuditLogs(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-[12px] font-semibold text-slate-600">Include audit logs in backup</span>
+              </label>
               <button
                 onClick={handleExportBackup}
                 disabled={exportLoading}
@@ -751,6 +770,9 @@ export default function Settings() {
           <p className="text-[13px] font-medium text-slate-500">Are you sure you want to proceed?</p>
         </div>
       </Modal>
+
+      {/* ── Toast notifications ───────────────────────────────────────────── */}
+      <Toast toasts={toasts} onDismiss={dismiss} />
 
     </div>
   )

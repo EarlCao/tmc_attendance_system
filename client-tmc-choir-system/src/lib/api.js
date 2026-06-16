@@ -92,7 +92,11 @@ export const categoriesAPI = {
 };
 
 export const backupAPI = {
-  exportBackup: () => api.get('/backup/export', { responseType: 'text' }),
+  exportBackup: ({ includeAuditLogs = false } = {}) =>
+    api.get('/backup/export', {
+      responseType: 'text',
+      params: { includeAuditLogs },
+    }),
   importBackup: (sqlText) =>
     api.post('/backup/import', sqlText, {
       headers: { 'Content-Type': 'text/plain' },

@@ -7,7 +7,8 @@ const BACKUP_MARKER = '-- TMC Choir Attendance System — PostgreSQL Backup';
 
 // Tables in FK-dependency order (parents first). Inserting in this order keeps
 // foreign-key constraints satisfied without disabling them.
-const TABLE_ORDER = [
+// AuditLog is optional and only included when the caller opts in.
+const CORE_TABLE_ORDER = [
   'EvaluationCategory',
   'Semester',
   'Member',
@@ -20,8 +21,9 @@ const TABLE_ORDER = [
   'AttendanceRecord',
   'JudgeEvaluation',
   'EvaluationScore',
-  'AuditLog',
 ];
+
+const AUDIT_LOG_TABLE = 'AuditLog';
 
 // MySQL-only / non-Postgres statements that may appear in older backup files.
 // These are silently skipped on import so legacy exports don't hard-fail.
@@ -120,6 +122,12 @@ function splitStatements(sql) {
 
 export const exportBackup = async (req, res) => {
   try {
+    // Audit logs are included only when explicitly requested (?includeAuditLogs=true).
+    const includeAuditLogs = String(req.query.includeAuditLogs) === 'true';
+    const tableOrder = includeAuditLogs
+      ? [...CORE_TABLE_ORDER, AUDIT_LOG_TABLE]
+      : CORE_TABLE_ORDER;
+
     const [
       evaluationCategories,
       users,
@@ -147,7 +155,9 @@ export const exportBackup = async (req, res) => {
       prisma.attendanceRecord.findMany({ orderBy: { id: 'asc' } }),
       prisma.judgeEvaluation.findMany({ orderBy: { id: 'asc' } }),
       prisma.evaluationScore.findMany({ orderBy: { id: 'asc' } }),
-      prisma.auditLog.findMany({ orderBy: { id: 'asc' } }),
+      includeAuditLogs
+        ? prisma.auditLog.findMany({ orderBy: { id: 'asc' } })
+        : Promise.resolve([]),
     ]);
 
     const datasets = {
@@ -171,19 +181,20 @@ export const exportBackup = async (req, res) => {
 
     lines.push(BACKUP_MARKER);
     lines.push(`-- Exported at: ${now}`);
+    lines.push(`-- Audit logs included: ${includeAuditLogs ? 'yes' : 'no'}`);
     lines.push(`-- Restore: import this file via Settings > Backup & Recovery`);
     lines.push(`--`);
     lines.push(``);
 
     // Truncate every table in one statement. CASCADE clears dependents and
     // RESTART IDENTITY resets the auto-increment sequences.
-    const truncList = TABLE_ORDER.map(quoteIdent).join(', ');
+    const truncList = tableOrder.map(quoteIdent).join(', ');
     lines.push(`-- ── Clear all tables ───────────────────────────────────────────────────────`);
     lines.push(`TRUNCATE TABLE ${truncList} RESTART IDENTITY CASCADE;`);
     lines.push(``);
 
     // Insert in FK-dependency order.
-    for (const table of TABLE_ORDER) {
+    for (const table of tableOrder) {
       const rows = datasets[table];
       lines.push(`-- ── ${table} (${rows.length} rows) ──`);
       lines.push(toInserts(table, rows));
@@ -191,7 +202,7 @@ export const exportBackup = async (req, res) => {
 
     // Re-sync sequences to the max id we just inserted.
     lines.push(`-- ── Reset sequences ────────────────────────────────────────────────────────`);
-    for (const table of TABLE_ORDER) lines.push(resetSequence(table));
+    for (const table of tableOrder) lines.push(resetSequence(table));
     lines.push(``);
     lines.push(`-- End of backup`);
 
