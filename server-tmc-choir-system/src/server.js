@@ -22,6 +22,19 @@ import portalRoutes from "./routes/portal.route.js";
 import auditLogRoutes from "./routes/auditLog.route.js";
 import { globalLimiter } from "./middleware/rateLimit.middleware.js";
 
+// Fail fast if required configuration is missing — prevents deploying with an
+// undefined JWT_SECRET (auth bypass risk) or undefined FRONTEND_URL (CORS open).
+const REQUIRED_ENV = ['JWT_SECRET', 'DATABASE_URL', 'FRONTEND_URL', 'JWT_EXPIRES_IN'];
+const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
+if (missingEnv.length > 0) {
+  console.error(`Missing required environment variables: ${missingEnv.join(', ')}`);
+  process.exit(1);
+}
+if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET.length < 32) {
+  console.error('JWT_SECRET is too weak for production (minimum 32 characters).');
+  process.exit(1);
+}
+
 const BACKEND_PORT = process.env.BACKEND_PORT || 3002;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 const app = express();

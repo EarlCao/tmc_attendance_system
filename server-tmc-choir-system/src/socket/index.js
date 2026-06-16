@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
 
 let io;
 
@@ -10,6 +11,23 @@ export const initSocket = (httpServer, frontendUrl) => {
       credentials: true,
     },
     path: '/socket.io',
+  });
+
+  // Authenticate every socket connection with the same JWT used for the REST API.
+  // Sockets broadcast member/auditionee PII, so unauthenticated connections must
+  // be rejected during the handshake.
+  io.use((socket, next) => {
+    try {
+      const token =
+        socket.handshake.auth?.token ||
+        socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '');
+      if (!token) return next(new Error('Unauthorized: missing token'));
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.user = decoded; // { id, ... }
+      next();
+    } catch (_err) {
+      next(new Error('Unauthorized: invalid token'));
+    }
   });
 
   io.on('connection', (socket) => {

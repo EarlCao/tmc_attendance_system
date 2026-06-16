@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import { createAuditLog } from '../lib/auditLogger.js';
+import { BCRYPT_COST, canonicalizeRole, generateTempPassword } from '../lib/security.js';
 
 // Get all accounts
 export const getAccounts = async (req, res) => {
@@ -75,9 +76,10 @@ export const createAccountForMember = async (req, res) => {
       counter++;
     }
 
-    const passwordHash = await bcrypt.hash('tmc2026', 10);
+    const tempPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_COST);
     const newUser = await prisma.user.create({
-      data: { username, passwordHash, role: 'member', memberId: member.id },
+      data: { username, passwordHash, role: 'MEMBER', memberId: member.id },
       include: { member: true },
     });
 
@@ -92,7 +94,8 @@ export const createAccountForMember = async (req, res) => {
     });
 
     const { passwordHash: ph, ...safeUser } = newUser;
-    res.status(201).json({ status: 'success', data: { account: safeUser } });
+    // Return the generated temporary password once so the admin can relay it.
+    res.status(201).json({ status: 'success', data: { account: { ...safeUser, tempPassword } } });
   } catch (error) {
     console.error('Create Account For Member Error:', error);
     res.status(500).json({ status: 'error', message: 'Internal server error' });
@@ -108,17 +111,23 @@ export const createAccount = async (req, res) => {
       return res.status(400).json({ status: 'fail', message: 'Username and password are required' });
     }
 
+    // Canonicalize and validate the role so only known values are ever stored.
+    const canonicalRole = canonicalizeRole(role || 'ADMIN');
+    if (!canonicalRole) {
+      return res.status(400).json({ status: 'fail', message: 'Invalid role. Allowed roles: ADMIN, MEMBER.' });
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { username } });
     if (existingUser) {
       return res.status(400).json({ status: 'fail', message: 'Username already exists' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
     const newUser = await prisma.user.create({
       data: {
         username,
         passwordHash,
-        role: role || 'admin',
+        role: canonicalRole,
         isActive: isActive !== undefined ? isActive : true,
         memberId: memberId || null,
       },
@@ -168,16 +177,22 @@ export const updateAccount = async (req, res) => {
       data.username = username;
       changes.push({ field: 'username', from: existingUser.username, to: username });
     }
-    if (role && role !== existingUser.role) {
-      data.role = role;
-      changes.push({ field: 'role', from: existingUser.role, to: role });
+    if (role !== undefined) {
+      const canonicalRole = canonicalizeRole(role);
+      if (!canonicalRole) {
+        return res.status(400).json({ status: 'fail', message: 'Invalid role. Allowed roles: ADMIN, MEMBER.' });
+      }
+      if (canonicalRole !== existingUser.role) {
+        data.role = canonicalRole;
+        changes.push({ field: 'role', from: existingUser.role, to: canonicalRole });
+      }
     }
     if (isActive !== undefined && isActive !== existingUser.isActive) {
       data.isActive = isActive;
       changes.push({ field: 'isActive', from: existingUser.isActive, to: isActive });
     }
     if (password) {
-      data.passwordHash = await bcrypt.hash(password, 10);
+      data.passwordHash = await bcrypt.hash(password, BCRYPT_COST);
       changes.push({ field: 'password', note: 'Password was changed' });
     }
 

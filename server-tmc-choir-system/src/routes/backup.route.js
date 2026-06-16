@@ -8,7 +8,8 @@ router.use(protect, requireAdmin);
 
 router.get('/export', exportBackup);
 
-// express.text() parses the raw SQL body (up to 50 MB)
-router.post('/import', express.text({ type: '*/*', limit: '50mb' }), importBackup);
+// express.text() parses the raw SQL body. Cap the size to limit memory/DoS risk;
+// the import controller further restricts which statements may run.
+router.post('/import', express.text({ type: '*/*', limit: '5mb' }), importBackup);
 
 export default router;

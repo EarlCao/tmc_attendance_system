@@ -2,6 +2,7 @@ import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import { emit } from '../socket/index.js';
 import { createAuditLog } from '../lib/auditLogger.js';
+import { BCRYPT_COST, generateTempPassword } from '../lib/security.js';
 
 // Normalize DB member record → frontend-friendly shape
 const formatMember = (m) => {
@@ -119,12 +120,14 @@ export const createMember = async (req, res) => {
       username = `${baseUsername}${counter}`;
       counter++;
     }
-    const passwordHash = await bcrypt.hash('tmc2026', 10);
+    // Generate a unique random temporary password instead of a shared constant.
+    const tempPassword = generateTempPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_COST);
     const newUser = await prisma.user.create({
       data: {
         username,
         passwordHash,
-        role: 'member',
+        role: 'MEMBER',
         memberId: newMember.id,
       }
     });
@@ -146,7 +149,9 @@ export const createMember = async (req, res) => {
     const formatted = formatMember(newMember);
     res.status(201).json({
       status: 'success',
-      data: { member: formatted },
+      // Return the generated credentials once so the admin can hand them over.
+      // The password is not stored anywhere in plaintext.
+      data: { member: formatted, account: { username, tempPassword } },
     });
   } catch (err) {
     console.error('Create Member Error:', err);
@@ -194,15 +199,25 @@ export const deleteMember = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const memberId = parseInt(id);
+
     // Find the member name before deleting for the audit log
-    const member = await prisma.member.findUnique({ where: { id: parseInt(id) } });
+    const member = await prisma.member.findUnique({ where: { id: memberId } });
 
-    // Delete associated User(s) first to avoid FK constraint issues.
-    const deletedUsers = await prisma.user.findMany({ where: { memberId: parseInt(id) } });
-    await prisma.user.deleteMany({ where: { memberId: parseInt(id) } });
+    // Collect linked users up-front so we can broadcast their removal afterwards.
+    const deletedUsers = await prisma.user.findMany({ where: { memberId } });
+
+    // Delete all dependent rows then the member itself, atomically. Attendance
+    // and officer rows have no ON DELETE CASCADE, so they must be removed first
+    // or the member delete fails with a foreign-key violation.
+    await prisma.$transaction([
+      prisma.attendanceRecord.deleteMany({ where: { memberId } }),
+      prisma.officer.deleteMany({ where: { memberId } }),
+      prisma.user.deleteMany({ where: { memberId } }),
+      prisma.member.delete({ where: { id: memberId } }),
+    ]);
+
     deletedUsers.forEach(u => emit('user:deleted', { id: u.id }));
-
-    await prisma.member.delete({ where: { id: parseInt(id) } });
 
     await createAuditLog({
       userId: req.user?.id,

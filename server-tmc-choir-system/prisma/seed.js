@@ -7,7 +7,15 @@ async function main() {
   // =========================
   // 1. CREATE ADMIN USER
   // =========================
-  const hashedPassword = await bcrypt.hash("admin123", 10);
+  // The admin password must be supplied via env so no credential lives in source.
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error(
+      "SEED_ADMIN_PASSWORD is required to seed the admin account. " +
+      "Set it in your environment before running the seed."
+    );
+  }
+  const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
   const admin = await prisma.user.upsert({
     where: { username: "admin" },

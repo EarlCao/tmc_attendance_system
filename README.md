@@ -137,12 +137,18 @@ Variables are set directly in `docker-compose.yml`. Key ones:
 
 | Variable         | Default                              | Description                |
 |------------------|--------------------------------------|----------------------------|
-| `DATABASE_URL`   | mysql://root:passcode@mysql:3306/... | Prisma database connection |
-| `JWT_SECRET`     | supersecretkey                       | JWT signing key            |
+| `DATABASE_URL`   | postgresql://<user>:<pass>@postgres:5432/<db> | Prisma database connection |
+| `JWT_SECRET`     | _(required, no default)_             | JWT signing key            |
+| `JWT_EXPIRES_IN` | 7d                                   | JWT lifetime               |
 | `BACKEND_PORT`   | 3002                                 | Express server port        |
-| `FRONTEND_URL`   | http://localhost:5173                | CORS allowed origin        |
+| `FRONTEND_URL`   | http://localhost:5173                | CORS / Socket.IO origin    |
+| `SEED_ADMIN_PASSWORD` | _(required to seed)_            | Initial admin password     |
 
-> For development, the defaults in `docker-compose.yml` are fine. Change `JWT_SECRET` if deploying publicly.
+> **Never commit real secrets.** Generate a strong `JWT_SECRET` before deploying:
+> ```bash
+> openssl rand -base64 48
+> ```
+> The server refuses to start in production if `JWT_SECRET`, `DATABASE_URL`, `FRONTEND_URL`, or `JWT_EXPIRES_IN` are missing.
 
 ---
 

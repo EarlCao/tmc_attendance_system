@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../lib/api';
+import { connectSocket, disconnectSocket } from '../lib/socket';
 
 const AuthContext = createContext();
 
@@ -36,6 +37,8 @@ export const AuthProvider = ({ children }) => {
     setToken(newToken);
     setUser(userData);
     setJustLoggedIn(true);
+    // Re-handshake the socket with the freshly issued token.
+    connectSocket();
   };
 
   const logout = async () => {
@@ -51,6 +54,8 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setJustLoggedIn(false);
+    // Tear down the authenticated socket connection.
+    disconnectSocket();
   };
 
   const clearWelcome = () => setJustLoggedIn(false);

@@ -49,7 +49,10 @@ export const protect = async (req, res, next) => {
     }
 
     // GRANT ACCESS TO PROTECTED ROUTE
-    req.user = currentUser;
+    // Never expose the password hash on the request context (it would leak via
+    // /api/auth/me and anywhere req.user is serialized).
+    const { passwordHash, ...safeUser } = currentUser;
+    req.user = safeUser;
     next();
   } catch (err) {
     if (err.name === 'JsonWebTokenError') {

@@ -31,6 +31,63 @@ function isUnsupportedStatement(stmt) {
   return /^SET\s+FOREIGN_KEY_CHECKS/i.test(stmt) || /^\/\*!/.test(stmt);
 }
 
+// ─── Import safety: statement whitelist ──────────────────────────────────────
+// The import endpoint must NEVER execute arbitrary SQL. We only allow the exact
+// statement shapes this system's exporter produces, and we validate that any
+// referenced table is one we own. Anything else is rejected outright.
+
+const ALL_TABLES = [...CORE_TABLE_ORDER, AUDIT_LOG_TABLE];
+const ALLOWED_TABLE_SET = new Set(ALL_TABLES);
+
+// Extract every double-quoted identifier from a statement, e.g. "User".
+function extractQuotedIdents(stmt) {
+  const out = [];
+  const re = /"((?:[^"]|"")+)"/g;
+  let m;
+  while ((m = re.exec(stmt)) !== null) {
+    out.push(m[1].replace(/""/g, '"'));
+  }
+  return out;
+}
+
+// Validate that a statement is one of the allowed, exporter-generated shapes and
+// only touches tables we own. Returns { ok, reason }.
+function validateStatement(stmt) {
+  const trimmed = stmt.trim();
+
+  // 1) TRUNCATE TABLE "A", "B", ... RESTART IDENTITY CASCADE;
+  if (/^TRUNCATE\s+TABLE\s+/i.test(trimmed)) {
+    const tables = extractQuotedIdents(trimmed);
+    if (tables.length === 0) return { ok: false, reason: 'TRUNCATE without identifiers' };
+    const bad = tables.find((t) => !ALLOWED_TABLE_SET.has(t));
+    if (bad) return { ok: false, reason: `TRUNCATE references unknown table "${bad}"` };
+    return { ok: true };
+  }
+
+  // 2) INSERT INTO "Table" (...) VALUES ...;
+  if (/^INSERT\s+INTO\s+/i.test(trimmed)) {
+    const idents = extractQuotedIdents(trimmed);
+    const table = idents[0];
+    if (!table) return { ok: false, reason: 'INSERT without a table identifier' };
+    if (!ALLOWED_TABLE_SET.has(table)) return { ok: false, reason: `INSERT into unknown table "${table}"` };
+    return { ok: true };
+  }
+
+  // 3) SELECT setval(pg_get_serial_sequence('"Table"', 'id'), ...);
+  if (/^SELECT\s+setval\s*\(/i.test(trimmed)) {
+    // Sequence resets reference the table only inside a string literal; require
+    // the pg_get_serial_sequence helper and a known table name to be present.
+    if (!/pg_get_serial_sequence/i.test(trimmed)) {
+      return { ok: false, reason: 'Unexpected SELECT statement' };
+    }
+    const referencesKnownTable = ALL_TABLES.some((t) => trimmed.includes(`"${t}"`));
+    if (!referencesKnownTable) return { ok: false, reason: 'setval references an unknown table' };
+    return { ok: true };
+  }
+
+  return { ok: false, reason: `Disallowed statement: "${trimmed.slice(0, 40)}..."` };
+}
+
 // ─── SQL helpers ──────────────────────────────────────────────────────────────
 
 // Quote a Postgres identifier (table / column name) with double quotes.
@@ -242,6 +299,19 @@ export const importBackup = async (req, res) => {
 
     if (statements.length === 0) {
       return res.status(400).json({ status: 'fail', message: 'Backup file contains no executable statements.' });
+    }
+
+    // SECURITY: never execute arbitrary SQL. Every statement must match one of
+    // the exporter-generated shapes (TRUNCATE / INSERT / setval) and reference
+    // only tables we own. Reject the whole file if anything else is present.
+    for (const stmt of statements) {
+      const { ok, reason } = validateStatement(stmt);
+      if (!ok) {
+        return res.status(400).json({
+          status: 'fail',
+          message: `Backup file contains a disallowed statement and was rejected. (${reason})`,
+        });
+      }
     }
 
     // Run the whole restore atomically: if anything fails, nothing is changed.
