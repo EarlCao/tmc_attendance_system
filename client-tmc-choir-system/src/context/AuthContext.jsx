@@ -20,13 +20,50 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
+  // Keep this tab in sync with the shared localStorage token. Two tabs/windows
+  // of the same browser profile share one `token` key, so logging in as a
+  // different user (e.g. a member) in another tab would otherwise leave this
+  // tab running with a stale in-memory identity but the *other* tab's token.
+  // React to cross-tab token changes by re-syncing (or logging out).
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key !== 'token') return;
+      const newToken = e.newValue;
+      if (newToken !== token) {
+        if (newToken) {
+          // A different session was established in another tab — adopt it and
+          // re-fetch the matching user so identity and token stay consistent.
+          setUser(null);
+          setLoading(true);
+          setToken(newToken);
+        } else {
+          // Logged out elsewhere — tear down this tab's session too.
+          setToken(null);
+          setUser(null);
+          setJustLoggedIn(false);
+          disconnectSocket();
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [token]);
+
   const fetchCurrentUser = async () => {
     try {
       const response = await authAPI.getMe();
       setUser(response.data.user);
     } catch (error) {
       console.error('Error fetching user:', error);
-      logout();
+      // Only destroy the session when the token is genuinely invalid (401).
+      // Transient failures — e.g. 429 rate-limit during fast navigation, a 5xx,
+      // or a network blip — must NOT log the user out; doing so would bounce a
+      // perfectly valid session back to /login. Keep the existing session and
+      // let the next request recover.
+      if (error.response?.status === 401) {
+        logout();
+      }
     } finally {
       setLoading(false);
     }

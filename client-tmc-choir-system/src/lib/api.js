@@ -17,6 +17,29 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Add a response interceptor so an expired/invalid/desynced session fails
+// loudly and cleanly instead of silently rendering empty pages. A 401 means
+// the stored token no longer maps to a valid user (e.g. it was overwritten by
+// a login in another tab, expired, or the user was wiped/deactivated), so we
+// clear it and send the user back to login.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const hadToken = !!localStorage.getItem('token');
+      // Don't redirect on the login request itself (bad credentials).
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      if (hadToken && !isLoginRequest) {
+        localStorage.removeItem('token');
+        if (window.location.pathname !== '/login') {
+          window.location.assign('/login');
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // API Services
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials).then(res => res.data),

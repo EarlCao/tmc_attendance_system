@@ -1,9 +1,16 @@
 import { rateLimit } from 'express-rate-limit';
 
-// Global rate limiting for all API endpoints to prevent abuse / DOS
+// Global rate limiting for all API endpoints to act as a safety net against
+// abuse / DoS / scraping. A data-heavy admin SPA legitimately fans out many
+// requests per page navigation, so the ceiling is generous and — crucially —
+// successful (2xx/3xx) responses are NOT counted toward the limit. That means
+// normal browsing never trips it, while bursts of *failing* requests (the
+// signature of brute-force / probing / abuse) still get throttled. Sensitive
+// endpoints keep their own stricter limiters (see loginLimiter / backupLimiter).
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 150, // Limit each IP to 150 requests per 15-minute window
+  limit: 1000, // Generous per-IP ceiling for legitimate dashboard use
+  skipSuccessfulRequests: true, // Only count failed (4xx/5xx) responses
   message: {
     status: 'fail',
     message: 'Too many requests from this IP, please try again in 15 minutes!',
