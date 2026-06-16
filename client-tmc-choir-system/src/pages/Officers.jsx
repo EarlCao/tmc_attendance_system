@@ -9,6 +9,7 @@ import EmptyState from '../components/common/EmptyState'
 const STATUS_FILTERS = [
   { value: 'active',   label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
+  { value: 'graduated', label: 'Graduated' },
   { value: 'all',      label: 'All' },
 ]
 
@@ -298,6 +299,7 @@ export default function Officers() {
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+              <option value="graduated">Graduated</option>
             </select>
           </div>
         </div>

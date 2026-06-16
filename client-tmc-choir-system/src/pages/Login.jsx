@@ -4,6 +4,7 @@ import { AlertCircle, Eye, EyeOff, Lock, User } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { authAPI } from '../lib/api'
 import ThemeToggle from '../components/common/ThemeToggle'
+import Modal from '../components/common/Modal'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -11,6 +12,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [inactiveModal, setInactiveModal] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
 
@@ -30,7 +32,11 @@ export default function Login() {
         }
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to sign in. Please check your credentials.')
+      if (err.response?.data?.reason === 'INACTIVE_ACCOUNT') {
+        setInactiveModal(true)
+      } else {
+        setError(err.response?.data?.message || 'Failed to sign in. Please check your credentials.')
+      }
     } finally {
       setLoading(false)
     }
@@ -152,6 +158,19 @@ export default function Login() {
           </p>
         </div>
       </div>
+
+      <Modal open={inactiveModal} onClose={() => setInactiveModal(false)} title="Account Inactive" size="sm"
+        footer={<button onClick={() => setInactiveModal(false)} className="btn-primary w-full justify-center">Acknowledge</button>}>
+        <div className="flex flex-col items-center text-center py-2">
+          <div className="mb-4 rounded-full bg-amber-100 p-3 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+            <AlertCircle size={32} />
+          </div>
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Your account is currently inactive. Please contact an administrator for assistance.
+          </p>
+        </div>
+      </Modal>
+
     </div>
   )
 }

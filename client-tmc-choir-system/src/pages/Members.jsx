@@ -83,6 +83,7 @@ function MemberForm({ form, setForm, errors = {} }) {
           <select className="input" value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+            <option value="graduated">Graduated</option>
           </select>
         </div>
         <div>
@@ -147,7 +148,9 @@ export default function Members() {
         const matchSearch = displayName.toLowerCase().includes(search.toLowerCase()) ||
                             m.email.toLowerCase().includes(search.toLowerCase())
         const matchVoice  = voiceFilter === 'All' || m.voicePart === voiceFilter
-        const matchStatus = statusFilter === 'All' || m.status === statusFilter
+        const matchStatus = statusFilter === 'All'
+          ? m.status !== 'graduated'
+          : (statusFilter === 'All (Include Graduated)' ? true : m.status === statusFilter)
         return matchSearch && matchVoice && matchStatus
       })
       .sort((a, b) => {
@@ -298,9 +301,11 @@ export default function Members() {
             onChange={e => setStatusFilter(e.target.value)}
             className="flex-none rounded-xl border border-slate-200/80 bg-white/50 px-4 py-2 text-[13px] font-medium text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
-            <option value="All">All Status</option>
+            <option value="All">All Statuses</option>
+            <option value="All (Include Graduated)">All Statuses (Include Graduated)</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+            <option value="graduated">Graduated</option>
           </select>
           <select
             value={memberSort}

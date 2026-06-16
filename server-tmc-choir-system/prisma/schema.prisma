@@ -36,11 +36,13 @@ enum MemberStatus {
   ACTIVE
   INACTIVE
   ALUMNI
+  GRADUATED
 }
 
 enum OfficerStatus {
   ACTIVE
   INACTIVE
+  GRADUATED
 }
 
 //////////////////////////////////////////////////////

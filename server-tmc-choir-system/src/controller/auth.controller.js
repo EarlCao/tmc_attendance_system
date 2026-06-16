@@ -61,6 +61,25 @@ export const login = async (req, res) => {
       });
     }
 
+    if (!user.isActive) {
+      // Log failed login attempt due to inactive account
+      await createAuditLog({
+        userId: user.id,
+        username: user.username,
+        action: 'LOGIN_FAILED',
+        category: 'AUTH',
+        target: `user:${user.username}`,
+        details: { reason: 'Account is inactive' },
+        ipAddress: req.ip,
+      });
+
+      return res.status(403).json({
+        status: 'fail',
+        message: 'Your account is currently inactive. Please contact an administrator for assistance.',
+        reason: 'INACTIVE_ACCOUNT',
+      });
+    }
+
     // 3) Log successful login
     await createAuditLog({
       userId: user.id,
